@@ -88,7 +88,7 @@ export async function checkLicenseOnline(): Promise<void> {
 
 const FREE_PATHS = ["/api/license", "/api/health", "/api/version"];
 
-const isDev = !process.env.PKG_EXECPATH && !process.env.NODE_ENV;
+const isDev = !process.env.PKG_EXECPATH;
 
 export function requireLicense(req: any, res: any, next: any): void {
   if (isDev) return next();
