@@ -11,9 +11,9 @@
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx database/seeds/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "pkg:macos": "pkg dist/index.js --target node20-macos-x64 --output ../dist-bin/fabrika-server-macos --assets '../migrations/**,../content/**'",
-    "pkg:macos-arm": "pkg dist/index.js --target node20-macos-arm64 --output ../dist-bin/fabrika-server-macos-arm --assets '../migrations/**,../content/**'",
-    "pkg:win": "pkg dist/index.js --target node20-win-x64 --output ../dist-bin/fabrika-server-win.exe --assets '../migrations/**,../content/**'"
+    "pkg:macos": "pkg dist/index.js --target node22-macos-x64 --output ../dist-bin/fabrika-server-macos --assets '../migrations/**,../content/**'",
+    "pkg:macos-arm": "pkg dist/index.js --target node22-macos-arm64 --output ../dist-bin/fabrika-server-macos-arm --assets '../migrations/**,../content/**'",
+    "pkg:win": "pkg dist/index.js --target node22-win-x64 --output ../dist-bin/fabrika-server-win.exe --assets '../migrations/**,../content/**'"
   },
   "pkg": {
     "assets": [
@@ -47,6 +47,7 @@
     "@types/express": "^5.0.0",
     "@types/multer": "^1.4.12",
     "@types/uuid": "^10.0.0",
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "@yao-pkg/pkg": "^6.0.0"
   }
 }
