@@ -7,7 +7,7 @@ PORT=3001
 
 check_update() {
   CURRENT=$(cat "$SCRIPT_DIR/version.txt" 2>/dev/null || echo "0.0.0")
-  LATEST=$(curl -s "https://api.github.com/repos/USERNAME/fabrika-content-workbench/releases/latest" \
+  LATEST=$(curl -s "https://api.github.com/repos/novoselovmaxim/fabrika-content-workbench/releases/latest" \
     | grep '"tag_name"' | sed 's/.*"v\([^"]*\)".*/\1/' 2>/dev/null || echo "")
   if [ -n "$LATEST" ] && [ "$LATEST" != "$CURRENT" ]; then
     osascript -e "display notification \"Доступна версия $LATEST. Скачайте на сайте.\" with title \"Фабрика Контента\""
