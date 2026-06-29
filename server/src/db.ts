@@ -1,8 +1,14 @@
 import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "./schema.js";
 import { PATHS, initDataDirs } from "./paths.js";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+
+const { drizzle } = require("drizzle-orm/better-sqlite3/index.cjs") as {
+  drizzle: (...args: any[]) => BetterSQLite3Database<typeof schema>;
+};
+const { migrate } = require("drizzle-orm/better-sqlite3/migrator.cjs") as {
+  migrate: (db: any, config: { migrationsFolder: string }) => void;
+};
 
 initDataDirs();
 
