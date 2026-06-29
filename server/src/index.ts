@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import path from "path";
+import { exec } from "child_process";
 import { PATHS } from "./paths.js";
 import { topicsRouter } from "./api/topics.js";
 import { rubricsRouter } from "./api/rubrics.js";
@@ -228,4 +229,13 @@ setTimeout(() => checkLicenseOnline(), 5000);
 
 app.listen(PORT, () => {
   console.log(`\n  🏭 Фабрика Контента → http://localhost:${PORT}\n`);
+  const url = `http://localhost:${PORT}`;
+  const browserCmd = process.platform === "win32"
+    ? `start "" "${url}"`
+    : process.platform === "darwin"
+      ? `open "${url}"`
+      : `xdg-open "${url}"`;
+  exec(browserCmd, (err) => {
+    if (err) console.log("  Откройте браузер вручную:", url);
+  });
 });

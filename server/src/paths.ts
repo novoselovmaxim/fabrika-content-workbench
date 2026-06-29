@@ -4,13 +4,17 @@ import fs from "fs";
 
 // Dev: __dirname = .../server/src  (tsx)
 // Prod (node dist): __dirname = .../server/dist
-// Prod (pkg binary): __dirname = /Applications/FabrikaContent
+// Prod (pkg binary): __dirname = .../FabrikaContent
+// Prod (.app bundle): __dirname = .../FabrikaContent.app/Contents/MacOS
 const isDev = __dirname.endsWith(path.sep + "src");
 const isPkg = !__dirname.includes("server");
+const isAppBundle = isPkg && __dirname.includes(path.sep + "MacOS");
 
-export const INSTALL_DIR = isPkg
-  ? __dirname
-  : path.resolve(__dirname, isDev ? "../.." : "../../..");
+export const INSTALL_DIR = isAppBundle
+  ? path.resolve(__dirname, "../Resources")
+  : isPkg
+    ? __dirname
+    : path.resolve(__dirname, isDev ? "../.." : "../../..");
 
 export const DATA_DIR = path.join(os.homedir(), "FabrikaContent");
 

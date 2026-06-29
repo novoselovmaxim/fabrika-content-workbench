@@ -20,7 +20,7 @@ jobs:
       - run: cd app && npm run build
       - run: cd server && npm run build
       - run: cd server && npm run pkg:macos-arm
-      - name: Package
+      - name: Package zip
         run: |
           VERSION=$(cat version.txt)
           mkdir -p releases release/macos-arm64/FabrikaContent
@@ -28,14 +28,16 @@ jobs:
           cp -r app/dist release/macos-arm64/FabrikaContent/app
           cp -r migrations release/macos-arm64/FabrikaContent/
           cp version.txt release/macos-arm64/FabrikaContent/
-          cp installers/macos/start.command release/macos-arm64/FabrikaContent/
-          cp installers/macos/uninstall.command release/macos-arm64/FabrikaContent/
-          chmod +x release/macos-arm64/FabrikaContent/start.command
           chmod +x release/macos-arm64/FabrikaContent/fabrika-server-macos
           cd release/macos-arm64 && zip -r ../../releases/FabrikaContent-${VERSION}-macos-arm64.zip FabrikaContent
+      - name: Build .app bundle
+        run: |
+          VERSION=$(cat version.txt)
+          bash installers/macos/make-app-bundle.sh fabrika-server-macos-arm $VERSION
+          cd release && zip -r ../releases/FabrikaContent-${VERSION}-macos-arm64-app.zip FabrikaContent.app
       - uses: actions/upload-artifact@v4
         with:
-          name: zip-macos-arm64
+          name: artifacts-macos-arm64
           path: releases/FabrikaContent-*.zip
 
   build-macos-x64:
@@ -49,7 +51,7 @@ jobs:
       - run: cd app && npm run build
       - run: cd server && npm run build
       - run: cd server && npm run pkg:macos
-      - name: Package
+      - name: Package zip
         run: |
           VERSION=$(cat version.txt)
           mkdir -p releases release/macos-x64/FabrikaContent
@@ -57,14 +59,16 @@ jobs:
           cp -r app/dist release/macos-x64/FabrikaContent/app
           cp -r migrations release/macos-x64/FabrikaContent/
           cp version.txt release/macos-x64/FabrikaContent/
-          cp installers/macos/start.command release/macos-x64/FabrikaContent/
-          cp installers/macos/uninstall.command release/macos-x64/FabrikaContent/
-          chmod +x release/macos-x64/FabrikaContent/start.command
           chmod +x release/macos-x64/FabrikaContent/fabrika-server-macos
           cd release/macos-x64 && zip -r ../../releases/FabrikaContent-${VERSION}-macos-x64.zip FabrikaContent
+      - name: Build .app bundle
+        run: |
+          VERSION=$(cat version.txt)
+          bash installers/macos/make-app-bundle.sh fabrika-server-macos $VERSION
+          cd release && zip -r ../releases/FabrikaContent-${VERSION}-macos-x64-app.zip FabrikaContent.app
       - uses: actions/upload-artifact@v4
         with:
-          name: zip-macos-x64
+          name: artifacts-macos-x64
           path: releases/FabrikaContent-*.zip
 
   build-windows:
@@ -79,7 +83,7 @@ jobs:
       - run: cd server && npm run build
       - run: npm install -g @yao-pkg/pkg
       - run: cd server && npm run pkg:win
-      - name: Package
+      - name: Package zip
         shell: pwsh
         run: |
           $VERSION = Get-Content version.txt
@@ -88,26 +92,30 @@ jobs:
           Copy-Item -Recurse app/dist release/win/FabrikaContent/app
           Copy-Item -Recurse migrations release/win/FabrikaContent/
           Copy-Item version.txt release/win/FabrikaContent/
-          Copy-Item installers/windows/start.bat release/win/FabrikaContent/
-          Copy-Item installers/windows/install-shortcut.ps1 release/win/FabrikaContent/
           Compress-Archive -Path release/win/FabrikaContent -DestinationPath releases/FabrikaContent-${VERSION}-windows.zip
+      - name: Build installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $VERSION = Get-Content version.txt
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$VERSION" installers/windows/setup.iss
       - uses: actions/upload-artifact@v4
         with:
-          name: zip-windows
-          path: releases/FabrikaContent-*.zip
+          name: artifacts-windows
+          path: releases\*
 
   create-release:
     needs: [build-macos-arm64, build-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
-      - name: Collect zips
+      - name: Collect all artifacts
         run: |
           mkdir -p releases
-          find . -name '*.zip' -exec cp {} releases/ \;
+          find . -type f \( -name '*.zip' -o -name '*.exe' \) -exec cp {} releases/ \;
           ls -la releases/
       - uses: softprops/action-gh-release@v1
         with:
-          files: releases/*.zip
+          files: releases/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
