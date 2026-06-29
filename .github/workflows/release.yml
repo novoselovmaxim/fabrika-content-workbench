@@ -79,17 +79,17 @@ jobs:
       - run: cd server && npm run build
       - run: cd server && npm run pkg:win
       - name: Package
-        shell: bash
+        shell: pwsh
         run: |
-          VERSION=$(cat version.txt)
-          mkdir -p releases release/win/FabrikaContent
-          cp dist-bin/fabrika-server-win.exe release/win/FabrikaContent/
-          cp -r app/dist release/win/FabrikaContent/app
-          cp -r migrations release/win/FabrikaContent/
-          cp version.txt release/win/FabrikaContent/
-          cp installers/windows/start.bat release/win/FabrikaContent/
-          cp installers/windows/install-shortcut.ps1 release/win/FabrikaContent/
-          cd release/win && zip -r ../../releases/FabrikaContent-${VERSION}-windows.zip FabrikaContent
+          $VERSION = Get-Content version.txt
+          New-Item -ItemType Directory -Force -Path releases, release/win/FabrikaContent | Out-Null
+          Copy-Item dist-bin/fabrika-server-win.exe release/win/FabrikaContent/
+          Copy-Item -Recurse app/dist release/win/FabrikaContent/app
+          Copy-Item -Recurse migrations release/win/FabrikaContent/
+          Copy-Item version.txt release/win/FabrikaContent/
+          Copy-Item installers/windows/start.bat release/win/FabrikaContent/
+          Copy-Item installers/windows/install-shortcut.ps1 release/win/FabrikaContent/
+          Compress-Archive -Path release/win/FabrikaContent -DestinationPath releases/FabrikaContent-${VERSION}-windows.zip
       - uses: actions/upload-artifact@v4
         with:
           name: zip-windows
