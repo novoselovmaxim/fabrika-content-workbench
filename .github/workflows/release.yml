@@ -76,8 +76,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - run: npm cache clean --force
-      - run: npm install --no-cache
+      - name: Update node-gyp for VS 2025
+        run: npm install -g node-gyp@latest
+      - run: npm install
       - run: cd app && npm run build
       - run: cd server && npm run build
       - run: npm install -g @yao-pkg/pkg
