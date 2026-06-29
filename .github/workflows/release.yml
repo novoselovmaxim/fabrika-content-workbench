@@ -97,7 +97,7 @@ jobs:
           path: releases/FabrikaContent-*.zip
 
   create-release:
-    needs: [build-macos-arm64, build-macos-x64, build-windows]
+    needs: [build-macos-arm64, build-windows]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
