@@ -77,6 +77,7 @@ jobs:
       - run: npm install
       - run: cd app && npm run build
       - run: cd server && npm run build
+      - run: npm install -g @yao-pkg/pkg
       - run: cd server && npm run pkg:win
       - name: Package
         shell: pwsh
