@@ -13,6 +13,8 @@ export interface LicenseInfo {
 }
 
 export function getLicense(): LicenseInfo {
+  // В dev режиме всегда активна
+  if (isDev) return { status: "active", planName: "Development" };
   const row = db.select().from(license).where(eq(license.id, "singleton")).get();
   if (!row) return { status: "inactive" };
   return {
@@ -86,7 +88,6 @@ export async function checkLicenseOnline(): Promise<void> {
 
 const FREE_PATHS = ["/api/license", "/api/health", "/api/version"];
 
-// В dev режиме лицензия не требуется
 const isDev = !process.env.PKG_EXECPATH && !process.env.NODE_ENV;
 
 export function requireLicense(req: any, res: any, next: any): void {
