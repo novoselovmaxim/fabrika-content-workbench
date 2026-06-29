@@ -10,19 +10,21 @@
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx database/seeds/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "pkg:macos": "pkg dist/index.js --target node22-macos-x64 --output ../dist-bin/fabrika-server-macos",
-    "pkg:macos-arm": "pkg dist/index.js --target node22-macos-arm64 --output ../dist-bin/fabrika-server-macos-arm",
-    "pkg:win": "pkg dist/index.js --target node22-win-x64 --output ../dist-bin/fabrika-server-win.exe"
+    "pkg:macos": "pkg dist/index.js --target node22-macos-x64 --output ../dist-bin/fabrika-server-macos --public-packages drizzle-orm",
+    "pkg:macos-arm": "pkg dist/index.js --target node22-macos-arm64 --output ../dist-bin/fabrika-server-macos-arm --public-packages drizzle-orm",
+    "pkg:win": "pkg dist/index.js --target node22-win-x64 --output ../dist-bin/fabrika-server-win.exe --public-packages drizzle-orm"
   },
   "pkg": {
     "assets": [
       "../migrations/**",
       "../content/**",
       "node_modules/better-sqlite3/build/**",
-      "node_modules/jimp/**"
+      "node_modules/jimp/**",
+      "node_modules/drizzle-orm/package.json"
     ],
     "scripts": [
-      "dist/**/*.js"
+      "dist/**/*.js",
+      "node_modules/drizzle-orm/**/*.cjs"
     ]
   },
   "dependencies": {
