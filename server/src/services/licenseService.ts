@@ -2,7 +2,7 @@ import { db } from "../db.js";
 import { license } from "../schema.js";
 import { eq } from "drizzle-orm";
 
-const LICENSE_SERVER = "https://license.yourdomain.ru";
+const LICENSE_SERVER = "http://80.87.111.142:4000";
 
 export interface LicenseInfo {
   status: "active" | "inactive" | "expired" | "invalid";
