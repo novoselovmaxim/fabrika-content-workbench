@@ -1,9 +1,6 @@
 import os from "os";
 import path from "path";
 import fs from "fs";
-import { fileURLToPath } from "url";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Dev: __dirname = .../server/src  (tsx)
 // Prod (node dist): __dirname = .../server/dist
