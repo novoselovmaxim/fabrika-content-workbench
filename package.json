@@ -1,0 +1,18 @@
+{
+  "name": "fabrika-content-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Фабрика Контента — редакторская платформа для управления контентом",
+  "workspaces": [
+    "server",
+    "app"
+  ],
+  "scripts": {
+    "dev": "concurrently -n server,app -c blue,green \"npm run dev -w server\" \"npm run dev -w app\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.3.0"
+  }
+}

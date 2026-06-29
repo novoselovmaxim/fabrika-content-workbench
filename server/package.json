@@ -1,0 +1,52 @@
+{
+  "name": "fabrika-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:migrate": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:seed": "tsx database/seeds/seed.ts",
+    "db:studio": "drizzle-kit studio",
+    "pkg:macos": "pkg dist/index.js --target node20-macos-x64 --output ../dist-bin/fabrika-server-macos --assets '../migrations/**,../content/**'",
+    "pkg:macos-arm": "pkg dist/index.js --target node20-macos-arm64 --output ../dist-bin/fabrika-server-macos-arm --assets '../migrations/**,../content/**'",
+    "pkg:win": "pkg dist/index.js --target node20-win-x64 --output ../dist-bin/fabrika-server-win.exe --assets '../migrations/**,../content/**'"
+  },
+  "pkg": {
+    "assets": [
+      "../migrations/**",
+      "../content/**",
+      "node_modules/better-sqlite3/build/**",
+      "node_modules/jimp/**"
+    ],
+    "scripts": [
+      "dist/**/*.js"
+    ]
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "cors": "^2.8.5",
+    "drizzle-kit": "^0.30.0",
+    "drizzle-orm": "^0.41.0",
+    "express": "^5.1.0",
+    "jimp": "^1.6.1",
+    "mammoth": "^1.12.0",
+    "multer": "^2.0.0",
+    "pdf-parse": "^2.4.5",
+    "turndown": "^7.2.4",
+    "uuid": "^11.1.0",
+    "xlsx": "^0.18.5",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/multer": "^1.4.12",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.19.0"
+  }
+}

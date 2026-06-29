@@ -1,0 +1,246 @@
+{
+  "app/src/App.tsx": {
+    "mtime": 1781854539387.2302,
+    "hash": "3d472bc5ca5707c2158c7b22cbc90ab4"
+  },
+  "app/src/components/ChatPanel.tsx": {
+    "mtime": 1781768603756.8867,
+    "hash": "90956f4ab6865066157c13550f3d754a"
+  },
+  "app/src/components/GeneratePanel.tsx": {
+    "mtime": 1781786220762.438,
+    "hash": "2aad244a7c3fca2e6e3ad79073d56d59"
+  },
+  "app/src/components/PublicationTab.tsx": {
+    "mtime": 1781806144583.719,
+    "hash": "cd67dd33f5d4d34d96302ab103e0f1e3"
+  },
+  "app/src/components/content-tabs/CarouselTab.tsx": {
+    "mtime": 1781854612067.488,
+    "hash": "6ffd653c54219e81b55a5a2467c128d4"
+  },
+  "app/src/components/content-tabs/PostTab.tsx": {
+    "mtime": 1781854616406.0757,
+    "hash": "c46d3bc5175620a917e18b3a2270c902"
+  },
+  "app/src/components/content-tabs/ReelTab.tsx": {
+    "mtime": 1781787686925.009,
+    "hash": "f04be16d2f3ffa65aaf512d97c30bc8e"
+  },
+  "app/src/components/content-tabs/StoriesTab.tsx": {
+    "mtime": 1781854620788.0903,
+    "hash": "edfb4bbedc7938789ddafec80a10c855"
+  },
+  "app/src/lib/api.ts": {
+    "mtime": 1781858234555.5347,
+    "hash": "2f09391a9e10fbdc1d0ce630c636c871"
+  },
+  "app/src/main.tsx": {
+    "mtime": 1781615733534.7312,
+    "hash": "4722067a6cba9f0cc47254aa9c4cbb92"
+  },
+  "app/src/pages/AnalyticsPage.tsx": {
+    "mtime": 1781784402702.6213,
+    "hash": "38577aa4f89363f93de694dea9e2fb12"
+  },
+  "app/src/pages/AssetsPage.tsx": {
+    "mtime": 1781784403156.624,
+    "hash": "311c2cceda73451a170a8918b97f1304"
+  },
+  "app/src/pages/CalendarPage.tsx": {
+    "mtime": 1781784401293.8076,
+    "hash": "f6fa849af783747d7421b9e7387cb4c2"
+  },
+  "app/src/pages/Dashboard.tsx": {
+    "mtime": 1781784400839.7014,
+    "hash": "599e76fd698b1d6e50c72d0449b758bb"
+  },
+  "app/src/pages/PipelineView.tsx": {
+    "mtime": 1781616838063.1802,
+    "hash": "d9357750bb9c32dbe31cecef836df309"
+  },
+  "app/src/pages/PostCardPage.tsx": {
+    "mtime": 1781809523254.8677,
+    "hash": "d337d7575c2773e0a32231f7e0f31d75"
+  },
+  "app/src/pages/QueuePage.tsx": {
+    "mtime": 1781784402254.2925,
+    "hash": "45e15599ad98183bdbc45be3b09ef982"
+  },
+  "app/src/pages/SettingsPage.tsx": {
+    "mtime": 1781854606301.407,
+    "hash": "3ac94063542265c489bed8283ebe95bf"
+  },
+  "app/src/pages/StrategyPage.tsx": {
+    "mtime": 1781857227462.923,
+    "hash": "6f40f38f5cd8b86507b8bf82a50d08de"
+  },
+  "app/src/pages/TopicsPage.tsx": {
+    "mtime": 1781784401798.1958,
+    "hash": "37e3ccb9341215911032b63f945d048d"
+  },
+  "app/vite.config.ts": {
+    "mtime": 1781795009595.279,
+    "hash": "77b204004ba14f430197349546c17af0"
+  },
+  "database/seeds/seed.ts": {
+    "mtime": 1781615194523.0425,
+    "hash": "e3a8386e68ab1d22b0e23b35bb523db8"
+  },
+  "server/drizzle.config.ts": {
+    "mtime": 1781614363249.578,
+    "hash": "6317e14857dd97add5d5abf5025a676e"
+  },
+  "server/src/api/assets.ts": {
+    "mtime": 1781817986034.4968,
+    "hash": "9aebcbffc603f01d87f9db6ef2d51f6a"
+  },
+  "server/src/api/chat.ts": {
+    "mtime": 1781858222463.2007,
+    "hash": "bb59ebd728001613d8c18042aa46e85f"
+  },
+  "server/src/api/contentTypes.ts": {
+    "mtime": 1781615400367.9102,
+    "hash": "a221e16cf9804e575ca1ec0ec32e5915"
+  },
+  "server/src/api/drafts.ts": {
+    "mtime": 1781615410852.5776,
+    "hash": "70947f6c244f9bcebb264214789b7c1f"
+  },
+  "server/src/api/generate.ts": {
+    "mtime": 1781854457564.3538,
+    "hash": "52a640ff9a7a77e6a011290fdfd1c36c"
+  },
+  "server/src/api/instagram.ts": {
+    "mtime": 1781618347515.3054,
+    "hash": "1b4aa44d0259cd9293f0f1db55123def"
+  },
+  "server/src/api/pipeline.ts": {
+    "mtime": 1781615420562.092,
+    "hash": "09cb9cc34b3d11ed87f514d0793211e6"
+  },
+  "server/src/api/platforms.ts": {
+    "mtime": 1781705827634.0154,
+    "hash": "369eb2a8b778e1fb230b4f6eb96cf471"
+  },
+  "server/src/api/posts.ts": {
+    "mtime": 1781854520122.4968,
+    "hash": "8bac928514c5dd3f1c934b7f671d32c6"
+  },
+  "server/src/api/projects.ts": {
+    "mtime": 1781858229237.9517,
+    "hash": "0b87dcbc10d4e608d3285e201e99ef11"
+  },
+  "server/src/api/rubrics.ts": {
+    "mtime": 1781781021514.2876,
+    "hash": "b597803e6724f6a53e3b34f020e751d8"
+  },
+  "server/src/api/settings.ts": {
+    "mtime": 1781763641750.361,
+    "hash": "4a86f0150f69de35ccc3db3531ce1c1b"
+  },
+  "server/src/api/strategy.ts": {
+    "mtime": 1781769302158.4705,
+    "hash": "0043ed1773ba04609fa31702497bd62b"
+  },
+  "server/src/api/topics.ts": {
+    "mtime": 1781781025894.5085,
+    "hash": "d4b4c04ea1e24be00c649288b36a15f8"
+  },
+  "server/src/db.ts": {
+    "mtime": 1781614701473.0388,
+    "hash": "d4dd005aac61df166c1497eda4026aad"
+  },
+  "server/src/index.ts": {
+    "mtime": 1781854466382.9023,
+    "hash": "87d22fd29d4f139feeb7375e4a7fb864"
+  },
+  "server/src/integrations/metaInstagram.ts": {
+    "mtime": 1781618175764.325,
+    "hash": "978ca865a5a2a6333d6be4b8c5808f39"
+  },
+  "server/src/schema.ts": {
+    "mtime": 1781854388937.0093,
+    "hash": "460cc29796879f8b9b99bb25420118da"
+  },
+  "server/src/services/aiGateway.ts": {
+    "mtime": 1781856836634.5073,
+    "hash": "10c9421e4cd2f230a92f92f2056eeba5"
+  },
+  "server/src/types/mammoth.d.ts": {
+    "mtime": 1781767672053.2856,
+    "hash": "c31d8ad53eb31116789347dd8ab652ab"
+  },
+  "app/index.html": {
+    "mtime": 1781615732217.0579,
+    "hash": "423dabb1da82c6e66e5cc18213cd3dd2"
+  },
+  "server/assets/uploads/48a2dda7-0feb-4d53-9be0-2ae4170e7dc5.png": {
+    "mtime": 1781792480454.4875,
+    "hash": "21e7cabdbbd1eb2be32f52579a73af76"
+  },
+  "server/assets/uploads/71dc0ef4-35cb-42c7-8620-ae4c8bb5515c.png": {
+    "mtime": 1781792764104.2988,
+    "hash": "544a2ad347dda9443dbf7c79c12ab03f"
+  },
+  "server/assets/uploads/602aed9f-7ee6-49b1-ad84-03ed0d6840be.png": {
+    "mtime": 1781799497390.7834,
+    "hash": "5c0270c04bb95a99337e620a9b28112a"
+  },
+  "server/assets/uploads/composed_ef7374fe-0f43-43b2-99d2-e7ecb719f16c.png": {
+    "mtime": 1781806180630.415,
+    "hash": "2cf3a3d4359cff66e2f299acd94947c5"
+  },
+  "server/assets/uploads/08d6c49b-0dcb-4532-81c0-49f7f84fb985.png": {
+    "mtime": 1781807720571.05,
+    "hash": "0a8960ced34fed178fd5d46050f5c7eb"
+  },
+  "server/assets/uploads/composed_6806bfcd-8159-44ad-a305-23120af05218.png": {
+    "mtime": 1781807720787.0522,
+    "hash": "78a51572a44bfcf9fcdb4d66d1083333"
+  },
+  "server/assets/uploads/cf8bdf69-e52a-4804-9fb4-65af969ca970.png": {
+    "mtime": 1781807933798.6074,
+    "hash": "90f699fc1052ea0bc9d72de80e37d205"
+  },
+  "server/assets/uploads/composed_22cf4d9e-aa2d-4b79-97db-5f095675f66e.png": {
+    "mtime": 1781807934035.4023,
+    "hash": "3eec5898a5c01b1178da5df84b4e2a75"
+  },
+  "server/assets/uploads/ce33aec6-f535-4f29-bf2b-4141377dc0b4.png": {
+    "mtime": 1781815915685.3206,
+    "hash": "681adcb9cbb5f7706d1ac0387da10245"
+  },
+  "server/assets/uploads/composed_170c0cea-04e5-4cb8-bbfe-e225e9ecd475.png": {
+    "mtime": 1781815915894.662,
+    "hash": "e1cf5e49a07ea2c785c6ae2fa95a09b1"
+  },
+  "app/src/components/BrandInterview.tsx": {
+    "mtime": 1781856875179.5708,
+    "hash": "326bd45b47473d6e78f67e75eee1da81"
+  },
+  "app/src/components/KnowledgeIndicator.tsx": {
+    "mtime": 1781854576195.9465,
+    "hash": "fb1d10038a378e83161b585b991e0639"
+  },
+  "app/src/pages/BrandStylesPage.tsx": {
+    "mtime": 1781858269192.079,
+    "hash": "5ae9a20aa3c30166270f3ac99db75b91"
+  },
+  "app/src/pages/KnowledgeBase.tsx": {
+    "mtime": 1781854571888.3865,
+    "hash": "7110e3df493c47d9115c2b9c27ad5a22"
+  },
+  "server/src/api/knowledge.ts": {
+    "mtime": 1781856858429.3594,
+    "hash": "bf8ee91bcb7a0ec4df3427711714da23"
+  },
+  "server/assets/uploads/bb886a35-3296-4573-b5cc-0f01110fae9a.png": {
+    "mtime": 1781823272544.7358,
+    "hash": "7f7bdaf02e9ca949655e19d4c08aa950"
+  },
+  "server/assets/uploads/composed_49160820-a9ba-4d71-bff3-ef36359ea999.png": {
+    "mtime": 1781823272820.677,
+    "hash": "8b249e27ad7bb0a209602d32ec4413d5"
+  }
+}

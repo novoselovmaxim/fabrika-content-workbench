@@ -1,0 +1,47 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build frontend
+        run: cd app && npm run build
+
+      - name: Build server TypeScript
+        run: cd server && npm run build
+
+      - name: Install pkg
+        run: npm install -g pkg
+
+      - name: Build binaries
+        run: |
+          cd server
+          npm run pkg:macos
+          npm run pkg:macos-arm
+          npm run pkg:win
+
+      - name: Package releases
+        run: bash scripts/build-release.sh
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: releases/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

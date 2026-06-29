@@ -1,0 +1,1987 @@
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api } from "../lib/api";
+import { getStoredProjectId, setStoredProjectId } from "../lib/project";
+import { PLATFORM_OPTIONS, PLATFORM_COLORS } from "../lib/constants";
+import { useNavigate } from "react-router-dom";
+import BrandInterview from "../components/BrandInterview";
+
+type OnboardingStepType =
+  | "scenario"
+  | "materials"
+  | "competitors"
+  | "audience"
+  | "hant"
+  | "value_prop"
+  | "products"
+  | "platforms"
+  | "complete";
+
+const STEPS: { key: OnboardingStepType; label: string; icon: string }[] = [
+  { key: "scenario", label: "Сценарий", icon: "🎯" },
+  { key: "materials", label: "Материалы", icon: "📁" },
+  { key: "competitors", label: "Конкуренты", icon: "🔍" },
+  { key: "audience", label: "ЦА", icon: "👥" },
+  { key: "hant", label: "Лестница Ханта", icon: "🪜" },
+  { key: "value_prop", label: "Ценность", icon: "💎" },
+  { key: "products", label: "Продукты", icon: "📦" },
+  { key: "platforms", label: "Площадки", icon: "📡" },
+  { key: "complete", label: "Итог", icon: "✅" },
+];
+
+const HANT_STAGES = [
+  { stage: 1, label: "Не знает о проблеме", temperature: "cold" },
+  { stage: 2, label: "Осознаёт, ничего не делает", temperature: "cold" },
+  { stage: 3, label: "Ищет решение", temperature: "warm" },
+  { stage: 4, label: "Выбирает среди решений", temperature: "warm" },
+  { stage: 5, label: "Выбирает поставщика", temperature: "warm" },
+  { stage: 6, label: "Сомневается в себе", temperature: "hot" },
+  { stage: 7, label: "Пробный период", temperature: "hot" },
+  { stage: 8, label: "Оплата и пользование", temperature: "retained" },
+  { stage: 9, label: "Повторные взаимодействия", temperature: "retained" },
+];
+
+const SAVE_KEY = "unpack-wizard-state";
+
+export default function UnpackPage() {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [projectId, setProjectId] = useState<string | null>(() => {
+    try { return sessionStorage.getItem(`${SAVE_KEY}_projectId`) || getStoredProjectId() || null; } catch { return null; }
+  });
+  const [stepIdx, setStepIdx] = useState(() => {
+    try { return parseInt(sessionStorage.getItem(`${SAVE_KEY}_step`) || "0"); } catch { return 0; }
+  });
+  const [scenario, setScenario] = useState<string | null>(() => {
+    try { return sessionStorage.getItem(`${SAVE_KEY}_scenario`) || null; } catch { return null; }
+  });
+  const [error, setError] = useState<string | null>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (error) errorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }); }, [error]);
+
+  const step = STEPS[stepIdx]?.key || "scenario";
+
+  useEffect(() => {
+    try { sessionStorage.setItem(`${SAVE_KEY}_step`, String(stepIdx)); } catch {}
+  }, [stepIdx]);
+  useEffect(() => {
+    if (scenario) try { sessionStorage.setItem(`${SAVE_KEY}_scenario`, scenario); } catch {}
+  }, [scenario]);
+
+  const { data: allProjects } = useQuery({ queryKey: ["projects"], queryFn: api.projects.list });
+
+  const createProject = useMutation({
+    mutationFn: () => api.projects.create({ name: "Новый проект" }),
+    onSuccess: (project) => {
+      setProjectId(project.id);
+      setStoredProjectId(project.id);
+      try { sessionStorage.setItem(`${SAVE_KEY}_projectId`, JSON.stringify(project.id)); } catch {}
+    },
+  });
+
+  const ensureProject = async (): Promise<string> => {
+    if (projectId) {
+      if (allProjects) {
+        if (allProjects.some((p: any) => p.id === projectId)) return projectId;
+        setProjectId(null);
+      } else {
+        try { const res = await fetch(`/api/projects/${projectId}`); if (res.ok) return projectId; } catch {}
+        setProjectId(null);
+      }
+    }
+    const project = await createProject.mutateAsync();
+    return project.id;
+  };
+
+  const nextStep = () => {
+    if (stepIdx < STEPS.length - 1) setStepIdx(stepIdx + 1);
+  };
+
+  const prevStep = () => {
+    if (stepIdx > 0) setStepIdx(stepIdx - 1);
+  };
+
+  const goToStep = (idx: number) => {
+    if (idx >= 0 && idx < STEPS.length) setStepIdx(idx);
+  };
+
+  // ── Materials state ──
+  const [unpackTab, setUnpackTab] = useState("files");
+  const [unpackLoading, setUnpackLoading] = useState(false);
+  const [unpackKnowledgeCount, setUnpackKnowledgeCount] = useState(0);
+  const [dragOver, setDragOver] = useState(false);
+  const [noteTitle, setNoteTitle] = useState("");
+  const [noteContent, setNoteContent] = useState("");
+  const [linkTitle, setLinkTitle] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [generatedKeywords, setGeneratedKeywords] = useState<any[]>([]);
+  const [keywordsLoading, setKeywordsLoading] = useState(false);
+  const [keywordsEditMode, setKeywordsEditMode] = useState(false);
+  const [keywordsEdits, setKeywordsEdits] = useState<Record<string, string>>({});
+  const [keywordsSaving, setKeywordsSaving] = useState(false);
+
+  const createKnowledge = useMutation({
+    mutationFn: async (data: any) => {
+      const pid = await ensureProject();
+      return api.knowledge.create({ ...data, projectId: pid });
+    },
+    onSuccess: () => setUnpackKnowledgeCount((c) => c + 1),
+  });
+
+  const uploadFile = useMutation({
+    mutationFn: async (file: File) => {
+      const pid = await ensureProject();
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("projectId", pid);
+      return api.knowledge.upload(fd);
+    },
+    onSuccess: () => setUnpackKnowledgeCount((c) => c + 1),
+  });
+
+  const handleGenerateKeywords = async () => {
+    setKeywordsLoading(true);
+    try {
+      const pid = await ensureProject();
+      const res = await fetch(`/api/onboarding/${pid}/generate-keywords`, { method: "POST" });
+      if (!res.ok) throw new Error("Keyword generation failed");
+      const data = await res.json();
+      setGeneratedKeywords(data);
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+    } catch (err: any) {
+      setError(err?.message || "Ошибка генерации ключевых слов");
+    } finally {
+      setKeywordsLoading(false);
+    }
+  };
+
+  const handleSaveKeywords = async () => {
+    setKeywordsSaving(true);
+    try {
+      const pid = await ensureProject();
+      const items: { keyword: string; source: string }[] = [];
+      for (const [group, text] of Object.entries(keywordsEdits)) {
+        for (const kw of text.split(",").map((s) => s.trim()).filter(Boolean)) {
+          items.push({ keyword: kw, source: `manual:${group}` });
+        }
+      }
+      await api.keywords.createBulk(pid, items, true);
+      setGeneratedKeywords(items.map((item) => ({
+        keyword: item.keyword,
+        group: item.source.replace("manual:", ""),
+        source: item.source,
+      })));
+      setKeywordsEditMode(false);
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+    } catch (err: any) {
+      setError(err?.message || "Ошибка сохранения ключевых слов");
+    } finally {
+      setKeywordsSaving(false);
+    }
+  };
+
+  // ── Competitors state ──
+  const [competitorUrls, setCompetitorUrls] = useState<string[]>([""]);
+  const [competitorKeywordsText, setCompetitorKeywordsText] = useState("");
+  const [competitorResult, setCompetitorResult] = useState<any>(null);
+  const [competitorLoading, setCompetitorLoading] = useState(false);
+  const [competitorEdit, setCompetitorEdit] = useState(false);
+  const [competitorShowPrompt, setCompetitorShowPrompt] = useState(false);
+  const [competitorPromptEdit, setCompetitorPromptEdit] = useState("");
+  const [competitorLastPrompt, setCompetitorLastPrompt] = useState("");
+  const [savedCompetitors, setSavedCompetitors] = useState<any[]>([]);
+  const [savedCompetitorsLoading, setSavedCompetitorsLoading] = useState(false);
+
+  // Auto-fill keywords textarea from generatedKeywords when entering competitors step
+  const prevStepRef = useRef(step);
+  useEffect(() => {
+    if (step === "competitors" && prevStepRef.current !== "competitors" && !competitorKeywordsText && generatedKeywords.length > 0) {
+      const allKws = generatedKeywords.map((kw: any) => kw.keyword).filter(Boolean);
+      setCompetitorKeywordsText([...new Set(allKws)].join(", "));
+    }
+    prevStepRef.current = step;
+  }, [step, generatedKeywords]);
+
+  // Load latest competitor result and accumulated saved competitors when entering competitors step
+  useEffect(() => {
+    if (step === "competitors" && projectId) {
+      if (!competitorResult) {
+        api.competitors.getLatest(projectId).then((data) => {
+          if (data) setCompetitorResult(data);
+        }).catch(() => {});
+      }
+      // Load all accumulated saved competitors
+      setSavedCompetitorsLoading(true);
+      api.competitors.getSaved(projectId).then((data) => {
+        setSavedCompetitors(data || []);
+        setSavedCompetitorsLoading(false);
+      }).catch(() => {
+        setSavedCompetitors([]);
+        setSavedCompetitorsLoading(false);
+      });
+    }
+  }, [step, projectId]);
+
+  const analyzeCompetitors = useMutation({
+    mutationFn: async () => {
+      const pid = await ensureProject();
+      const urls = competitorUrls.filter((u) => u.trim());
+      const kws = competitorKeywordsText.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean);
+      return api.competitors.search(pid, { urls, keywords: kws });
+    },
+    onSuccess: (data) => {
+      setCompetitorResult(data);
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+      // Refresh saved competitors list after new search
+      if (projectId) {
+        api.competitors.getSaved(projectId).then((savedData) => {
+          setSavedCompetitors(savedData || []);
+        }).catch(() => {});
+      }
+    },
+    onError: (err: any) => setError(err?.message || "Competitor analysis failed"),
+  });
+
+  // ── Audience state (deep analysis) ──
+  const [audienceGeneratedPrompt, setAudienceGeneratedPrompt] = useState("");
+  const [audienceEditedPrompt, setAudienceEditedPrompt] = useState("");
+  const [audienceResult, setAudienceResult] = useState<any>(null);
+  const [audienceLoading, setAudienceLoading] = useState(false);
+  const [audienceShowPrompt, setAudienceShowPrompt] = useState(false);
+  const [audienceLastPrompt, setAudienceLastPrompt] = useState("");
+  const [audienceEditing, setAudienceEditing] = useState<{ gi: number; field: string } | null>(null);
+  const [audienceEditBuffer, setAudienceEditBuffer] = useState("");
+  const [audienceSaving, setAudienceSaving] = useState(false);
+
+  const loadAudiencePrompt = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const data = await api.onboarding.getAudiencePrompt(projectId);
+      setAudienceGeneratedPrompt(data.prompt);
+      setAudienceEditedPrompt(data.prompt);
+    } catch (err: any) {
+      setError(err?.message || "Failed to load audience prompt");
+    }
+  }, [projectId]);
+
+  // Load prompt when entering audience step
+  useEffect(() => {
+    if (step === "audience" && projectId && !audienceGeneratedPrompt) {
+      loadAudiencePrompt();
+    }
+  }, [step, projectId, audienceGeneratedPrompt, loadAudiencePrompt]);
+
+  const generateAudienceDeep = useMutation({
+    mutationFn: async () => {
+      const pid = await ensureProject();
+      const override = audienceEditedPrompt !== audienceGeneratedPrompt ? audienceEditedPrompt : undefined;
+      return api.onboarding.generateAudienceDeep(pid, override);
+    },
+    onSuccess: (data) => {
+      if (data.promptUsed) setAudienceLastPrompt(data.promptUsed);
+      setAudienceResult(data.result || data);
+      setAudienceEditing(null);
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+    },
+    onError: (err: any) => setError(err?.message || "Deep audience analysis failed"),
+  });
+
+  const saveAudienceResult = useMutation({
+    mutationFn: async () => {
+      const pid = await ensureProject();
+      return api.onboarding.saveAudience(pid, audienceResult);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+    },
+    onError: (err: any) => setError(err?.message || "Save failed"),
+  });
+
+  const startEditing = (gi: number, field: string, currentValue: string) => {
+    setAudienceEditing({ gi, field });
+    setAudienceEditBuffer(currentValue);
+  };
+
+  const cancelEditing = () => {
+    setAudienceEditing(null);
+    setAudienceEditBuffer("");
+  };
+
+  const confirmEditing = () => {
+    if (!audienceEditing) return;
+    const { gi, field } = audienceEditing;
+    setAudienceResult((prev: any) => {
+      if (!prev?.groups) return prev;
+      const groups = [...prev.groups];
+      const group = { ...groups[gi] };
+      // Try to parse as JSON array if value looks like one
+      const trimmed = audienceEditBuffer.trim();
+      if (trimmed.startsWith("[") || trimmed.startsWith("{")) {
+        try { group[field] = JSON.parse(trimmed); } catch { group[field] = trimmed; }
+      } else if (field === "socialFactors") {
+        try { group[field] = JSON.parse(trimmed); } catch { group[field] = trimmed; }
+      } else {
+        group[field] = trimmed;
+      }
+      groups[gi] = group;
+      return { ...prev, groups };
+    });
+    setAudienceEditing(null);
+    setAudienceEditBuffer("");
+  };
+
+  const renderEditableField = (gi: number, field: string, label: string, value: any) => {
+    const isEditing = audienceEditing?.gi === gi && audienceEditing?.field === field;
+    const displayValue = Array.isArray(value) ? value.join("\n") : typeof value === "object" ? JSON.stringify(value, null, 2) : String(value || "");
+
+    return (
+      <div style={{ marginBottom: 4 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+          <div style={{ flex: 1 }}>
+            <SectionLabel label={label} />
+            {isEditing ? (
+              <div>
+                <textarea
+                  className="input"
+                  style={{ fontSize: 12, fontFamily: "monospace", width: "100%", minHeight: 60 }}
+                  value={audienceEditBuffer}
+                  onChange={(e) => setAudienceEditBuffer(e.target.value)}
+                  rows={Array.isArray(value) ? Math.max(value.length + 1, 3) : 3}
+                />
+                <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                  <button className="btn btn-primary" style={{ fontSize: 10, padding: "2px 10px" }} onClick={confirmEditing}>✅</button>
+                  <button className="btn btn-ghost" style={{ fontSize: 10, padding: "2px 10px" }} onClick={cancelEditing}>✕</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+                {Array.isArray(value) ? value.map((item: string, j: number) => <div key={j}>• {item}</div>)
+                : typeof value === "object" ? <pre style={{ fontSize: 11, margin: 0, whiteSpace: "pre-wrap" }}>{displayValue}</pre>
+                : <span>{displayValue}</span>}
+              </div>
+            )}
+          </div>
+          {!isEditing && (
+            <button className="btn btn-ghost" style={{ fontSize: 10, padding: "2px 6px", flexShrink: 0 }} onClick={() => startEditing(gi, field, displayValue)}>✏️</button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ── Hant state (multi-group) ──
+  const [hantData, setHantData] = useState<any[]>([]);
+  const [hantActiveGroup, setHantActiveGroup] = useState(0);
+  const [hantEditingStage, setHantEditingStage] = useState<{ ji: number; si: number; field: string } | null>(null);
+  const [hantEditBuffer, setHantEditBuffer] = useState("");
+  const [hantSaving, setHantSaving] = useState(false);
+
+  const generateHant = useMutation({
+    mutationFn: async () => {
+      const pid = await ensureProject();
+      return api.onboarding.generateHantMulti(pid);
+    },
+    onSuccess: (data) => {
+      setHantData(Array.isArray(data) ? data : []);
+      setHantActiveGroup(0);
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+    },
+    onError: (err: any) => setError(err?.message || "Hant analysis failed"),
+  });
+
+  const saveHantResult = useMutation({
+    mutationFn: async () => {
+      const pid = await ensureProject();
+      return api.onboarding.saveHant(pid, hantData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+    },
+    onError: (err: any) => setError(err?.message || "Save failed"),
+  });
+
+  const startHantEdit = (ji: number, si: number, field: string, value: string) => {
+    setHantEditingStage({ ji, si, field });
+    setHantEditBuffer(value);
+  };
+
+  const cancelHantEdit = () => {
+    setHantEditingStage(null);
+    setHantEditBuffer("");
+  };
+
+  const confirmHantEdit = () => {
+    if (!hantEditingStage) return;
+    const { ji, si, field } = hantEditingStage;
+    setHantData((prev: any[]) => {
+      const next = [...prev];
+      const journey = { ...next[ji] };
+      if (!journey.stages) return prev;
+      const stages = [...journey.stages];
+      const stage = { ...stages[si] };
+      const trimmed = hantEditBuffer.trim();
+      if (field === "touchpoints") {
+        try { stage[field] = JSON.parse(trimmed); } catch { stage[field] = [trimmed]; }
+      } else {
+        stage[field] = trimmed;
+      }
+      stages[si] = stage;
+      journey.stages = stages;
+      next[ji] = journey;
+      return next;
+    });
+    setHantEditingStage(null);
+    setHantEditBuffer("");
+  };
+
+  const renderHantStageField = (ji: number, si: number, field: string, label: string, value: any) => {
+    const isEditing = hantEditingStage?.ji === ji && hantEditingStage?.si === si && hantEditingStage?.field === field;
+    const displayValue = Array.isArray(value) ? value.join(", ") : String(value || "");
+
+    return (
+      <div style={{ marginBottom: 2 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+          <div style={{ flex: 1 }}>
+            <strong style={{ fontSize: 11 }}>{label}:</strong>
+            {isEditing ? (
+              <div>
+                <textarea
+                  className="input"
+                  style={{ fontSize: 11, fontFamily: "monospace", width: "100%", minHeight: 40 }}
+                  value={hantEditBuffer}
+                  onChange={(e) => setHantEditBuffer(e.target.value)}
+                  rows={2}
+                />
+                <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
+                  <button className="btn btn-primary" style={{ fontSize: 10, padding: "1px 8px" }} onClick={confirmHantEdit}>✅</button>
+                  <button className="btn btn-ghost" style={{ fontSize: 10, padding: "1px 8px" }} onClick={cancelHantEdit}>✕</button>
+                </div>
+              </div>
+            ) : (
+              <span style={{ fontSize: 11 }}>{displayValue}</span>
+            )}
+          </div>
+          {!isEditing && (
+            <button className="btn btn-ghost" style={{ fontSize: 9, padding: "1px 4px", flexShrink: 0 }} onClick={() => startHantEdit(ji, si, field, displayValue)}>✏️</button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ── Value prop state ──
+  const [valuePropResult, setValuePropResult] = useState<any>(null);
+  const [valuePropLoading, setValuePropLoading] = useState(false);
+
+  const generateValueProp = useMutation({
+    mutationFn: async () => {
+      const pid = await ensureProject();
+      const res = await fetch(`/api/onboarding/${pid}/generate-value-prop`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to generate value prop");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setValuePropResult(data);
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+    },
+    onError: (err: any) => setError(err?.message || "Value prop generation failed"),
+  });
+
+  // ── Products state ──
+  const [productsResult, setProductsResult] = useState<any[]>([]);
+  const [productsDeletedIds, setProductsDeletedIds] = useState<string[]>([]);
+  const [productsSaving, setProductsSaving] = useState(false);
+  const [productsEditing, setProductsEditing] = useState<{ i: number; field: string } | null>(null);
+  const [productsEditBuffer, setProductsEditBuffer] = useState("");
+
+  const generateProducts = useMutation({
+    mutationFn: async () => {
+      const pid = await ensureProject();
+      const res = await fetch(`/api/onboarding/${pid}/generate-products`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to generate products");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setProductsResult((prev) => {
+        const map = new Map(prev.map((p) => [p.id, p]));
+        for (const p of data) map.set(p.id, p);
+        return Array.from(map.values());
+      });
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["products", projectId] });
+    },
+    onError: (err: any) => setError(err?.message || "Product generation failed"),
+  });
+
+  const startProductsEdit = (i: number, field: string, value: string) => {
+    setProductsEditing({ i, field });
+    setProductsEditBuffer(value);
+  };
+
+  const cancelProductsEdit = () => {
+    setProductsEditing(null);
+    setProductsEditBuffer("");
+  };
+
+  const confirmProductsEdit = () => {
+    if (!productsEditing) return;
+    const { i, field } = productsEditing;
+    setProductsResult((prev) => {
+      const next = [...prev];
+      const prod = { ...next[i] };
+      const trimmed = productsEditBuffer.trim();
+      if (field === "pains" || field === "gains") {
+        prod[field] = trimmed.split("\n").map((s) => s.replace(/^[•\-*]\s*/, "").trim()).filter(Boolean);
+      } else {
+        prod[field] = trimmed;
+      }
+      next[i] = prod;
+      return next;
+    });
+    setProductsEditing(null);
+    setProductsEditBuffer("");
+  };
+
+  const addProduct = () => {
+    setProductsResult((prev) => [...prev, { id: undefined, name: "", description: "", audienceDescription: "", pains: [], gains: [] }]);
+  };
+
+  const deleteProduct = (i: number) => {
+    const prod = productsResult[i];
+    if (prod.id) setProductsDeletedIds((prev) => [...prev, prod.id]);
+    setProductsResult((prev) => prev.filter((_, idx) => idx !== i));
+  };
+
+  const saveProducts = async () => {
+    const pid = await ensureProject();
+    setProductsSaving(true);
+    try {
+      for (const id of productsDeletedIds) {
+        await api.products.delete(id);
+      }
+      const newIds: Record<number, string> = {};
+      for (let idx = 0; idx < productsResult.length; idx++) {
+        const prod = productsResult[idx];
+        const body = {
+          projectId: pid,
+          name: prod.name,
+          description: prod.description || "",
+          values: JSON.stringify({
+            pains: prod.pains || [],
+            gains: prod.gains || [],
+            audienceDescription: prod.audienceDescription || "",
+          }),
+        };
+        if (prod.id) {
+          await api.products.update(prod.id, body);
+        } else {
+          const created = await api.products.create(body);
+          newIds[idx] = created.id;
+        }
+      }
+      if (Object.keys(newIds).length > 0) {
+        setProductsResult((prev) => prev.map((p, i) => (newIds[i] ? { ...p, id: newIds[i] } : p)));
+      }
+      setProductsDeletedIds([]);
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["products", projectId] });
+    } catch (err: any) {
+      setError(err?.message || "Save failed");
+    } finally {
+      setProductsSaving(false);
+    }
+  };
+
+  // ── Platforms state ──
+  const [platformsResult, setPlatformsResult] = useState<any[]>([]);
+  const [platformsDeletedIds, setPlatformsDeletedIds] = useState<string[]>([]);
+  const [platformsSaving, setPlatformsSaving] = useState(false);
+  const [platformsEditing, setPlatformsEditing] = useState<{ i: number; field: string } | null>(null);
+  const [platformsEditBuffer, setPlatformsEditBuffer] = useState("");
+  const [showAddPlatformForProduct, setShowAddPlatformForProduct] = useState<string | null>(null);
+
+  const suggestPlatforms = useMutation({
+      mutationFn: async () => {
+        const pid = await ensureProject();
+        const res = await fetch(`/api/onboarding/${pid}/suggest-platforms`, { method: "POST" });
+        if (!res.ok) {
+          let msg = "Failed to suggest platforms";
+          try { const err = await res.json(); if (err.error) msg = err.error; } catch {}
+          throw new Error(msg);
+        }
+        return res.json();
+      },
+    onSuccess: (data) => {
+      setPlatformsResult((prev) => {
+        const manual = prev.filter((p) => (p.suggested ?? 0) !== 1);
+        return [...manual, ...data];
+      });
+      setPlatformsDeletedIds([]);
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["platforms", projectId] });
+    },
+    onError: (err: any) => setError(err?.message || "Platform suggestion failed"),
+  });
+
+  const startPlatformsEdit = (i: number, field: string, value: string) => {
+    setPlatformsEditing({ i, field });
+    setPlatformsEditBuffer(value);
+  };
+
+  const cancelPlatformsEdit = () => {
+    setPlatformsEditing(null);
+    setPlatformsEditBuffer("");
+  };
+
+  const confirmPlatformsEdit = () => {
+    if (!platformsEditing) return;
+    const { i, field } = platformsEditing;
+    setPlatformsResult((prev) => {
+      const next = [...prev];
+      if (field === "full") {
+        const lines = platformsEditBuffer.split("\n").map((s) => s.trim()).filter(Boolean);
+        next[i] = { ...next[i], name: lines[0] || next[i].name, description: lines.slice(1).join("\n") || next[i].description };
+      } else {
+        next[i] = { ...next[i], [field]: platformsEditBuffer.trim() };
+      }
+      return next;
+    });
+    setPlatformsEditing(null);
+    setPlatformsEditBuffer("");
+  };
+
+  const addPlatform = (productId: string, type: string) => {
+    const opt = PLATFORM_OPTIONS.find((p) => p.value === type);
+    setPlatformsResult((prev) => [...prev, {
+      id: undefined, productId, type, name: opt?.label || type,
+      description: "Добавлено вручную", priority: 99,
+    }]);
+    setShowAddPlatformForProduct(null);
+  };
+
+  const deletePlatform = (i: number) => {
+    const pl = platformsResult[i];
+    if (pl.id) setPlatformsDeletedIds((prev) => [...prev, pl.id]);
+    setPlatformsResult((prev) => prev.filter((_, idx) => idx !== i));
+  };
+
+  const savePlatforms = async () => {
+    const pid = await ensureProject();
+    setPlatformsSaving(true);
+    try {
+      for (const id of platformsDeletedIds) {
+        try { await api.platforms.delete(id); } catch (e) {}
+      }
+      const newIds: Record<number, string> = {};
+      for (let idx = 0; idx < platformsResult.length; idx++) {
+        const pl = platformsResult[idx];
+        const body: any = {
+          projectId: pid,
+          productId: pl.productId || null,
+          type: pl.type,
+          name: pl.name,
+          suggested: pl.suggested || 0,
+        };
+        if (pl.description) body.config = JSON.stringify({ description: pl.description, priority: pl.priority || 99 });
+        if (pl.id) {
+          try {
+            await api.platforms.update(pl.id, body);
+          } catch (e: any) {
+            if (e.message?.includes("404")) {
+              // If not found, create as new
+              const created = await api.platforms.create(body);
+              newIds[idx] = created.id;
+            } else {
+              throw e;
+            }
+          }
+        } else {
+          const created = await api.platforms.create(body);
+          newIds[idx] = created.id;
+        }
+      }
+      if (Object.keys(newIds).length > 0) {
+        setPlatformsResult((prev) => prev.map((p, i) => (newIds[i] ? { ...p, id: newIds[i] } : p)));
+      }
+      setPlatformsDeletedIds([]);
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["platforms", projectId] });
+    } catch (err: any) {
+      setError(err?.message || "Save failed");
+    } finally {
+      setPlatformsSaving(false);
+    }
+  };
+
+  // ── Real knowledge count from DB ──
+  const { data: knowledgeStats } = useQuery({
+    queryKey: ["knowledge-stats", projectId],
+    queryFn: () => api.knowledge.stats(projectId!),
+    enabled: !!projectId,
+  });
+  const realKnowledgeCount = knowledgeStats?.total ?? 0;
+
+  // ── Saved competitors (for complete tab) ──
+  const { data: savedCompetitorsList } = useQuery({
+    queryKey: ["saved-competitors", projectId],
+    queryFn: () => api.competitors.getSaved(projectId!),
+    enabled: !!projectId,
+  });
+  const savedCompetitorsCount = savedCompetitorsList?.length || 0;
+
+  // ── Onboarding status ──
+  const { data: onboardingStatus } = useQuery({
+    queryKey: ["onboarding-status", projectId],
+    queryFn: () => fetch(`/api/onboarding/${projectId}/status`).then((r) => r.json()),
+    enabled: !!projectId,
+  });
+
+  const initialFillRef = useRef(false);
+  // Helper: normalize hant data — old format (flat stages) → new format (journeys with stages)
+  const normalizeHantData = (data: any): any[] => {
+    if (!Array.isArray(data)) return [];
+    // If first element has a "stages" field → already new format
+    if (data.length > 0 && data[0].stages) return data;
+    // Old format: flat array of stage objects → wrap in one journey
+    if (data.length > 0 && data[0].stage) {
+      return [{ groupName: "Основная ЦА", groupSummary: "Единая целевая аудитория", stages: data }];
+    }
+    return data;
+  };
+
+  // Fill state from existing onboarding steps when status loads
+  useEffect(() => {
+    if (initialFillRef.current || !onboardingStatus?.steps || !projectId) return;
+    initialFillRef.current = true;
+    for (const step of onboardingStatus.steps) {
+      if (!step.aiOutput) continue;
+      try {
+        const data = JSON.parse(step.aiOutput);
+        if (step.stepKey === "materials" && Array.isArray(data)) setGeneratedKeywords(data);
+        if (step.stepKey === "competitors") setCompetitorResult(data);
+        if (step.stepKey === "audience" && data) setAudienceResult(data);
+        if (step.stepKey === "hant" && Array.isArray(data)) setHantData(normalizeHantData(data));
+        if (step.stepKey === "value_prop" && data?.formula) setValuePropResult(data);
+        if (step.stepKey === "products" && Array.isArray(data)) setProductsResult(data);
+        if (step.stepKey === "platforms" && Array.isArray(data)) setPlatformsResult(data);
+      } catch {}
+    }
+    // Also load from legacy project fields
+    api.projects.get(projectId).then((p) => {
+      if (p.valueProp) try { setValuePropResult(JSON.parse(p.valueProp)); } catch {}
+      if (p.customerJourney) try { setHantData(normalizeHantData(JSON.parse(p.customerJourney))); } catch {}
+    }).catch(() => {});
+  }, [onboardingStatus, projectId]);
+
+  // Load products & platforms from API when entering the platforms step
+  useEffect(() => {
+    if (step !== "platforms" || !projectId) return;
+    api.products.listByProject(projectId).then((data) => {
+      if (data?.length > 0) {
+        setProductsResult((prev) => {
+          if (prev.length > 0) return prev;
+          return data.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            audienceDescription: "",
+            pains: [],
+            gains: [],
+          }));
+        });
+      }
+    }).catch(() => {});
+    api.platforms.listByProject(projectId).then((data) => {
+      if (data?.length > 0) {
+        setPlatformsResult((prev) => {
+          if (prev.length > 0) return prev;
+          return data.map((pl: any) => {
+            let description = "";
+            let priority = 99;
+            try {
+              const cfg = JSON.parse(pl.config || "{}");
+              description = cfg.description || "";
+              priority = cfg.priority || pl.ordering || 99;
+            } catch {}
+            return { ...pl, description, priority };
+          });
+        });
+      }
+    }).catch(() => {});
+  }, [step, projectId]);
+
+  const startScenario = useMutation({
+    mutationFn: async (s: string) => {
+      const pid = await ensureProject();
+      const res = await fetch(`/api/onboarding/${pid}/start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scenario: s }),
+      });
+      if (!res.ok) throw new Error("Failed to start onboarding");
+      setScenario(s);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
+      nextStep();
+    },
+  });
+
+  const finishOnboarding = async () => {
+    if (!projectId) return;
+    await api.projects.update(projectId, { onboardingComplete: 1 });
+    navigate("/strategy");
+  };
+
+  const SectionLabel = ({ label }: { label: string }) => (
+    <div style={{ fontWeight: 600, fontSize: 11, color: "var(--dim)", marginBottom: 4, textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</div>
+  );
+
+  const Section = ({ label, items }: { label: string; items: string[] }) => {
+    if (!items || items.length === 0) return null;
+    return (
+      <div>
+        <SectionLabel label={label} />
+        <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+          {items.map((item: string, j: number) => <div key={j}>• {item}</div>)}
+        </div>
+      </div>
+    );
+  };
+
+  const renderCompetitors = (items: any[], label: string) => {
+    if (items.length === 0) return null;
+    return (
+      <div>
+        <div style={{ fontWeight: 600, fontSize: 12, color: "var(--dim)", marginBottom: 6 }}>{label}</div>
+        {items.map((c: any, i: number) => (
+          <div key={i} style={{ padding: 10, background: "var(--bg-hover)", borderRadius: 6, marginBottom: 6 }}>
+            <div style={{ fontWeight: 600, fontSize: 13 }}>{c.name}</div>
+            <div className="text-xs text-dim" style={{ marginTop: 2 }}>
+              {c.positioning && <div><strong>Позиционирование:</strong> {c.positioning}</div>}
+              <div><strong>Сильные стороны:</strong> {Array.isArray(c.strengths) ? c.strengths.join(", ") : c.strengths}</div>
+              <div><strong>Слабые стороны:</strong> {Array.isArray(c.weaknesses) ? c.weaknesses.join(", ") : c.weaknesses}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+      <div className="page-header">
+        <h2>🔍 Фабрика контента</h2>
+        <p>Пошаговая распаковка: от сценария до площадок</p>
+      </div>
+
+      {error && (
+        <div ref={errorRef} style={{ padding: "10px 14px", background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.4)", borderRadius: 6, marginBottom: 16, fontSize: 14, color: "#ef4444", fontWeight: 500 }}>
+          ⚠️ {error}
+          <button className="btn btn-ghost" style={{ marginLeft: 12, fontSize: 12, padding: "2px 8px" }} onClick={() => setError(null)}>✕</button>
+        </div>
+      )}
+
+      {/* Progress bar */}
+      <div>
+        <div className="flex items-center gap-1" style={{ marginBottom: 12, overflowX: "auto", paddingBottom: 4 }}>
+          {STEPS.map((s, i) => (
+            <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+              <button
+                className={`btn ${i === stepIdx ? "btn-primary" : i < stepIdx ? "btn-ghost" : "btn-ghost"}`}
+                onClick={() => goToStep(i)}
+                style={{ fontSize: 11, padding: "4px 8px", opacity: i > stepIdx ? 0.4 : 1, whiteSpace: "nowrap" }}
+              >
+                {s.icon} {s.label}
+              </button>
+              {i < STEPS.length - 1 && <div style={{ width: 10, height: 1, background: "var(--border)" }} />}
+            </div>
+          ))}
+        </div>
+        <div style={{ height: 3, background: "var(--bg-hover)", borderRadius: 2 }}>
+          <div style={{
+            height: "100%", width: `${((stepIdx + 1) / STEPS.length) * 100}%`,
+            background: "var(--accent)", borderRadius: 2, transition: "width 0.3s",
+          }} />
+        </div>
+      </div>
+
+      {/* Step content */}
+      <div className="card" style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+
+        {/* Step: scenario */}
+        {step === "scenario" && (
+          <div>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>🎯 Выберите сценарий</h3>
+            <p className="text-sm text-dim" style={{ marginBottom: 24 }}>
+              Как будем работать с проектом?
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <button
+                className={`btn ${scenario === "existing" ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => startScenario.mutate("existing")}
+                disabled={startScenario.isPending}
+                style={{ padding: 24, height: "auto", flexDirection: "column", gap: 12, textAlign: "center", border: scenario === "existing" ? "2px solid var(--accent)" : "2px solid var(--border)" }}
+              >
+                <span style={{ fontSize: 32 }}>🏢</span>
+                <span style={{ fontWeight: 600 }}>Уже есть продукт</span>
+                <span className="text-xs text-dim">Загрузите материалы, AI распакует бренд из них</span>
+              </button>
+              <button
+                className={`btn ${scenario === "new" ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => startScenario.mutate("new")}
+                disabled={startScenario.isPending}
+                style={{ padding: 24, height: "auto", flexDirection: "column", gap: 12, textAlign: "center", border: scenario === "new" ? "2px solid var(--accent)" : "2px solid var(--border)" }}
+              >
+                <span style={{ fontSize: 32 }}>🚀</span>
+                <span style={{ fontWeight: 600 }}>Создаём новый продукт</span>
+                <span className="text-xs text-dim">Пройдём шаги вместе, AI поможет проработать всё с нуля</span>
+              </button>
+            </div>
+            {startScenario.isPending && (
+              <div className="text-sm text-dim" style={{ textAlign: "center", marginTop: 16 }}>⏳ Создание проекта...</div>
+            )}
+          </div>
+        )}
+
+        {/* Step: materials */}
+        {step === "materials" && (
+          <div>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>📁 Загрузка материалов</h3>
+            <p className="text-sm text-dim" style={{ marginBottom: 16 }}>
+              Загрузите файлы, добавьте заметки и ссылки — AI извлечёт ключевые слова и данные
+            </p>
+
+            <div className="flex gap-2" style={{ marginBottom: 20 }}>
+              {["files", "notes", "interview"].map((t) => (
+                <button key={t} className={`btn ${unpackTab === t ? "btn-primary" : "btn-ghost"}`} style={{ fontSize: 13 }} onClick={() => setUnpackTab(t)}>
+                  {t === "files" ? "📁 Загрузить файлы" : t === "notes" ? "🔗 Ссылки и заметки" : "💬 Интервью с нуля"}
+                </button>
+              ))}
+            </div>
+
+            {unpackTab === "files" && (
+              <div>
+                <div
+                  className="knowledge-dropzone"
+                  style={{ border: dragOver ? "2px dashed var(--accent)" : "2px dashed var(--border)", borderRadius: 8, padding: 32, textAlign: "center", cursor: "pointer", background: dragOver ? "rgba(99,102,241,0.05)" : "transparent" }}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    const files = Array.from(e.dataTransfer.files);
+                    for (const f of files) uploadFile.mutate(f);
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {dragOver ? "📂 Отпустите файлы для загрузки" : "📁 Перетащите файлы сюда или нажмите для выбора"}
+                  <span className="text-xs text-dim" style={{ display: "block", marginTop: 4 }}>Поддерживаются: DOCX, PPTX, XLSX, PDF, HTML, TXT, MD, CSV, JSON</span>
+                </div>
+                <input ref={fileInputRef} type="file" style={{ display: "none" }} multiple accept=".docx,.pptx,.xlsx,.pdf,.html,.htm,.txt,.md,.csv,.json"
+                  onChange={(e) => { const files = Array.from(e.target.files || []); for (const f of files) uploadFile.mutate(f); }}
+                />
+              </div>
+            )}
+
+            {unpackTab === "notes" && (
+              <div className="flex flex-col gap-4">
+                <div className="card">
+                  <div className="flex flex-col gap-3">
+                    <input className="input" placeholder="Название заметки" value={noteTitle} onChange={(e) => setNoteTitle(e.target.value)} />
+                    <textarea className="input" rows={4} placeholder="Текст заметки (или описание проекта своими словами)" value={noteContent} onChange={(e) => setNoteContent(e.target.value)} />
+                    <button className="btn btn-primary" onClick={() => { if (!noteTitle.trim()) return; createKnowledge.mutate({ type: "note", title: noteTitle, content: noteContent }); setNoteTitle(""); setNoteContent(""); }}
+                      disabled={createKnowledge.isPending || !noteTitle.trim()} style={{ alignSelf: "flex-start" }}>
+                      ✏️ Добавить заметку
+                    </button>
+                  </div>
+                </div>
+                <div className="card">
+                  <div className="flex flex-col gap-3">
+                    <input className="input" placeholder="Название ссылки" value={linkTitle} onChange={(e) => setLinkTitle(e.target.value)} />
+                    <input className="input" placeholder="URL" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} />
+                      <button className="btn btn-primary" onClick={() => { if (!linkTitle.trim() || !linkUrl.trim()) return; createKnowledge.mutate({ type: "link", title: linkTitle, content: linkUrl, sourceUrl: linkUrl }); setLinkTitle(""); setLinkUrl(""); }}
+                      disabled={createKnowledge.isPending || !linkTitle.trim() || !linkUrl.trim()} style={{ alignSelf: "flex-start" }}>
+                      🔗 Добавить ссылку
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {unpackTab === "interview" && (
+              <BrandInterview onComplete={(answers) => {
+                (async () => {
+                  setUnpackLoading(true);
+                  try {
+                    const pid = await ensureProject();
+                    for (const a of answers) {
+                      if (a.answer?.trim()) {
+                        await api.knowledge.create({ projectId: pid, type: "note", title: `Интервью: ${a.question}`, content: a.answer });
+                      }
+                    }
+                    setUnpackKnowledgeCount((c) => c + answers.filter((a: any) => a.answer?.trim()).length);
+                  } catch (err: any) {
+                    setError(err?.message || "Ошибка сохранения интервью");
+                  } finally {
+                    setUnpackLoading(false);
+                  }
+                })();
+              }} onCancel={() => setUnpackTab("files")} />
+            )}
+
+            {unpackKnowledgeCount > 0 && (
+              <div className="text-sm text-dim" style={{ marginTop: 12, textAlign: "center" }}>
+                ✅ Загружено: {unpackKnowledgeCount} записей в базу знаний
+              </div>
+            )}
+
+            {unpackTab !== "interview" && (
+              <div style={{ marginTop: 20, display: "flex", gap: 12, justifyContent: "center" }}>
+                <button className="btn btn-primary" onClick={handleGenerateKeywords} disabled={keywordsLoading || (unpackKnowledgeCount === 0 && realKnowledgeCount === 0)}>
+                  {keywordsLoading ? "⏳ AI извлекает..." : "🔑 Извлечь ключевые слова"}
+                </button>
+              </div>
+            )}
+
+            {generatedKeywords.length > 0 && (
+              <div className="card" style={{ marginTop: 16, padding: "10px 14px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontWeight: 600, fontSize: 13 }}>🔑 Ключевые слова</span>
+                    <span className="text-xs text-dim">{generatedKeywords.length}</span>
+                  </div>
+                  <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px" }} onClick={() => {
+                    if (!keywordsEditMode) {
+                      const edits: Record<string, string> = {};
+                      for (const kw of generatedKeywords) {
+                        const g = kw.group || "общее";
+                        if (!edits[g]) edits[g] = "";
+                        edits[g] += (edits[g] ? ", " : "") + kw.keyword;
+                      }
+                      setKeywordsEdits(edits);
+                    }
+                    setKeywordsEditMode(!keywordsEditMode);
+                  }}>
+                    {keywordsEditMode ? "✕ Отмена" : "✏️"}
+                  </button>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {Object.entries(
+                    generatedKeywords.reduce((acc: any, kw: any) => {
+                      const g = kw.group || "общее";
+                      if (!acc[g]) acc[g] = [];
+                      acc[g].push(kw.keyword);
+                      return acc;
+                    }, {})
+                  ).map(([group, kws]: [string, any]) => (
+                    <div key={group} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                      <span className="text-xs text-dim" style={{ fontWeight: 600, whiteSpace: "nowrap", minWidth: 80, marginTop: 4 }}>{group}</span>
+                      {keywordsEditMode ? (
+                        <input
+                          className="input"
+                          style={{ flex: 1, fontSize: 12, padding: "4px 8px" }}
+                          value={keywordsEdits[group] || ""}
+                          onChange={(e) => setKeywordsEdits((prev) => ({ ...prev, [group]: e.target.value }))}
+                        />
+                      ) : (
+                        <div className="text-sm" style={{ lineHeight: 1.6 }}>
+                          {(kws as string[]).map((kw, j) => (
+                            <span key={j}>{j > 0 && <span style={{ color: "var(--border)" }}>, </span>}<span style={{ color: "var(--text)" }}>{kw}</span></span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {keywordsEditMode && (
+                    <button className="btn btn-primary" style={{ alignSelf: "flex-start", fontSize: 12, padding: "4px 16px", marginTop: 4 }} onClick={handleSaveKeywords} disabled={keywordsSaving}>
+                      {keywordsSaving ? "⏳ Сохранение..." : "💾 Сохранить"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step: competitors */}
+        {step === "competitors" && (
+          <div>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>🔍 Конкуренты</h3>
+            <p className="text-sm text-dim" style={{ marginBottom: 16 }}>
+              Добавьте URL конкурентов и ключевые слова для анализа рынка
+            </p>
+
+            <div className="flex flex-col gap-4">
+              <div className="card">
+                <label className="text-xs text-dim" style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>Прямые конкуренты</label>
+                {competitorUrls.map((url, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                    <input className="input" placeholder={`URL конкурента ${i + 1}`} value={url} onChange={(e) => {
+                      const next = [...competitorUrls];
+                      next[i] = e.target.value;
+                      setCompetitorUrls(next);
+                    }} />
+                    {competitorUrls.length > 1 && (
+                      <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setCompetitorUrls(competitorUrls.filter((_, j) => j !== i))}>✕</button>
+                    )}
+                  </div>
+                ))}
+                <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setCompetitorUrls([...competitorUrls, ""])}>+ Добавить URL</button>
+              </div>
+
+              <div className="card">
+                <label className="text-xs text-dim" style={{ display: "block", marginBottom: 8, fontWeight: 600 }}>
+                  Ключевые слова для поиска
+                  {generatedKeywords.length > 0 && (
+                    <span className="text-xs text-dim" style={{ marginLeft: 8, fontWeight: 400 }}>
+                      (автоматически перенесены из материалов)
+                    </span>
+                  )}
+                </label>
+                <textarea
+                  className="input" rows={4}
+                  placeholder="Вставьте ключевые слова через запятую или с новой строки"
+                  value={competitorKeywordsText}
+                  onChange={(e) => setCompetitorKeywordsText(e.target.value)}
+                />
+              </div>
+
+              <button
+                className="btn btn-primary"
+                onClick={() => analyzeCompetitors.mutate()}
+                disabled={analyzeCompetitors.isPending}
+                style={{ alignSelf: "center" }}
+              >
+                {analyzeCompetitors.isPending ? "⏳ Анализ..." : "🔍 Анализировать"}
+              </button>
+
+              {competitorResult && (
+                <div className="card" style={{ marginTop: 8 }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>Результат последнего анализа</span>
+                    <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setCompetitorEdit(!competitorEdit)}>
+                      {competitorEdit ? "Готово" : "✏️ Редактировать"}
+                    </button>
+                  </div>
+                  {competitorEdit ? (
+                    <textarea
+                      className="input" rows={12}
+                      value={JSON.stringify(competitorResult.resultJson || competitorResult, null, 2)}
+                      onChange={(e) => {
+                        try {
+                          const parsed = JSON.parse(e.target.value);
+                          setCompetitorResult((prev: any) => ({ ...prev, resultJson: parsed }));
+                        } catch {}
+                      }}
+                      style={{ fontFamily: "monospace", fontSize: 12 }}
+                    />
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      {renderCompetitors(competitorResult.resultJson?.direct || [], "Прямые конкуренты")}
+                      {renderCompetitors(competitorResult.resultJson?.indirect || [], "Косвенные конкуренты")}
+                      {competitorResult.resultJson?.marketInsights && (
+                        <div style={{ padding: 10, background: "var(--bg-hover)", borderRadius: 6 }}>
+                          <div className="text-xs text-dim">{competitorResult.resultJson.marketInsights}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Accumulated competitors from all searches */}
+              {(savedCompetitors.length > 0 || savedCompetitorsLoading) && (
+                <div className="card" style={{ marginTop: 8 }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <span style={{ fontWeight: 600, fontSize: 14 }}>
+                      Накопленные конкуренты ({savedCompetitors.length})
+                    </span>
+                    <div className="flex gap-1">
+                      <button 
+                        className="btn btn-ghost" 
+                        style={{ fontSize: 11 }} 
+                        onClick={() => {
+                          if (projectId) {
+                            api.competitors.clearSaved(projectId).then(() => {
+                              setSavedCompetitors([]);
+                            });
+                          }
+                        }}
+                        disabled={savedCompetitors.length === 0}
+                      >
+                        🗑 Очистить всё
+                      </button>
+                    </div>
+                  </div>
+                  {savedCompetitorsLoading ? (
+                    <div className="text-xs text-dim">Загрузка...</div>
+                  ) : savedCompetitors.length > 0 ? (
+                    <div className="flex flex-col gap-2 max-h-96 overflow-y-auto">
+                      {savedCompetitors.map((comp: any) => (
+                        <div key={comp.id} style={{ padding: 8, background: "var(--bg-hover)", borderRadius: 6, display: "flex", gap: 8, alignItems: "flex-start" }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13 }}>{comp.name}</div>
+                            <div className="text-xs text-dim" style={{ marginTop: 2 }}>
+                              <a href={comp.url} target="_blank" rel="noopener noreferrer" className="text-xs">
+                                {comp.url}
+                              </a>
+                              {comp.positioning && <div><strong>Позиционирование:</strong> {comp.positioning}</div>}
+                              {comp.strengths && <div><strong>Сильные:</strong> {JSON.parse(comp.strengths || "[]").join(", ")}</div>}
+                              {comp.weaknesses && <div><strong>Слабые:</strong> {JSON.parse(comp.weaknesses || "[]").join(", ")}</div>}
+                              {comp.audience && <div><strong>Аудитория:</strong> {comp.audience}</div>}
+                              {comp.contentStrategy && <div><strong>Стратегия:</strong> {comp.contentStrategy}</div>}
+                              <div className="text-xs text-dim" style={{ marginTop: 4 }}>
+                                Найден: {new Date(comp.created_at).toLocaleString()} • По запросу: {comp.search_keywords || "—"}
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            className="btn btn-ghost"
+                            style={{ fontSize: 10, alignSelf: "flex-start" }}
+                            onClick={() => {
+                              api.competitors.deleteSaved(comp.id).then(() => {
+                                setSavedCompetitors(prev => prev.filter(c => c.id !== comp.id));
+                              });
+                            }}
+                          >
+                            Удалить
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-dim">Нет накопленных конкурентов</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Step: audience — глубокий анализ ЦА по 17 пунктам */}
+        {step === "audience" && (
+          <div>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>👥 Целевая аудитория</h3>
+            <p className="text-sm text-dim" style={{ marginBottom: 16 }}>
+              Глубокий анализ ЦА по 17 параметрам. Промпт сформирован из загруженных данных и анализа конкурентов.
+              Вы можете отредактировать промпт перед запуском, а после — поправить любой пункт вручную.
+            </p>
+
+            {/* Prompt section */}
+            <div className="card" style={{ marginBottom: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <label className="text-xs text-dim" style={{ fontWeight: 600 }}>Промпт для AI</label>
+                <button
+                  className="btn btn-ghost"
+                  style={{ fontSize: 11, padding: "2px 10px" }}
+                  onClick={() => { setAudienceShowPrompt(!audienceShowPrompt); }}
+                >
+                  {audienceShowPrompt ? "✕ Скрыть" : "📝 Показать/редактировать"}
+                </button>
+              </div>
+
+              {audienceShowPrompt && (
+                <div>
+                  {audienceEditedPrompt ? (
+                    <textarea
+                      className="input" rows={10}
+                      style={{ fontFamily: "monospace", fontSize: 12, width: "100%" }}
+                      value={audienceEditedPrompt}
+                      onChange={(e) => setAudienceEditedPrompt(e.target.value)}
+                    />
+                  ) : (
+                    <div className="text-sm text-dim" style={{ textAlign: "center", padding: 16 }}>
+                      {audienceGeneratedPrompt ? "⏳ Загрузка..." : "Загрузка данных проекта..."}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                    <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 10px" }} onClick={loadAudiencePrompt}>
+                      🔄 Сформировать заново
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex gap-2" style={{ marginTop: 8 }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => generateAudienceDeep.mutate()}
+                disabled={generateAudienceDeep.isPending || !audienceGeneratedPrompt}
+              >
+                {generateAudienceDeep.isPending ? (
+                  <span>⏳ AI анализирует ЦА...</span>
+                ) : audienceResult ? (
+                  "🔄 Перезапустить анализ"
+                ) : (
+                  "🔍 Запустить анализ ЦА"
+                )}
+              </button>
+            </div>
+
+            {/* Results */}
+            {audienceResult?.groups && audienceResult.groups.length > 0 && (
+              <div className="flex flex-col gap-6" style={{ marginTop: 20 }}>
+                {audienceResult.groups.map((group: any, gi: number) => (
+                  <div key={gi} className="card" style={{ borderLeft: "4px solid var(--accent)" }}>
+                    <div style={{
+                      fontSize: 16, fontWeight: 700, marginBottom: 4, color: "var(--accent)",
+                      display: "flex", alignItems: "center", gap: 8,
+                    }}>
+                      <span>{group.name || `Сегмент ${gi + 1}`}</span>
+                      {renderEditableField(gi, "name", "", group.name)}
+                    </div>
+                    {renderEditableField(gi, "summary", "Краткое описание", group.summary)}
+
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+                      {renderEditableField(gi, "segments", "1. Группы-сегменты", group.segments)}
+                      {renderEditableField(gi, "socialFactors", "2. Социальный фактор", group.socialFactors)}
+                      {renderEditableField(gi, "pains", "3. Боли и проблемы", group.pains)}
+                      {renderEditableField(gi, "fears", "4. Глобальные страхи", group.fears)}
+                      {renderEditableField(gi, "irritations", "5. Что раздражает", group.irritations)}
+                      {renderEditableField(gi, "goals", "6. Цели, желания, ценности", group.goals)}
+                      {renderEditableField(gi, "beliefs", "7. Убеждения", group.beliefs)}
+                      {renderEditableField(gi, "stepsToSolve", "8. Шаги для устранения проблемы", group.stepsToSolve)}
+                      {renderEditableField(gi, "alternatives", "9. Альтернативные методы", group.alternatives)}
+                      {renderEditableField(gi, "whyAlternativesFail", "10. Почему альтернативы не работают", group.whyAlternativesFail)}
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        {renderEditableField(gi, "needFrequency", "11a. Частота потребности", group.needFrequency)}
+                        {renderEditableField(gi, "needSituation", "11b. Ситуация потребности", group.needSituation)}
+                      </div>
+                      {renderEditableField(gi, "informationSources", "12. Где потребляют информацию", group.informationSources)}
+                      {renderEditableField(gi, "touchpoints", "13. Точки контакта", group.touchpoints)}
+                      {renderEditableField(gi, "desiredResult", "14. Желаемый результат", group.desiredResult)}
+                      {renderEditableField(gi, "whyProductBetter", "15. Почему продукт лучше", group.whyProductBetter)}
+                      {renderEditableField(gi, "globalFears", "16. Глобальные страхи", group.globalFears)}
+                      {renderEditableField(gi, "objections", "17. Возражения", group.objections)}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Save & continue */}
+                <div style={{ textAlign: "center", marginTop: 12 }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ fontSize: 15, padding: "10px 32px" }}
+                    onClick={() => saveAudienceResult.mutate()}
+                    disabled={saveAudienceResult.isPending}
+                  >
+                    {saveAudienceResult.isPending ? "⏳ Сохранение..." : "💾 Сохранить"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {audienceResult?.groups?.length === 0 && audienceResult && (
+              <div className="text-sm text-dim" style={{ marginTop: 16, textAlign: "center" }}>
+                AI не определил группы ЦА. Попробуйте отредактировать промпт и запустить снова.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step: hant — лестница Ханта для каждой группы ЦА */}
+        {step === "hant" && (
+          <div>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>🪜 Лестница Ханта</h3>
+            <p className="text-sm text-dim" style={{ marginBottom: 16 }}>
+              Матрица пути клиента по 9 стадиям Ханта — отдельно для каждой группы ЦА
+            </p>
+
+            {!audienceResult?.groups?.length && !Array.isArray(audienceResult) && (
+              <div className="card" style={{ textAlign: "center", padding: 20 }}>
+                <div className="text-sm text-dim">Сначала выполните анализ ЦА на предыдущем шаге</div>
+              </div>
+            )}
+
+            {((audienceResult?.groups?.length > 0) && hantData.length !== audienceResult.groups.length) && !generateHant.isPending && (
+              <button
+                className="btn btn-primary"
+                onClick={() => generateHant.mutate()}
+                disabled={generateHant.isPending}
+              >
+                {generateHant.isPending
+                  ? "⏳ Построение..."
+                  : hantData.length === 0
+                    ? `🪜 Построить лестницы для ${audienceResult.groups.length} групп ЦА`
+                    : `🔄 Перестроить лестницы для ${audienceResult.groups.length} групп ЦА`
+                }
+              </button>
+            )}
+
+            {Array.isArray(audienceResult) && hantData.length === 0 && !generateHant.isPending && (
+              <button
+                className="btn btn-primary"
+                onClick={() => generateHant.mutate()}
+                disabled={generateHant.isPending}
+              >
+                {generateHant.isPending ? "⏳ Построение..." : "🪜 Построить лестницу Ханта"}
+              </button>
+            )}
+
+            {generateHant.isPending && (
+              <div className="text-sm text-dim" style={{ textAlign: "center", padding: 20 }}>
+                ⏳ AI строит лестницы Ханта для каждой группы ЦА...
+              </div>
+            )}
+
+            {hantData.length > 0 && (
+              <div>
+                {/* Tabs for each group */}
+                <div className="flex gap-1" style={{ marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
+                  {hantData.map((journey: any, ji: number) => {
+                    const stages = journey.stages || [];
+                    return (
+                      <button
+                        key={ji}
+                        className={`btn ${hantActiveGroup === ji ? "btn-primary" : "btn-ghost"}`}
+                        style={{ fontSize: 12, padding: "6px 14px", whiteSpace: "nowrap" }}
+                        onClick={() => setHantActiveGroup(ji)}
+                      >
+                        {journey.groupName || `Группа ${ji + 1}`} ({stages.length} ст.)
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Stages for active group */}
+                {hantData[hantActiveGroup] && (() => {
+                  const stages = hantData[hantActiveGroup].stages || [];
+                  return (
+                    <div>
+                      {hantData[hantActiveGroup].groupSummary && (
+                        <div className="text-sm text-dim" style={{ marginBottom: 12 }}>
+                          {hantData[hantActiveGroup].groupSummary}
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-3">
+                        {stages.map((stage: any, si: number) => (
+                          <div key={si} style={{
+                            padding: 12,
+                            background: "var(--bg-hover)",
+                            borderRadius: 8,
+                            borderLeft: `4px solid ${
+                              stage.temperature === "cold" ? "#3b82f6"
+                              : stage.temperature === "warm" ? "#f59e0b"
+                              : stage.temperature === "hot" ? "#ef4444"
+                              : "#8b5cf6"
+                            }`,
+                          }}>
+                            <div className="flex items-center justify-between mb-2">
+                              <span style={{ fontWeight: 600, fontSize: 13 }}>
+                                Стадия {stage.stage}: {stage.label}
+                              </span>
+                              <span className="tag" style={{ fontSize: 9, textTransform: "uppercase" }}>
+                                {stage.temperature}
+                              </span>
+                            </div>
+                            <div className="text-xs" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 12px" }}>
+                              {renderHantStageField(hantActiveGroup, si, "clientGoal", "Цель", stage.clientGoal)}
+                              {renderHantStageField(hantActiveGroup, si, "clientActions", "Действия клиента", stage.clientActions)}
+                              {renderHantStageField(hantActiveGroup, si, "contentFromActions", "Контент (действия)", stage.contentFromActions)}
+                              {renderHantStageField(hantActiveGroup, si, "expectations", "Ожидания", stage.expectations)}
+                              {renderHantStageField(hantActiveGroup, si, "contentFromExpectations", "Контент (ожидания)", stage.contentFromExpectations)}
+                              {renderHantStageField(hantActiveGroup, si, "emotions", "Эмоции", stage.emotions)}
+                              {renderHantStageField(hantActiveGroup, si, "tonality", "Тональность", stage.tonality)}
+                              {renderHantStageField(hantActiveGroup, si, "touchpoints", "Точки контакта", stage.touchpoints)}
+                              {renderHantStageField(hantActiveGroup, si, "experience", "Опыт клиента", stage.experience)}
+                              {renderHantStageField(hantActiveGroup, si, "contentFromExperience", "Контент (опыт)", stage.contentFromExperience)}
+                              {renderHantStageField(hantActiveGroup, si, "recommendations", "Рекомендации", stage.recommendations)}
+                              {renderHantStageField(hantActiveGroup, si, "funnelPrototype", "Прототип воронки", stage.funnelPrototype)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Save & continue */}
+                <div style={{ textAlign: "center", marginTop: 20 }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ fontSize: 15, padding: "10px 32px" }}
+                    onClick={() => saveHantResult.mutate()}
+                    disabled={saveHantResult.isPending}
+                  >
+                    {saveHantResult.isPending ? "⏳ Сохранение..." : "💾 Сохранить"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step: value_prop */}
+        {step === "value_prop" && (
+          <div>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>💎 Ценностное предложение</h3>
+            <p className="text-sm text-dim" style={{ marginBottom: 16 }}>
+              AI сформирует ценностное предложение на основе собранных данных
+            </p>
+
+            <button
+              className="btn btn-primary"
+              onClick={() => generateValueProp.mutate()}
+              disabled={generateValueProp.isPending}
+            >
+              {generateValueProp.isPending ? "⏳ Генерация..." : "💎 Сгенерировать ценностное предложение"}
+            </button>
+
+            {valuePropResult && (
+              <div className="flex flex-col gap-4" style={{ marginTop: 16 }}>
+                <div className="card">
+                  <label className="text-xs text-dim" style={{ fontWeight: 600 }}>Формула</label>
+                  <div style={{ fontSize: 15, lineHeight: 1.6, marginTop: 4, fontWeight: 500 }}>
+                    {valuePropResult.formula}
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div className="card">
+                    <label className="text-xs text-dim" style={{ fontWeight: 600 }}>Задачи и цели ЦА</label>
+                    {(valuePropResult.tasks || []).map((t: any, i: number) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid var(--border)" }}>
+                        <span>{t.text}</span>
+                        <span style={{ color: "var(--accent)" }}>{"★".repeat(t.score)}{"☆".repeat(3 - t.score)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="card">
+                    <label className="text-xs text-dim" style={{ fontWeight: 600 }}>Товары и услуги</label>
+                    {(valuePropResult.products || []).map((p: any, i: number) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid var(--border)" }}>
+                        <span>{p.text}</span>
+                        <span style={{ color: "var(--accent)" }}>{"★".repeat(p.score)}{"☆".repeat(3 - p.score)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="card">
+                    <label className="text-xs text-dim" style={{ fontWeight: 600 }}>Проблемы</label>
+                    {(valuePropResult.problems || []).map((p: any, i: number) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid var(--border)" }}>
+                        <span>{p.text}</span>
+                        <span style={{ color: "var(--accent)" }}>{"★".repeat(p.score)}{"☆".repeat(3 - p.score)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="card">
+                    <label className="text-xs text-dim" style={{ fontWeight: 600 }}>Выгоды и результат</label>
+                    {(valuePropResult.gains || []).map((g: any, i: number) => (
+                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid var(--border)" }}>
+                        <span>{g.text}</span>
+                        <span style={{ color: "var(--accent)" }}>{"★".repeat(g.score)}{"☆".repeat(3 - g.score)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step: products */}
+        {step === "products" && (
+          <div>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>📦 Продукты</h3>
+            <p className="text-sm text-dim" style={{ marginBottom: 16 }}>
+              AI определит продукты/услуги на основе материалов. Можно добавить вручную.
+            </p>
+
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => generateProducts.mutate()}
+                disabled={generateProducts.isPending}
+              >
+                {generateProducts.isPending ? "⏳ Генерация..." : "🤖 Сгенерировать из материалов"}
+              </button>
+              <button className="btn btn-ghost" onClick={addProduct}>
+                ➕ Добавить продукт
+              </button>
+            </div>
+
+            {productsResult.length > 0 && (
+              <div className="flex flex-col gap-4">
+                {productsResult.map((prod: any, i: number) => {
+                  const renderField = (field: string, label: string, value: any) => {
+                    const isEditing = productsEditing?.i === i && productsEditing?.field === field;
+                    const displayValue = Array.isArray(value) ? value.join("\n") : String(value || "");
+                    return (
+                      <div style={{ marginBottom: 4 }}>
+                        <div style={{ display: "flex", alignItems: "flex-start", gap: 4 }}>
+                          <div style={{ flex: 1 }}>
+                            {label && <strong style={{ fontSize: 12 }}>{label}:</strong>}
+                            {isEditing ? (
+                              <div>
+                                <textarea
+                                  className="input"
+                                  style={{ fontSize: 12, fontFamily: "monospace", width: "100%", minHeight: 50 }}
+                                  value={productsEditBuffer}
+                                  onChange={(e) => setProductsEditBuffer(e.target.value)}
+                                  rows={Array.isArray(value) ? Math.max(value.length + 1, 2) : 2}
+                                />
+                                <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                                  <button className="btn btn-primary" style={{ fontSize: 10, padding: "2px 10px" }} onClick={confirmProductsEdit}>✅</button>
+                                  <button className="btn btn-ghost" style={{ fontSize: 10, padding: "2px 10px" }} onClick={cancelProductsEdit}>✕</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+                                {Array.isArray(value) ? value.map((item: string, j: number) => <div key={j}>• {item}</div>)
+                                : <span>{displayValue || "—"}</span>}
+                              </div>
+                            )}
+                          </div>
+                          {!isEditing && (
+                            <button className="btn btn-ghost" style={{ fontSize: 10, padding: "2px 6px", flexShrink: 0 }}
+                              onClick={() => startProductsEdit(i, field, displayValue)}>✏️</button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  };
+
+                  return (
+                    <div key={prod.id || `new-${i}`} className="card" style={{ padding: 16 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                        <div style={{ fontWeight: 700, fontSize: 16 }}>{prod.name || "Новый продукт"}</div>
+                        <button className="btn btn-ghost" style={{ fontSize: 11, color: "var(--danger)", padding: "2px 8px" }}
+                          onClick={() => deleteProduct(i)}>🗑️</button>
+                      </div>
+                      <div style={{ borderTop: "1px solid var(--border)", paddingTop: 10 }}>
+                        {renderField("name", "Название", prod.name)}
+                        {renderField("description", "Описание", prod.description)}
+                        {renderField("audienceDescription", "Целевая аудитория", prod.audienceDescription)}
+                        <div style={{ marginTop: 10, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                          <div style={{ background: "rgba(239,68,68,0.06)", borderRadius: 6, padding: 8 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: "#ef4444" }}>⚠️ Проблемы</div>
+                            {renderField("pains", "", prod.pains)}
+                          </div>
+                          <div style={{ background: "rgba(34,197,94,0.06)", borderRadius: 6, padding: 8 }}>
+                            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: "#22c55e" }}>✅ Выгоды</div>
+                            {renderField("gains", "", prod.gains)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div style={{ textAlign: "center", marginTop: 8 }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ fontSize: 15, padding: "10px 32px" }}
+                    onClick={saveProducts}
+                    disabled={productsSaving}
+                  >
+                    {productsSaving ? "⏳ Сохранение..." : "💾 Сохранить"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {productsResult.length === 0 && (
+              <div className="card" style={{ textAlign: "center", padding: 20 }}>
+                <div className="text-sm text-dim">Продукты ещё не добавлены. Сгенерируйте из материалов или добавьте вручную.</div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step: platforms */}
+        {step === "platforms" && (
+          <div>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>📡 Площадки</h3>
+            <p className="text-sm text-dim" style={{ marginBottom: 16 }}>
+              AI предложит подходящие площадки для каждого продукта. Можно добавлять и редактировать вручную.
+            </p>
+
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              <button
+                className="btn btn-primary"
+                onClick={() => suggestPlatforms.mutate()}
+                disabled={suggestPlatforms.isPending || productsResult.length === 0}
+              >
+                {suggestPlatforms.isPending ? "⏳ Подбор..." : "🤖 Подобрать площадки"}
+              </button>
+            </div>
+
+            {productsResult.length === 0 && (
+              <div className="card" style={{ textAlign: "center", padding: 20 }}>
+                <div className="text-sm text-dim">Сначала добавьте продукты на предыдущем шаге.</div>
+              </div>
+            )}
+
+            {platformsResult.length === 0 && productsResult.length > 0 && (
+              <div className="card" style={{ textAlign: "center", padding: 20 }}>
+                <div className="text-sm text-dim">Площадки ещё не добавлены. Нажмите «Подобрать площадки» или добавьте вручную.</div>
+              </div>
+            )}
+
+            {platformsResult.length > 0 && (
+              <div className="flex flex-col gap-4">
+                {productsResult.map((product: any) => {
+                  const productPlatforms = platformsResult.filter((pl: any) => pl.productId === product.id);
+                  if (productPlatforms.length === 0) return null;
+                  return (
+                    <div key={product.id} className="card" style={{ padding: 16 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>
+                        📦 {product.name}
+                      </div>
+                      {productPlatforms.map((pl: any, j: number) => {
+                        const globalIdx = platformsResult.indexOf(pl);
+                        const isEditing = platformsEditing?.i === globalIdx && platformsEditing?.field === "full";
+
+                        return (
+                          <div key={pl.id || `new-${j}`} style={{
+                            padding: "8px 10px", background: "var(--bg-hover)", borderRadius: 6, marginBottom: 4,
+                          }}>
+                            {isEditing ? (
+                              <div>
+                                <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
+                                  <input className="input" style={{ fontSize: 13, flex: 1 }} value={platformsEditBuffer}
+                                    onChange={(e) => setPlatformsEditBuffer(e.target.value)}
+                                    placeholder="Название" />
+                                  <button className="btn btn-primary" style={{ fontSize: 10, padding: "1px 8px" }} onClick={confirmPlatformsEdit}>✅</button>
+                                  <button className="btn btn-ghost" style={{ fontSize: 10, padding: "1px 8px" }} onClick={cancelPlatformsEdit}>✕</button>
+                                </div>
+                                <textarea className="input" style={{ fontSize: 11, width: "100%", minHeight: 28, marginBottom: 2 }}
+                                  value={platformsEditBuffer}
+                                  onChange={(e) => setPlatformsEditBuffer(e.target.value)}
+                                  placeholder="Описание" rows={1} />
+                              </div>
+                            ) : (
+                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <span style={{
+                                  width: 10, height: 10, borderRadius: 5,
+                                  background: PLATFORM_COLORS[pl.type] || "var(--accent)",
+                                  flexShrink: 0,
+                                }} />
+                                <div style={{ fontWeight: 600, fontSize: 13, minWidth: 100 }}>{pl.name}</div>
+                                <span className="tag" style={{ fontSize: 10 }}>{pl.type}</span>
+                                <div style={{ flex: 1, fontSize: 12, color: "var(--text-dim)" }}>
+                                  {pl.description || "—"}
+                                </div>
+                                <span style={{ fontSize: 11, color: "var(--accent)", fontWeight: 600, flexShrink: 0 }}>#{pl.priority}</span>
+                                <button className="btn btn-ghost" style={{ fontSize: 10, padding: "1px 6px", flexShrink: 0 }}
+                                  onClick={() => startPlatformsEdit(globalIdx, "full", `${pl.name}\n${pl.description || ""}`)}>✏️</button>
+                                <button className="btn btn-ghost" style={{ fontSize: 11, color: "var(--danger)", padding: "1px 6px", flexShrink: 0 }}
+                                  onClick={() => deletePlatform(globalIdx)}>🗑️</button>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      <div style={{ marginTop: 8 }}>
+                        {showAddPlatformForProduct === product.id ? (
+                          <div className="flex flex-wrap gap-1">
+                            {PLATFORM_OPTIONS.filter(
+                              (opt) => !productPlatforms.some((pl: any) => pl.type === opt.value)
+                            ).map((opt) => (
+                              <button key={opt.value} className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px" }}
+                                onClick={() => addPlatform(product.id, opt.value)}>
+                                <span style={{ display: "inline-block", width: 6, height: 6, borderRadius: 3, background: PLATFORM_COLORS[opt.value] || "var(--accent)", marginRight: 4 }} />
+                                {opt.label}
+                              </button>
+                            ))}
+                            <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px" }}
+                              onClick={() => setShowAddPlatformForProduct(null)}>✕</button>
+                          </div>
+                        ) : (
+                          <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px" }}
+                            onClick={() => setShowAddPlatformForProduct(product.id)}>
+                            ➕ Добавить площадку
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Platforms without product */}
+                {platformsResult.some((pl: any) => !pl.productId) && (
+                  <div className="card" style={{ padding: 16 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 10 }}>📡 Без продукта</div>
+                    {platformsResult.filter((pl: any) => !pl.productId).map((pl: any, j: number) => {
+                      const globalIdx = platformsResult.indexOf(pl);
+                      return (
+                        <div key={pl.id || `orphan-${j}`} style={{
+                          display: "flex", alignItems: "center", gap: 10,
+                          padding: "8px 10px", background: "var(--bg-hover)", borderRadius: 6, marginBottom: 4,
+                        }}>
+                          <span style={{ fontWeight: 600, fontSize: 13, minWidth: 100 }}>{pl.name}</span>
+                          <span className="tag" style={{ fontSize: 10 }}>{pl.type}</span>
+                          <button className="btn btn-ghost" style={{ fontSize: 11, color: "var(--danger)", padding: "1px 6px", flexShrink: 0 }}
+                            onClick={() => deletePlatform(globalIdx)}>🗑️</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div style={{ textAlign: "center", marginTop: 8 }}>
+                  <button
+                    className="btn btn-primary"
+                    style={{ fontSize: 15, padding: "10px 32px" }}
+                    onClick={savePlatforms}
+                    disabled={platformsSaving}
+                  >
+                    {platformsSaving ? "⏳ Сохранение..." : "💾 Сохранить"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step: complete */}
+        {step === "complete" && (
+          <div>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>✅ Онбординг завершён</h3>
+            <p className="text-sm text-dim" style={{ marginBottom: 20 }}>
+              Все данные собраны. Можно перейти к стратегии или вернуться к любому шагу
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {(() => {
+                const stepStatus = (key: string) => onboardingStatus?.steps?.find((s: any) => s.stepKey === key);
+                const stepData = (key: string) => {
+                  const s = stepStatus(key);
+                  if (!s?.aiOutput) return null;
+                  try { return JSON.parse(s.aiOutput); } catch { return null; }
+                };
+                const items = [
+                  {
+                    key: "scenario", icon: "🎯", label: "Сценарий",
+                    done: !!scenario,
+                    detail: scenario ? `«${scenario.slice(0, 50)}${scenario.length > 50 ? "…" : ""}»` : "Не указан",
+                  },
+                  {
+                    key: "materials", icon: "📁", label: "Материалы",
+                    done: (realKnowledgeCount || 0) > 0,
+                    detail: `${realKnowledgeCount || "0"} записей знаний`,
+                  },
+                  {
+                    key: "competitors", icon: "🔍", label: "Конкуренты",
+                    done: (() => {
+                      if (savedCompetitorsCount > 0) return true;
+                      const d = stepData("competitors");
+                      return !!(d?.direct?.length || d?.indirect?.length);
+                    })(),
+                    detail: (() => {
+                      if (savedCompetitorsCount > 0) return `${savedCompetitorsCount} конкурентов в базе`;
+                      const d = stepData("competitors");
+                      if (d?.direct?.length || d?.indirect?.length) return `${(d.direct?.length || 0) + (d.indirect?.length || 0)} конкурентов`;
+                      return "Не проанализированы";
+                    })(),
+                  },
+                  {
+                    key: "audience", icon: "👥", label: "Целевая аудитория",
+                    done: !!stepData("audience"),
+                    detail: (() => {
+                      const d = stepData("audience");
+                      if (!d) return "Не сформирована";
+                      return `${d.groups?.length || 0} групп(ы), ${d.groups?.reduce((a: number, g: any) => a + (g.name ? 1 : 0), 0) || 0} описаны`;
+                    })(),
+                  },
+                  {
+                    key: "hant", icon: "🪜", label: "Лестница Ханта",
+                    done: (() => {
+                      const d = stepData("hant");
+                      return Array.isArray(d) && d.length > 0 && d.some((g: any) => g.stages?.length > 0);
+                    })(),
+                    detail: (() => {
+                      const d = stepData("hant");
+                      if (!Array.isArray(d)) return "Не построена";
+                      return `${d.length} групп(ы), ${d.reduce((a: number, g: any) => a + (g.stages?.length || 0), 0)} стадий`;
+                    })(),
+                  },
+                  {
+                    key: "value_prop", icon: "💎", label: "Ценностное предложение",
+                    done: (() => {
+                      const d = stepData("value_prop");
+                      return !!(d?.formula || d?.reason);
+                    })(),
+                    detail: (() => {
+                      const d = stepData("value_prop");
+                      if (!d) return "Не сгенерировано";
+                      return d.formula ? `Формула: ${d.formula?.slice(0, 30)}…` : "Сгенерировано";
+                    })(),
+                  },
+                  {
+                    key: "products", icon: "📦", label: "Продукты",
+                    done: productsResult.length > 0,
+                    detail: `${productsResult.length} продуктов`,
+                  },
+                  {
+                    key: "platforms", icon: "📡", label: "Площадки",
+                    done: platformsResult.length > 0,
+                    detail: `${platformsResult.length} площадок`,
+                  },
+                ];
+                return items.map((item) => {
+                  const stepIdx = STEPS.findIndex((s) => s.key === item.key);
+                  return (
+                    <button
+                    key={item.key}
+                    onClick={() => goToStep(stepIdx >= 0 ? stepIdx : 0)}
+                    className="card"
+                    style={{
+                      display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", cursor: "pointer",
+                      borderLeft: `4px solid ${item.done ? "#22c55e" : "var(--border)"}`,
+                      textAlign: "left", width: "100%", borderTopLeftRadius: 0, borderBottomLeftRadius: 0,
+                      color: "var(--text)",
+                    }}
+                  >
+                    <span style={{ fontSize: 26, flexShrink: 0 }}>{item.done ? "✅" : item.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 15, fontWeight: 700 }}>{item.label}</div>
+                      <div className="text-sm text-dim" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>{item.detail}</div>
+                    </div>
+                    <span style={{
+                      fontSize: 20, flexShrink: 0, fontWeight: 700,
+                      color: item.done ? "#22c55e" : "var(--dim)",
+                      background: item.done ? "rgba(34,197,94,0.1)" : "transparent",
+                      borderRadius: "50%", width: 32, height: 32,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {item.done ? "✓" : "—"}
+                    </span>
+                  </button>
+                  );
+                });
+              })()}
+            </div>
+
+            <div style={{ textAlign: "center", marginTop: 24 }}>
+              <button className="btn btn-primary" style={{ fontSize: 16, padding: "12px 40px" }} onClick={finishOnboarding}>
+                🚀 Перейти к стратегии
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Navigation */}
+      <div className="flex items-center justify-between" style={{ marginTop: 16 }}>
+        <button className="btn btn-ghost" onClick={prevStep} disabled={stepIdx === 0}>
+          ← Назад
+        </button>
+        <div className="text-xs text-dim">
+          Шаг {stepIdx + 1} из {STEPS.length}
+        </div>
+        <button
+          className="btn btn-primary"
+          onClick={nextStep}
+          disabled={stepIdx === STEPS.length - 1}
+        >
+          Далее →
+        </button>
+      </div>
+    </div>
+  );
+}
