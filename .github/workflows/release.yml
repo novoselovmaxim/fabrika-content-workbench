@@ -24,7 +24,7 @@ jobs:
       - name: Package
         run: |
           VERSION=$(cat version.txt)
-          mkdir -p release/macos-arm64/FabrikaContent
+          mkdir -p releases release/macos-arm64/FabrikaContent
           cp dist-bin/fabrika-server-macos-arm release/macos-arm64/FabrikaContent/fabrika-server-macos
           cp -r app/dist release/macos-arm64/FabrikaContent/app
           cp -r migrations release/macos-arm64/FabrikaContent/
@@ -54,7 +54,7 @@ jobs:
       - name: Package
         run: |
           VERSION=$(cat version.txt)
-          mkdir -p release/macos-x64/FabrikaContent
+          mkdir -p releases release/macos-x64/FabrikaContent
           cp dist-bin/fabrika-server-macos release/macos-x64/FabrikaContent/fabrika-server-macos
           cp -r app/dist release/macos-x64/FabrikaContent/app
           cp -r migrations release/macos-x64/FabrikaContent/
@@ -85,7 +85,7 @@ jobs:
         shell: bash
         run: |
           VERSION=$(cat version.txt)
-          mkdir -p release/win/FabrikaContent
+          mkdir -p releases release/win/FabrikaContent
           cp dist-bin/fabrika-server-win.exe release/win/FabrikaContent/
           cp -r app/dist release/win/FabrikaContent/app
           cp -r migrations release/win/FabrikaContent/
