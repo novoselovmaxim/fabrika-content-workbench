@@ -18,8 +18,8 @@
     "assets": [
       "../migrations/**",
       "../content/**",
-      "node_modules/better-sqlite3/build/**",
-      "node_modules/jimp/**"
+      "../node_modules/better-sqlite3/build/**",
+      "../node_modules/jimp/**"
     ]
   },
   "dependencies": {
