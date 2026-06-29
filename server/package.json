@@ -4,15 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
+    "build": "tsc && esbuild src/index.ts --bundle --platform=node --target=node22 --outfile=dist/bundle.cjs --external:better-sqlite3",
+    "start": "node dist/bundle.cjs",
     "db:migrate": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx database/seeds/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "pkg:macos": "pkg dist/index.js --target node22-macos-x64 --output ../dist-bin/fabrika-server-macos --public-packages drizzle-orm",
-    "pkg:macos-arm": "pkg dist/index.js --target node22-macos-arm64 --output ../dist-bin/fabrika-server-macos-arm --public-packages drizzle-orm",
-    "pkg:win": "pkg dist/index.js --target node22-win-x64 --output ../dist-bin/fabrika-server-win.exe --public-packages drizzle-orm"
+    "pkg:macos": "pkg dist/bundle.cjs --target node22-macos-x64 --output ../dist-bin/fabrika-server-macos",
+    "pkg:macos-arm": "pkg dist/bundle.cjs --target node22-macos-arm64 --output ../dist-bin/fabrika-server-macos-arm",
+    "pkg:win": "pkg dist/bundle.cjs --target node22-win-x64 --output ../dist-bin/fabrika-server-win.exe"
   },
   "pkg": {
     "assets": [
@@ -20,9 +20,6 @@
       "../content/**",
       "node_modules/better-sqlite3/build/**",
       "node_modules/jimp/**"
-    ],
-    "scripts": [
-      "dist/**/*.js"
     ]
   },
   "dependencies": {
@@ -46,6 +43,7 @@
     "@types/express": "^5.0.0",
     "@types/multer": "^1.4.12",
     "@types/uuid": "^10.0.0",
+    "esbuild": "^0.25.0",
     "tsx": "^4.19.0",
     "@yao-pkg/pkg": "^6.0.0"
   }
