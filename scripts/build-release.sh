@@ -12,7 +12,7 @@ cd server
 npm run build
 cd ..
 
-mkdir -p dist-bin
+mkdir -p dist-bin releases
 
 cd server
 npm run pkg:macos
