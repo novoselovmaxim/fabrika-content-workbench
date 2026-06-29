@@ -54,7 +54,7 @@
       "source_file": "bereg-instagram-workbench/app/vite.config.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_app_vite_config_ts",
-      "community": 35,
+      "community": 37,
       "norm_label": "vite.config.ts"
     },
     {
@@ -63,7 +63,7 @@
       "source_file": "app/src/App.tsx",
       "source_location": "L1",
       "id": "app_src_app_tsx",
-      "community": 4,
+      "community": 3,
       "norm_label": "app.tsx"
     },
     {
@@ -72,7 +72,7 @@
       "source_file": "app/src/App.tsx",
       "source_location": "L70",
       "id": "app_handlechange",
-      "community": 4,
+      "community": 3,
       "norm_label": "handlechange()"
     },
     {
@@ -81,7 +81,7 @@
       "source_file": "app/src/main.tsx",
       "source_location": "L1",
       "id": "app_src_main_tsx",
-      "community": 36,
+      "community": 38,
       "norm_label": "main.tsx"
     },
     {
@@ -90,7 +90,7 @@
       "source_file": "bereg-instagram-workbench/app/src/components/BrandInterview.tsx",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_app_src_components_brandinterview_tsx",
-      "community": 25,
+      "community": 27,
       "norm_label": "brandinterview.tsx"
     },
     {
@@ -99,7 +99,7 @@
       "source_file": "bereg-instagram-workbench/app/src/components/BrandInterview.tsx",
       "source_location": "L76",
       "id": "brandinterview_brandinterview",
-      "community": 25,
+      "community": 27,
       "norm_label": "brandinterview()"
     },
     {
@@ -108,7 +108,7 @@
       "source_file": "app/src/components/UpdateBanner.tsx",
       "source_location": "L1",
       "id": "app_src_components_updatebanner_tsx",
-      "community": 17,
+      "community": 18,
       "norm_label": "updatebanner.tsx"
     },
     {
@@ -117,7 +117,7 @@
       "source_file": "app/src/components/UpdateBanner.tsx",
       "source_location": "L3",
       "id": "updatebanner_updatebanner",
-      "community": 17,
+      "community": 18,
       "norm_label": "updatebanner()"
     },
     {
@@ -126,7 +126,7 @@
       "source_file": "/Users/maxnov/Prod/Bereg_content/bereg-instagram-workbench/app/src/components/GeneratePanel.tsx",
       "source_location": "L1",
       "id": "users_maxnov_prod_bereg_content_bereg_instagram_workbench_app_src_components_generatepanel_tsx",
-      "community": 37,
+      "community": 39,
       "norm_label": "generatepanel.tsx"
     },
     {
@@ -198,7 +198,7 @@
       "source_file": "app/src/components/LicenseGate.tsx",
       "source_location": "L1",
       "id": "app_src_components_licensegate_tsx",
-      "community": 38,
+      "community": 40,
       "norm_label": "licensegate.tsx"
     },
     {
@@ -207,7 +207,7 @@
       "source_file": "bereg-instagram-workbench/app/src/components/ChatPanel.tsx",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_app_src_components_chatpanel_tsx",
-      "community": 39,
+      "community": 41,
       "norm_label": "chatpanel.tsx"
     },
     {
@@ -216,7 +216,7 @@
       "source_file": "bereg-instagram-workbench/app/src/components/KnowledgeIndicator.tsx",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_app_src_components_knowledgeindicator_tsx",
-      "community": 26,
+      "community": 28,
       "norm_label": "knowledgeindicator.tsx"
     },
     {
@@ -225,7 +225,7 @@
       "source_file": "bereg-instagram-workbench/app/src/components/KnowledgeIndicator.tsx",
       "source_location": "L4",
       "id": "knowledgeindicator_knowledgeindicator",
-      "community": 26,
+      "community": 28,
       "norm_label": "knowledgeindicator()"
     },
     {
@@ -234,7 +234,7 @@
       "source_file": "bereg-instagram-workbench/app/src/components/PlatformIndicator.tsx",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_app_src_components_platformindicator_tsx",
-      "community": 4,
+      "community": 3,
       "norm_label": "platformindicator.tsx"
     },
     {
@@ -243,7 +243,7 @@
       "source_file": "bereg-instagram-workbench/app/src/components/PlatformIndicator.tsx",
       "source_location": "L6",
       "id": "platformindicator_platformindicator",
-      "community": 4,
+      "community": 3,
       "norm_label": "platformindicator()"
     },
     {
@@ -360,7 +360,7 @@
       "source_file": "bereg-instagram-workbench/app/src/components/content-tabs/ReelTab.tsx",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_app_src_components_content_tabs_reeltab_tsx",
-      "community": 16,
+      "community": 17,
       "norm_label": "reeltab.tsx"
     },
     {
@@ -369,7 +369,7 @@
       "source_file": "bereg-instagram-workbench/app/src/components/content-tabs/ReelTab.tsx",
       "source_location": "L30",
       "id": "reeltab_generate",
-      "community": 16,
+      "community": 17,
       "norm_label": "generate()"
     },
     {
@@ -378,7 +378,7 @@
       "source_file": "bereg-instagram-workbench/app/src/components/content-tabs/ReelTab.tsx",
       "source_location": "L68",
       "id": "reeltab_updateline",
-      "community": 16,
+      "community": 17,
       "norm_label": "updateline()"
     },
     {
@@ -387,7 +387,7 @@
       "source_file": "bereg-instagram-workbench/app/src/components/content-tabs/ReelTab.tsx",
       "source_location": "L72",
       "id": "reeltab_savedraft",
-      "community": 16,
+      "community": 17,
       "norm_label": "savedraft()"
     },
     {
@@ -585,7 +585,7 @@
       "source_file": "app/src/lib/project.ts",
       "source_location": "L1",
       "id": "app_src_lib_project_ts",
-      "community": 4,
+      "community": 3,
       "norm_label": "project.ts"
     },
     {
@@ -594,7 +594,7 @@
       "source_file": "app/src/lib/project.ts",
       "source_location": "L4",
       "id": "project_migratekey",
-      "community": 4,
+      "community": 3,
       "norm_label": "migratekey()"
     },
     {
@@ -603,7 +603,7 @@
       "source_file": "app/src/lib/project.ts",
       "source_location": "L18",
       "id": "project_getstoredprojectid",
-      "community": 4,
+      "community": 3,
       "norm_label": "getstoredprojectid()"
     },
     {
@@ -612,7 +612,7 @@
       "source_file": "app/src/lib/project.ts",
       "source_location": "L27",
       "id": "project_setstoredprojectid",
-      "community": 4,
+      "community": 3,
       "norm_label": "setstoredprojectid()"
     },
     {
@@ -621,7 +621,7 @@
       "source_file": "app/src/lib/project.ts",
       "source_location": "L33",
       "id": "project_clearstoredprojectid",
-      "community": 4,
+      "community": 3,
       "norm_label": "clearstoredprojectid()"
     },
     {
@@ -630,7 +630,7 @@
       "source_file": "app/src/lib/project.ts",
       "source_location": "L39",
       "id": "project_getstoredplatformid",
-      "community": 4,
+      "community": 3,
       "norm_label": "getstoredplatformid()"
     },
     {
@@ -639,7 +639,7 @@
       "source_file": "app/src/lib/project.ts",
       "source_location": "L48",
       "id": "project_setstoredplatformid",
-      "community": 5,
+      "community": 4,
       "norm_label": "setstoredplatformid()"
     },
     {
@@ -648,7 +648,7 @@
       "source_file": "app/src/lib/project.ts",
       "source_location": "L54",
       "id": "project_clearstoredplatformid",
-      "community": 4,
+      "community": 3,
       "norm_label": "clearstoredplatformid()"
     },
     {
@@ -657,7 +657,7 @@
       "source_file": "app/src/lib/project.ts",
       "source_location": "L60",
       "id": "project_getstoredproductid",
-      "community": 4,
+      "community": 3,
       "norm_label": "getstoredproductid()"
     },
     {
@@ -666,7 +666,7 @@
       "source_file": "app/src/lib/project.ts",
       "source_location": "L69",
       "id": "project_setstoredproductid",
-      "community": 4,
+      "community": 3,
       "norm_label": "setstoredproductid()"
     },
     {
@@ -675,7 +675,7 @@
       "source_file": "app/src/lib/project.ts",
       "source_location": "L75",
       "id": "project_clearstoredproductid",
-      "community": 4,
+      "community": 3,
       "norm_label": "clearstoredproductid()"
     },
     {
@@ -684,7 +684,7 @@
       "source_file": "app/src/lib/useLicense.ts",
       "source_location": "L1",
       "id": "app_src_lib_uselicense_ts",
-      "community": 21,
+      "community": 23,
       "norm_label": "uselicense.ts"
     },
     {
@@ -693,7 +693,7 @@
       "source_file": "app/src/lib/useLicense.ts",
       "source_location": "L10",
       "id": "uselicense_uselicense",
-      "community": 21,
+      "community": 23,
       "norm_label": "uselicense()"
     },
     {
@@ -702,7 +702,7 @@
       "source_file": "app/src/lib/useLicense.ts",
       "source_location": "L18",
       "id": "uselicense_useactivatelicense",
-      "community": 21,
+      "community": 23,
       "norm_label": "useactivatelicense()"
     },
     {
@@ -711,7 +711,7 @@
       "source_file": "app/src/lib/api.ts",
       "source_location": "L1",
       "id": "app_src_lib_api_ts",
-      "community": 27,
+      "community": 29,
       "norm_label": "api.ts"
     },
     {
@@ -720,7 +720,7 @@
       "source_file": "app/src/lib/api.ts",
       "source_location": "L3",
       "id": "api_request",
-      "community": 27,
+      "community": 29,
       "norm_label": "request()"
     },
     {
@@ -729,7 +729,7 @@
       "source_file": "app/src/lib/useUpdater.ts",
       "source_location": "L1",
       "id": "app_src_lib_useupdater_ts",
-      "community": 17,
+      "community": 18,
       "norm_label": "useupdater.ts"
     },
     {
@@ -738,7 +738,7 @@
       "source_file": "app/src/lib/useUpdater.ts",
       "source_location": "L3",
       "id": "useupdater_useupdater",
-      "community": 17,
+      "community": 18,
       "norm_label": "useupdater()"
     },
     {
@@ -747,7 +747,7 @@
       "source_file": "bereg-instagram-workbench/app/src/lib/constants.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_app_src_lib_constants_ts",
-      "community": 40,
+      "community": 42,
       "norm_label": "constants.ts"
     },
     {
@@ -756,7 +756,7 @@
       "source_file": "bereg-instagram-workbench/app/src/pages/FreeContentPage.tsx",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_app_src_pages_freecontentpage_tsx",
-      "community": 18,
+      "community": 19,
       "norm_label": "freecontentpage.tsx"
     },
     {
@@ -765,7 +765,7 @@
       "source_file": "bereg-instagram-workbench/app/src/pages/FreeContentPage.tsx",
       "source_location": "L108",
       "id": "freecontentpage_nextstep",
-      "community": 18,
+      "community": 19,
       "norm_label": "nextstep()"
     },
     {
@@ -774,7 +774,7 @@
       "source_file": "bereg-instagram-workbench/app/src/pages/FreeContentPage.tsx",
       "source_location": "L109",
       "id": "freecontentpage_prevstep",
-      "community": 18,
+      "community": 19,
       "norm_label": "prevstep()"
     },
     {
@@ -783,7 +783,7 @@
       "source_file": "bereg-instagram-workbench/app/src/pages/FreeContentPage.tsx",
       "source_location": "L111",
       "id": "freecontentpage_canproceed",
-      "community": 18,
+      "community": 19,
       "norm_label": "canproceed()"
     },
     {
@@ -972,7 +972,7 @@
       "source_file": "/Users/maxnov/Prod/Bereg_content/bereg-instagram-workbench/app/src/pages/AnalyticsPage.tsx",
       "source_location": "L1",
       "id": "users_maxnov_prod_bereg_content_bereg_instagram_workbench_app_src_pages_analyticspage_tsx",
-      "community": 41,
+      "community": 43,
       "norm_label": "analyticspage.tsx"
     },
     {
@@ -981,7 +981,7 @@
       "source_file": "bereg-instagram-workbench/app/src/pages/QueuePage.tsx",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_app_src_pages_queuepage_tsx",
-      "community": 22,
+      "community": 24,
       "norm_label": "queuepage.tsx"
     },
     {
@@ -990,7 +990,7 @@
       "source_file": "bereg-instagram-workbench/app/src/pages/QueuePage.tsx",
       "source_location": "L19",
       "id": "queuepage_relativedate",
-      "community": 22,
+      "community": 24,
       "norm_label": "relativedate()"
     },
     {
@@ -999,7 +999,7 @@
       "source_file": "bereg-instagram-workbench/app/src/pages/QueuePage.tsx",
       "source_location": "L37",
       "id": "queuepage_listparams",
-      "community": 22,
+      "community": 24,
       "norm_label": "listparams()"
     },
     {
@@ -1062,7 +1062,7 @@
       "source_file": "app/src/pages/Dashboard.tsx",
       "source_location": "L1",
       "id": "app_src_pages_dashboard_tsx",
-      "community": 19,
+      "community": 20,
       "norm_label": "dashboard.tsx"
     },
     {
@@ -1071,7 +1071,7 @@
       "source_file": "app/src/pages/Dashboard.tsx",
       "source_location": "L34",
       "id": "dashboard_useinview",
-      "community": 19,
+      "community": 20,
       "norm_label": "useinview()"
     },
     {
@@ -1080,7 +1080,7 @@
       "source_file": "app/src/pages/Dashboard.tsx",
       "source_location": "L48",
       "id": "dashboard_animatedcounter",
-      "community": 19,
+      "community": 20,
       "norm_label": "animatedcounter()"
     },
     {
@@ -1089,7 +1089,7 @@
       "source_file": "app/src/pages/Dashboard.tsx",
       "source_location": "L241",
       "id": "dashboard_timeago",
-      "community": 19,
+      "community": 20,
       "norm_label": "timeago()"
     },
     {
@@ -1098,7 +1098,7 @@
       "source_file": "app/src/pages/SettingsPage.tsx",
       "source_location": "L1",
       "id": "app_src_pages_settingspage_tsx",
-      "community": 23,
+      "community": 25,
       "norm_label": "settingspage.tsx"
     },
     {
@@ -1107,7 +1107,7 @@
       "source_file": "app/src/pages/SettingsPage.tsx",
       "source_location": "L75",
       "id": "settingspage_getmodelsfortask",
-      "community": 23,
+      "community": 25,
       "norm_label": "getmodelsfortask()"
     },
     {
@@ -1116,7 +1116,7 @@
       "source_file": "app/src/pages/SettingsPage.tsx",
       "source_location": "L81",
       "id": "settingspage_onproviderfilterchange",
-      "community": 23,
+      "community": 25,
       "norm_label": "onproviderfilterchange()"
     },
     {
@@ -1125,7 +1125,7 @@
       "source_file": "app/src/pages/AssetsPage.tsx",
       "source_location": "L1",
       "id": "app_src_pages_assetspage_tsx",
-      "community": 24,
+      "community": 26,
       "norm_label": "assetspage.tsx"
     },
     {
@@ -1134,7 +1134,7 @@
       "source_file": "app/src/pages/AssetsPage.tsx",
       "source_location": "L14",
       "id": "assetspage_relativedate",
-      "community": 24,
+      "community": 26,
       "norm_label": "relativedate()"
     },
     {
@@ -1143,7 +1143,7 @@
       "source_file": "app/src/pages/AssetsPage.tsx",
       "source_location": "L78",
       "id": "assetspage_copytext",
-      "community": 24,
+      "community": 26,
       "norm_label": "copytext()"
     },
     {
@@ -1152,7 +1152,7 @@
       "source_file": "bereg-instagram-workbench/app/src/pages/KnowledgeBase.tsx",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_app_src_pages_knowledgebase_tsx",
-      "community": 28,
+      "community": 30,
       "norm_label": "knowledgebase.tsx"
     },
     {
@@ -1161,7 +1161,7 @@
       "source_file": "bereg-instagram-workbench/app/src/pages/KnowledgeBase.tsx",
       "source_location": "L88",
       "id": "knowledgebase_gettags",
-      "community": 28,
+      "community": 30,
       "norm_label": "gettags()"
     },
     {
@@ -1170,7 +1170,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L1",
       "id": "app_src_pages_topicspage_tsx",
-      "community": 3,
+      "community": 2,
       "norm_label": "topicspage.tsx"
     },
     {
@@ -1179,7 +1179,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L26",
       "id": "topicspage_prioritylabel",
-      "community": 3,
+      "community": 2,
       "norm_label": "prioritylabel()"
     },
     {
@@ -1188,7 +1188,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L33",
       "id": "topicspage_nextpriority",
-      "community": 3,
+      "community": 2,
       "norm_label": "nextpriority()"
     },
     {
@@ -1197,7 +1197,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L40",
       "id": "topicspage_relativedate",
-      "community": 3,
+      "community": 2,
       "norm_label": "relativedate()"
     },
     {
@@ -1206,7 +1206,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L241",
       "id": "topicspage_matchessearch",
-      "community": 3,
+      "community": 2,
       "norm_label": "matchessearch()"
     },
     {
@@ -1215,7 +1215,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L248",
       "id": "topicspage_matchesstatus",
-      "community": 3,
+      "community": 2,
       "norm_label": "matchesstatus()"
     },
     {
@@ -1224,7 +1224,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L255",
       "id": "topicspage_togglerubric",
-      "community": 3,
+      "community": 2,
       "norm_label": "togglerubric()"
     },
     {
@@ -1233,7 +1233,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L263",
       "id": "topicspage_toggletopic",
-      "community": 3,
+      "community": 2,
       "norm_label": "toggletopic()"
     },
     {
@@ -1242,7 +1242,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L271",
       "id": "topicspage_startedit",
-      "community": 3,
+      "community": 2,
       "norm_label": "startedit()"
     },
     {
@@ -1251,7 +1251,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L278",
       "id": "topicspage_saveedit",
-      "community": 3,
+      "community": 2,
       "norm_label": "saveedit()"
     },
     {
@@ -1260,7 +1260,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L285",
       "id": "topicspage_canceledit",
-      "community": 3,
+      "community": 2,
       "norm_label": "canceledit()"
     },
     {
@@ -1269,7 +1269,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L287",
       "id": "topicspage_cyclepriority",
-      "community": 3,
+      "community": 2,
       "norm_label": "cyclepriority()"
     },
     {
@@ -1278,7 +1278,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L292",
       "id": "topicspage_toggleselect",
-      "community": 3,
+      "community": 2,
       "norm_label": "toggleselect()"
     },
     {
@@ -1287,7 +1287,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L300",
       "id": "topicspage_selectall",
-      "community": 3,
+      "community": 2,
       "norm_label": "selectall()"
     },
     {
@@ -1296,7 +1296,7 @@
       "source_file": "app/src/pages/TopicsPage.tsx",
       "source_location": "L308",
       "id": "topicspage_clearselection",
-      "community": 3,
+      "community": 2,
       "norm_label": "clearselection()"
     },
     {
@@ -1377,7 +1377,7 @@
       "source_file": "app/src/pages/StrategyPage.tsx",
       "source_location": "L1",
       "id": "app_src_pages_strategypage_tsx",
-      "community": 5,
+      "community": 4,
       "norm_label": "strategypage.tsx"
     },
     {
@@ -1386,7 +1386,7 @@
       "source_file": "app/src/pages/StrategyPage.tsx",
       "source_location": "L11",
       "id": "strategypage_loadsaved",
-      "community": 5,
+      "community": 4,
       "norm_label": "loadsaved()"
     },
     {
@@ -1395,7 +1395,7 @@
       "source_file": "app/src/pages/StrategyPage.tsx",
       "source_location": "L36",
       "id": "strategypage_datebadge",
-      "community": 5,
+      "community": 4,
       "norm_label": "datebadge()"
     },
     {
@@ -1404,7 +1404,7 @@
       "source_file": "app/src/pages/StrategyPage.tsx",
       "source_location": "L45",
       "id": "strategypage_statusbadge",
-      "community": 5,
+      "community": 4,
       "norm_label": "statusbadge()"
     },
     {
@@ -1413,7 +1413,7 @@
       "source_file": "app/src/pages/StrategyPage.tsx",
       "source_location": "L165",
       "id": "strategypage_extractjson",
-      "community": 5,
+      "community": 4,
       "norm_label": "extractjson()"
     },
     {
@@ -1422,7 +1422,7 @@
       "source_file": "app/src/pages/StrategyPage.tsx",
       "source_location": "L277",
       "id": "strategypage_getrecommendedfunnels",
-      "community": 5,
+      "community": 4,
       "norm_label": "getrecommendedfunnels()"
     },
     {
@@ -1431,7 +1431,7 @@
       "source_file": "app/src/pages/StrategyPage.tsx",
       "source_location": "L363",
       "id": "strategypage_updateplatformdata",
-      "community": 5,
+      "community": 4,
       "norm_label": "updateplatformdata()"
     },
     {
@@ -1440,7 +1440,7 @@
       "source_file": "app/src/pages/StrategyPage.tsx",
       "source_location": "L371",
       "id": "strategypage_ensureproject",
-      "community": 5,
+      "community": 4,
       "norm_label": "ensureproject()"
     },
     {
@@ -1449,7 +1449,7 @@
       "source_file": "app/src/pages/StrategyPage.tsx",
       "source_location": "L531",
       "id": "strategypage_nextstep",
-      "community": 5,
+      "community": 4,
       "norm_label": "nextstep()"
     },
     {
@@ -1458,7 +1458,7 @@
       "source_file": "app/src/pages/StrategyPage.tsx",
       "source_location": "L545",
       "id": "strategypage_prevstep",
-      "community": 5,
+      "community": 4,
       "norm_label": "prevstep()"
     },
     {
@@ -1467,7 +1467,7 @@
       "source_file": "app/src/pages/StrategyPage.tsx",
       "source_location": "L549",
       "id": "strategypage_switchplatform",
-      "community": 5,
+      "community": 4,
       "norm_label": "switchplatform()"
     },
     {
@@ -1476,7 +1476,7 @@
       "source_file": "app/src/pages/StrategyPage.tsx",
       "source_location": "L1244",
       "id": "strategypage_attach",
-      "community": 5,
+      "community": 4,
       "norm_label": "attach()"
     },
     {
@@ -1485,7 +1485,7 @@
       "source_file": "server/drizzle.config.ts",
       "source_location": "L1",
       "id": "server_drizzle_config_ts",
-      "community": 42,
+      "community": 44,
       "norm_label": "drizzle.config.ts"
     },
     {
@@ -1494,7 +1494,7 @@
       "source_file": "server/src/schema.ts",
       "source_location": "L1",
       "id": "server_src_schema_ts",
-      "community": 1,
+      "community": 5,
       "norm_label": "schema.ts"
     },
     {
@@ -1503,7 +1503,7 @@
       "source_file": "server/src/index.ts",
       "source_location": "L1",
       "id": "server_src_index_ts",
-      "community": 1,
+      "community": 5,
       "norm_label": "index.ts"
     },
     {
@@ -1512,7 +1512,7 @@
       "source_file": "server/src/paths.ts",
       "source_location": "L1",
       "id": "server_src_paths_ts",
-      "community": 1,
+      "community": 5,
       "norm_label": "paths.ts"
     },
     {
@@ -1521,7 +1521,7 @@
       "source_file": "server/src/paths.ts",
       "source_location": "L42",
       "id": "paths_initdatadirs",
-      "community": 1,
+      "community": 5,
       "norm_label": "initdatadirs()"
     },
     {
@@ -1530,7 +1530,7 @@
       "source_file": "server/src/db.ts",
       "source_location": "L1",
       "id": "server_src_db_ts",
-      "community": 1,
+      "community": 5,
       "norm_label": "db.ts"
     },
     {
@@ -1539,7 +1539,7 @@
       "source_file": "server/src/db.ts",
       "source_location": "L19",
       "id": "db_runmigrations",
-      "community": 1,
+      "community": 5,
       "norm_label": "runmigrations()"
     },
     {
@@ -1548,7 +1548,7 @@
       "source_file": "/Users/maxnov/Prod/Bereg_content/bereg-instagram-workbench/server/src/types/mammoth.d.ts",
       "source_location": "L1",
       "id": "users_maxnov_prod_bereg_content_bereg_instagram_workbench_server_src_types_mammoth_d_ts",
-      "community": 43,
+      "community": 45,
       "norm_label": "mammoth.d.ts"
     },
     {
@@ -1638,7 +1638,7 @@
       "source_file": "bereg-instagram-workbench/server/src/seeds/funnels.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_seeds_funnels_ts",
-      "community": 29,
+      "community": 31,
       "norm_label": "funnels.ts"
     },
     {
@@ -1647,7 +1647,7 @@
       "source_file": "bereg-instagram-workbench/server/src/seeds/funnels.ts",
       "source_location": "L251",
       "id": "funnels_seedfunnels",
-      "community": 29,
+      "community": 31,
       "norm_label": "seedfunnels()"
     },
     {
@@ -1656,7 +1656,7 @@
       "source_file": "bereg-instagram-workbench/server/src/seeds/contentTextures.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_seeds_contenttextures_ts",
-      "community": 30,
+      "community": 32,
       "norm_label": "contenttextures.ts"
     },
     {
@@ -1665,7 +1665,7 @@
       "source_file": "bereg-instagram-workbench/server/src/seeds/contentTextures.ts",
       "source_location": "L42",
       "id": "contenttextures_seedcontenttextures",
-      "community": 30,
+      "community": 32,
       "norm_label": "seedcontenttextures()"
     },
     {
@@ -1674,7 +1674,7 @@
       "source_file": "/Users/maxnov/Prod/Bereg_content/bereg-instagram-workbench/server/src/api/rubrics.ts",
       "source_location": "L1",
       "id": "users_maxnov_prod_bereg_content_bereg_instagram_workbench_server_src_api_rubrics_ts",
-      "community": 44,
+      "community": 46,
       "norm_label": "rubrics.ts"
     },
     {
@@ -1683,7 +1683,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/competitors.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_api_competitors_ts",
-      "community": 45,
+      "community": 47,
       "norm_label": "competitors.ts"
     },
     {
@@ -1692,7 +1692,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/textures.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_api_textures_ts",
-      "community": 46,
+      "community": 48,
       "norm_label": "textures.ts"
     },
     {
@@ -1701,7 +1701,7 @@
       "source_file": "server/src/api/knowledge.ts",
       "source_location": "L1",
       "id": "server_src_api_knowledge_ts",
-      "community": 1,
+      "community": 5,
       "norm_label": "knowledge.ts"
     },
     {
@@ -1710,7 +1710,7 @@
       "source_file": "server/src/api/knowledge.ts",
       "source_location": "L33",
       "id": "knowledge_wordcount",
-      "community": 1,
+      "community": 5,
       "norm_label": "wordcount()"
     },
     {
@@ -1719,7 +1719,7 @@
       "source_file": "server/src/api/knowledge.ts",
       "source_location": "L37",
       "id": "knowledge_convertfile",
-      "community": 1,
+      "community": 5,
       "norm_label": "convertfile()"
     },
     {
@@ -1728,7 +1728,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/projects.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_api_projects_ts",
-      "community": 31,
+      "community": 33,
       "norm_label": "projects.ts"
     },
     {
@@ -1737,7 +1737,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/projects.ts",
       "source_location": "L103",
       "id": "projects_extractjson",
-      "community": 31,
+      "community": 33,
       "norm_label": "extractjson()"
     },
     {
@@ -1746,7 +1746,7 @@
       "source_file": "/Users/maxnov/Prod/Bereg_content/bereg-instagram-workbench/server/src/api/contentTypes.ts",
       "source_location": "L1",
       "id": "users_maxnov_prod_bereg_content_bereg_instagram_workbench_server_src_api_contenttypes_ts",
-      "community": 47,
+      "community": 49,
       "norm_label": "contenttypes.ts"
     },
     {
@@ -1755,7 +1755,7 @@
       "source_file": "/Users/maxnov/Prod/Bereg_content/bereg-instagram-workbench/server/src/api/instagram.ts",
       "source_location": "L1",
       "id": "users_maxnov_prod_bereg_content_bereg_instagram_workbench_server_src_api_instagram_ts",
-      "community": 48,
+      "community": 50,
       "norm_label": "instagram.ts"
     },
     {
@@ -1764,7 +1764,7 @@
       "source_file": "server/src/api/license.ts",
       "source_location": "L1",
       "id": "server_src_api_license_ts",
-      "community": 1,
+      "community": 5,
       "norm_label": "license.ts"
     },
     {
@@ -1773,7 +1773,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/settings.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_api_settings_ts",
-      "community": 32,
+      "community": 34,
       "norm_label": "settings.ts"
     },
     {
@@ -1782,7 +1782,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/settings.ts",
       "source_location": "L80",
       "id": "settings_fetchprovidermodels",
-      "community": 32,
+      "community": 34,
       "norm_label": "fetchprovidermodels()"
     },
     {
@@ -1791,7 +1791,7 @@
       "source_file": "/Users/maxnov/Prod/Bereg_content/bereg-instagram-workbench/server/src/api/drafts.ts",
       "source_location": "L1",
       "id": "users_maxnov_prod_bereg_content_bereg_instagram_workbench_server_src_api_drafts_ts",
-      "community": 49,
+      "community": 51,
       "norm_label": "drafts.ts"
     },
     {
@@ -1800,7 +1800,7 @@
       "source_file": "/Users/maxnov/Prod/Bereg_content/bereg-instagram-workbench/server/src/api/pipeline.ts",
       "source_location": "L1",
       "id": "users_maxnov_prod_bereg_content_bereg_instagram_workbench_server_src_api_pipeline_ts",
-      "community": 50,
+      "community": 52,
       "norm_label": "pipeline.ts"
     },
     {
@@ -1809,7 +1809,7 @@
       "source_file": "server/src/api/assets.ts",
       "source_location": "L1",
       "id": "server_src_api_assets_ts",
-      "community": 1,
+      "community": 5,
       "norm_label": "assets.ts"
     },
     {
@@ -1818,7 +1818,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/topics.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_api_topics_ts",
-      "community": 51,
+      "community": 53,
       "norm_label": "topics.ts"
     },
     {
@@ -1827,7 +1827,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/chat.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_api_chat_ts",
-      "community": 52,
+      "community": 54,
       "norm_label": "chat.ts"
     },
     {
@@ -1836,7 +1836,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/strategy.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_api_strategy_ts",
-      "community": 53,
+      "community": 55,
       "norm_label": "strategy.ts"
     },
     {
@@ -1845,7 +1845,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/products.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_api_products_ts",
-      "community": 54,
+      "community": 56,
       "norm_label": "products.ts"
     },
     {
@@ -1854,7 +1854,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/audiences.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_api_audiences_ts",
-      "community": 33,
+      "community": 35,
       "norm_label": "audiences.ts"
     },
     {
@@ -1863,7 +1863,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/audiences.ts",
       "source_location": "L10",
       "id": "audiences_extractjson",
-      "community": 33,
+      "community": 35,
       "norm_label": "extractjson()"
     },
     {
@@ -1872,7 +1872,7 @@
       "source_file": "server/src/api/posts.ts",
       "source_location": "L1",
       "id": "server_src_api_posts_ts",
-      "community": 1,
+      "community": 5,
       "norm_label": "posts.ts"
     },
     {
@@ -1881,7 +1881,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/keywords.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_api_keywords_ts",
-      "community": 55,
+      "community": 57,
       "norm_label": "keywords.ts"
     },
     {
@@ -1890,7 +1890,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/onboarding.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_api_onboarding_ts",
-      "community": 20,
+      "community": 21,
       "norm_label": "onboarding.ts"
     },
     {
@@ -1899,7 +1899,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/onboarding.ts",
       "source_location": "L47",
       "id": "onboarding_dataforstep",
-      "community": 20,
+      "community": 21,
       "norm_label": "dataforstep()"
     },
     {
@@ -1908,7 +1908,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/onboarding.ts",
       "source_location": "L329",
       "id": "onboarding_buildaudienceprompt",
-      "community": 20,
+      "community": 21,
       "norm_label": "buildaudienceprompt()"
     },
     {
@@ -1917,7 +1917,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/onboarding.ts",
       "source_location": "L404",
       "id": "onboarding_loadaudiencecontext",
-      "community": 20,
+      "community": 21,
       "norm_label": "loadaudiencecontext()"
     },
     {
@@ -1926,7 +1926,7 @@
       "source_file": "bereg-instagram-workbench/server/src/api/funnels.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_api_funnels_ts",
-      "community": 56,
+      "community": 58,
       "norm_label": "funnels.ts"
     },
     {
@@ -1980,52 +1980,52 @@
       "source_file": "/Users/maxnov/Prod/Bereg_content/bereg-instagram-workbench/server/src/api/platforms.ts",
       "source_location": "L1",
       "id": "users_maxnov_prod_bereg_content_bereg_instagram_workbench_server_src_api_platforms_ts",
-      "community": 57,
+      "community": 59,
       "norm_label": "platforms.ts"
     },
     {
       "label": "licenseService.ts",
       "file_type": "code",
-      "source_file": "server/src/services/licenseService.ts",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/licenseService.ts",
       "source_location": "L1",
-      "id": "server_src_services_licenseservice_ts",
-      "community": 1,
+      "id": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_licenseservice_ts",
+      "community": 16,
       "norm_label": "licenseservice.ts"
     },
     {
       "label": "getLicense()",
       "file_type": "code",
-      "source_file": "server/src/services/licenseService.ts",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/licenseService.ts",
       "source_location": "L15",
       "id": "licenseservice_getlicense",
-      "community": 1,
+      "community": 16,
       "norm_label": "getlicense()"
     },
     {
       "label": "activateLicense()",
       "file_type": "code",
-      "source_file": "server/src/services/licenseService.ts",
-      "source_location": "L27",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/licenseService.ts",
+      "source_location": "L29",
       "id": "licenseservice_activatelicense",
-      "community": 1,
+      "community": 16,
       "norm_label": "activatelicense()"
     },
     {
       "label": "checkLicenseOnline()",
       "file_type": "code",
-      "source_file": "server/src/services/licenseService.ts",
-      "source_location": "L61",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/licenseService.ts",
+      "source_location": "L63",
       "id": "licenseservice_checklicenseonline",
-      "community": 1,
+      "community": 16,
       "norm_label": "checklicenseonline()"
     },
     {
       "label": "requireLicense()",
       "file_type": "code",
-      "source_file": "server/src/services/licenseService.ts",
-      "source_location": "L92",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/licenseService.ts",
+      "source_location": "L93",
       "id": "licenseservice_requirelicense",
-      "community": 1,
+      "community": 16,
       "norm_label": "requirelicense()"
     },
     {
@@ -2034,7 +2034,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_services_aigateway_ts",
-      "community": 2,
+      "community": 1,
       "norm_label": "aigateway.ts"
     },
     {
@@ -2043,7 +2043,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L11",
       "id": "aigateway_getdbsetting",
-      "community": 2,
+      "community": 1,
       "norm_label": "getdbsetting()"
     },
     {
@@ -2052,7 +2052,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L46",
       "id": "aigateway_getproviderapikey",
-      "community": 2,
+      "community": 1,
       "norm_label": "getproviderapikey()"
     },
     {
@@ -2061,7 +2061,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L119",
       "id": "aigateway_getmodelfortask",
-      "community": 2,
+      "community": 1,
       "norm_label": "getmodelfortask()"
     },
     {
@@ -2070,7 +2070,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L128",
       "id": "aigateway_gettaskmodelkeys",
-      "community": 2,
+      "community": 1,
       "norm_label": "gettaskmodelkeys()"
     },
     {
@@ -2079,7 +2079,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L138",
       "id": "aigateway_callopenai",
-      "community": 2,
+      "community": 1,
       "norm_label": "callopenai()"
     },
     {
@@ -2088,7 +2088,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L171",
       "id": "aigateway_callanthropic",
-      "community": 2,
+      "community": 1,
       "norm_label": "callanthropic()"
     },
     {
@@ -2097,7 +2097,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L202",
       "id": "aigateway_generate",
-      "community": 2,
+      "community": 1,
       "norm_label": "generate()"
     },
     {
@@ -2106,7 +2106,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L234",
       "id": "aigateway_extractjson",
-      "community": 2,
+      "community": 1,
       "norm_label": "extractjson()"
     },
     {
@@ -2115,7 +2115,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L266",
       "id": "aigateway_isgeminiimagemodel",
-      "community": 2,
+      "community": 1,
       "norm_label": "isgeminiimagemodel()"
     },
     {
@@ -2124,7 +2124,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L270",
       "id": "aigateway_generateimage",
-      "community": 2,
+      "community": 1,
       "norm_label": "generateimage()"
     },
     {
@@ -2133,7 +2133,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L626",
       "id": "aigateway_gettemplates",
-      "community": 2,
+      "community": 1,
       "norm_label": "gettemplates()"
     },
     {
@@ -2142,7 +2142,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L630",
       "id": "aigateway_gettemplate",
-      "community": 2,
+      "community": 1,
       "norm_label": "gettemplate()"
     },
     {
@@ -2151,7 +2151,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/aiGateway.ts",
       "source_location": "L634",
       "id": "aigateway_filltemplate",
-      "community": 2,
+      "community": 1,
       "norm_label": "filltemplate()"
     },
     {
@@ -2160,43 +2160,43 @@
       "source_file": "bereg-instagram-workbench/server/src/services/hantStages.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_services_hantstages_ts",
-      "community": 58,
+      "community": 60,
       "norm_label": "hantstages.ts"
     },
     {
       "label": "updater.ts",
       "file_type": "code",
-      "source_file": "server/src/services/updater.ts",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/updater.ts",
       "source_location": "L1",
-      "id": "server_src_services_updater_ts",
-      "community": 1,
+      "id": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_updater_ts",
+      "community": 22,
       "norm_label": "updater.ts"
     },
     {
       "label": "getCurrentVersion()",
       "file_type": "code",
-      "source_file": "server/src/services/updater.ts",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/updater.ts",
       "source_location": "L7",
       "id": "updater_getcurrentversion",
-      "community": 1,
+      "community": 22,
       "norm_label": "getcurrentversion()"
     },
     {
       "label": "checkForUpdates()",
       "file_type": "code",
-      "source_file": "server/src/services/updater.ts",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/updater.ts",
       "source_location": "L15",
       "id": "updater_checkforupdates",
-      "community": 1,
+      "community": 22,
       "norm_label": "checkforupdates()"
     },
     {
       "label": "compareVersions()",
       "file_type": "code",
-      "source_file": "server/src/services/updater.ts",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/updater.ts",
       "source_location": "L41",
       "id": "updater_compareversions",
-      "community": 1,
+      "community": 22,
       "norm_label": "compareversions()"
     },
     {
@@ -2205,7 +2205,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/searchService.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_services_searchservice_ts",
-      "community": 2,
+      "community": 1,
       "norm_label": "searchservice.ts"
     },
     {
@@ -2214,7 +2214,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/searchService.ts",
       "source_location": "L23",
       "id": "searchservice_getsetting",
-      "community": 2,
+      "community": 1,
       "norm_label": "getsetting()"
     },
     {
@@ -2223,7 +2223,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/searchService.ts",
       "source_location": "L32",
       "id": "searchservice_searchtavily",
-      "community": 2,
+      "community": 1,
       "norm_label": "searchtavily()"
     },
     {
@@ -2232,7 +2232,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/searchService.ts",
       "source_location": "L90",
       "id": "searchservice_searchbrave",
-      "community": 2,
+      "community": 1,
       "norm_label": "searchbrave()"
     },
     {
@@ -2241,7 +2241,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/searchService.ts",
       "source_location": "L124",
       "id": "searchservice_analyzeresults",
-      "community": 2,
+      "community": 1,
       "norm_label": "analyzeresults()"
     },
     {
@@ -2250,7 +2250,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/searchService.ts",
       "source_location": "L177",
       "id": "searchservice_searchcompetitors",
-      "community": 2,
+      "community": 1,
       "norm_label": "searchcompetitors()"
     },
     {
@@ -2259,7 +2259,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/projectContext.ts",
       "source_location": "L1",
       "id": "bereg_instagram_workbench_server_src_services_projectcontext_ts",
-      "community": 34,
+      "community": 36,
       "norm_label": "projectcontext.ts"
     },
     {
@@ -2268,7 +2268,7 @@
       "source_file": "bereg-instagram-workbench/server/src/services/projectContext.ts",
       "source_location": "L8",
       "id": "projectcontext_buildprojectcontext",
-      "community": 34,
+      "community": 36,
       "norm_label": "buildprojectcontext()"
     },
     {
@@ -2277,7 +2277,7 @@
       "source_file": "installers/windows/install-shortcut.ps1",
       "source_location": "L1",
       "id": "installers_windows_install_shortcut_ps1",
-      "community": 59,
+      "community": 61,
       "norm_label": "install-shortcut.ps1"
     }
   ],
@@ -4311,30 +4311,6 @@
       "confidence_score": 1.0
     },
     {
-      "relation": "imports_from",
-      "confidence": "EXTRACTED",
-      "source_file": "server/src/index.ts",
-      "source_location": "L32",
-      "weight": 1.0,
-      "_src": "server_src_index_ts",
-      "_tgt": "server_src_services_licenseservice_ts",
-      "source": "server_src_index_ts",
-      "target": "server_src_services_licenseservice_ts",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "imports_from",
-      "confidence": "EXTRACTED",
-      "source_file": "server/src/index.ts",
-      "source_location": "L33",
-      "weight": 1.0,
-      "_src": "server_src_index_ts",
-      "_tgt": "server_src_services_updater_ts",
-      "source": "server_src_index_ts",
-      "target": "server_src_services_updater_ts",
-      "confidence_score": 1.0
-    },
-    {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "server/src/paths.ts",
@@ -4661,56 +4637,56 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "server/src/services/licenseService.ts",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/licenseService.ts",
       "source_location": "L15",
       "weight": 1.0,
-      "_src": "server_src_services_licenseservice_ts",
+      "_src": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_licenseservice_ts",
       "_tgt": "licenseservice_getlicense",
-      "source": "server_src_services_licenseservice_ts",
+      "source": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_licenseservice_ts",
       "target": "licenseservice_getlicense",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "server/src/services/licenseService.ts",
-      "source_location": "L27",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/licenseService.ts",
+      "source_location": "L29",
       "weight": 1.0,
-      "_src": "server_src_services_licenseservice_ts",
+      "_src": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_licenseservice_ts",
       "_tgt": "licenseservice_activatelicense",
-      "source": "server_src_services_licenseservice_ts",
+      "source": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_licenseservice_ts",
       "target": "licenseservice_activatelicense",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "server/src/services/licenseService.ts",
-      "source_location": "L61",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/licenseService.ts",
+      "source_location": "L63",
       "weight": 1.0,
-      "_src": "server_src_services_licenseservice_ts",
+      "_src": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_licenseservice_ts",
       "_tgt": "licenseservice_checklicenseonline",
-      "source": "server_src_services_licenseservice_ts",
+      "source": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_licenseservice_ts",
       "target": "licenseservice_checklicenseonline",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "server/src/services/licenseService.ts",
-      "source_location": "L92",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/licenseService.ts",
+      "source_location": "L93",
       "weight": 1.0,
-      "_src": "server_src_services_licenseservice_ts",
+      "_src": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_licenseservice_ts",
       "_tgt": "licenseservice_requirelicense",
-      "source": "server_src_services_licenseservice_ts",
+      "source": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_licenseservice_ts",
       "target": "licenseservice_requirelicense",
       "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "confidence": "EXTRACTED",
-      "source_file": "server/src/services/licenseService.ts",
-      "source_location": "L96",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/licenseService.ts",
+      "source_location": "L97",
       "weight": 1.0,
       "_src": "licenseservice_requirelicense",
       "_tgt": "licenseservice_getlicense",
@@ -4985,43 +4961,43 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "server/src/services/updater.ts",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/updater.ts",
       "source_location": "L7",
       "weight": 1.0,
-      "_src": "server_src_services_updater_ts",
+      "_src": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_updater_ts",
       "_tgt": "updater_getcurrentversion",
-      "source": "server_src_services_updater_ts",
+      "source": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_updater_ts",
       "target": "updater_getcurrentversion",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "server/src/services/updater.ts",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/updater.ts",
       "source_location": "L15",
       "weight": 1.0,
-      "_src": "server_src_services_updater_ts",
+      "_src": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_updater_ts",
       "_tgt": "updater_checkforupdates",
-      "source": "server_src_services_updater_ts",
+      "source": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_updater_ts",
       "target": "updater_checkforupdates",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "server/src/services/updater.ts",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/updater.ts",
       "source_location": "L41",
       "weight": 1.0,
-      "_src": "server_src_services_updater_ts",
+      "_src": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_updater_ts",
       "_tgt": "updater_compareversions",
-      "source": "server_src_services_updater_ts",
+      "source": "users_maxnov_prod_bereg_content_fabrika_content_workbench_server_src_services_updater_ts",
       "target": "updater_compareversions",
       "confidence_score": 1.0
     },
     {
       "relation": "calls",
       "confidence": "EXTRACTED",
-      "source_file": "server/src/services/updater.ts",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/updater.ts",
       "source_location": "L21",
       "weight": 1.0,
       "_src": "updater_checkforupdates",
@@ -5033,7 +5009,7 @@
     {
       "relation": "calls",
       "confidence": "EXTRACTED",
-      "source_file": "server/src/services/updater.ts",
+      "source_file": "/Users/maxnov/Prod/Bereg_content/fabrika-content-workbench/server/src/services/updater.ts",
       "source_location": "L31",
       "weight": 1.0,
       "_src": "updater_checkforupdates",
