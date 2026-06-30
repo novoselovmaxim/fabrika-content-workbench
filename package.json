@@ -18,7 +18,7 @@
   },
   "build": {
     "appId": "com.fabrika.content.workbench",
-    "productName": "Фабрика Контента",
+    "productName": "Fabrika Content",
     "directories": {
       "app": ".",
       "output": "release/electron"
@@ -43,10 +43,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
-      "installerSidebar": "build/installerSidebar.bmp"
+      "createDesktopShortcut": true
     }
   },
   "dependencies": {
