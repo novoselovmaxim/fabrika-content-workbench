@@ -29,7 +29,7 @@
       "server/dist/bundle.cjs"
     ],
     "extraResources": [
-      { "from": "migrations", "to": "migrations" },
+      { "from": "database/migrations", "to": "migrations" },
       { "from": "app/dist", "to": "app" }
     ],
     "asarUnpack": [

@@ -2,11 +2,9 @@ import os from "os";
 import path from "path";
 import fs from "fs";
 
-// Dev: __dirname = .../server/src  (tsx)
-// Prod (node dist): __dirname = .../server/dist
-// Prod (pkg binary): __dirname = .../FabrikaContent
-// Prod (Electron packaged): __dirname = .../Resources/server/dist
-const isDev = __dirname.endsWith(path.sep + "src");
+const isDev =
+  __dirname.endsWith(path.sep + "src") ||
+  (!process.env.PKG_EXECPATH && !process.env.ELECTRON_APP);
 const isPkg = !__dirname.includes("server");
 const isAppBundle = isPkg && __dirname.includes(path.sep + "MacOS");
 const isElectron = !!process.env.ELECTRON_APP;
@@ -38,7 +36,7 @@ export const PATHS = {
   config: path.join(DATA_DIR, "config"),
   licenseFile: path.join(DATA_DIR, "config", "license.json"),
   frontend: path.join(INSTALL_DIR, "app"),
-  migrations: isDev
+  migrations: isDev || (isElectron && !(process as any).resourcesPath)
     ? path.resolve(__dirname, "../../database/migrations")
     : path.join(INSTALL_DIR, "migrations"),
 };
