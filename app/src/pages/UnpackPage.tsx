@@ -17,16 +17,16 @@ type OnboardingStepType =
   | "platforms"
   | "complete";
 
-const STEPS: { key: OnboardingStepType; label: string; icon: string }[] = [
-  { key: "scenario", label: "Сценарий", icon: "🎯" },
-  { key: "materials", label: "Материалы", icon: "📁" },
-  { key: "competitors", label: "Конкуренты", icon: "🔍" },
-  { key: "audience", label: "ЦА", icon: "👥" },
-  { key: "hant", label: "Лестница Ханта", icon: "🪜" },
-  { key: "value_prop", label: "Ценность", icon: "💎" },
-  { key: "products", label: "Продукты", icon: "📦" },
-  { key: "platforms", label: "Площадки", icon: "📡" },
-  { key: "complete", label: "Итог", icon: "✅" },
+const STEPS: { key: OnboardingStepType; label: string; icon: string; number: number }[] = [
+  { key: "scenario", label: "Сценарий", icon: "🎯", number: 1 },
+  { key: "materials", label: "Материалы", icon: "📁", number: 2 },
+  { key: "competitors", label: "Конкуренты", icon: "🔍", number: 3 },
+  { key: "audience", label: "ЦА", icon: "👥", number: 4 },
+  { key: "hant", label: "Лестница Ханта", icon: "🪜", number: 5 },
+  { key: "value_prop", label: "Ценность", icon: "💎", number: 6 },
+  { key: "products", label: "Продукты", icon: "📦", number: 7 },
+  { key: "platforms", label: "Площадки", icon: "📡", number: 8 },
+  { key: "complete", label: "Итог", icon: "✅", number: 9 },
 ];
 
 const HANT_STAGES = [
@@ -473,6 +473,8 @@ export default function UnpackPage() {
   // ── Value prop state ──
   const [valuePropResult, setValuePropResult] = useState<any>(null);
   const [valuePropLoading, setValuePropLoading] = useState(false);
+  const [vpEditing, setVpEditing] = useState<string | null>(null);
+  const [vpEditBuffer, setVpEditBuffer] = useState("");
 
   const generateValueProp = useMutation({
     mutationFn: async () => {
@@ -781,14 +783,18 @@ export default function UnpackPage() {
       if (data?.length > 0) {
         setProductsResult((prev) => {
           if (prev.length > 0) return prev;
-          return data.map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            description: p.description,
-            audienceDescription: "",
-            pains: [],
-            gains: [],
-          }));
+          return data.map((p: any) => {
+            let parsedValues: any = {};
+            try { if (p.values) parsedValues = JSON.parse(p.values); } catch {}
+            return {
+              id: p.id,
+              name: p.name,
+              description: p.description || "",
+              audienceDescription: parsedValues.audienceDescription || "",
+              pains: parsedValues.pains || [],
+              gains: parsedValues.gains || [],
+            };
+          });
         });
       }
     }).catch(() => {});
@@ -886,25 +892,36 @@ export default function UnpackPage() {
 
       {/* Progress bar */}
       <div>
-        <div className="flex items-center gap-1" style={{ marginBottom: 12, overflowX: "auto", paddingBottom: 4 }}>
+        <div className="flex items-center gap-0" style={{ marginBottom: 12, overflowX: "auto", paddingBottom: 4 }}>
           {STEPS.map((s, i) => (
-            <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 1, flexShrink: 0 }}>
+            <div key={s.key} style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
               <button
-                className={`btn ${i === stepIdx ? "btn-primary" : i < stepIdx ? "btn-ghost" : "btn-ghost"}`}
                 onClick={() => goToStep(i)}
-                style={{ fontSize: 11, padding: "4px 8px", opacity: i > stepIdx ? 0.4 : 1, whiteSpace: "nowrap" }}
+                style={{
+                  fontSize: 12, padding: "6px 10px", whiteSpace: "nowrap", cursor: "pointer",
+                  borderRadius: 6, border: "none", fontWeight: i === stepIdx ? 700 : 400,
+                  background: i === stepIdx ? "var(--accent)" : i < stepIdx ? "var(--bg-hover)" : "transparent",
+                  color: i === stepIdx ? "#fff" : i < stepIdx ? "var(--text)" : "var(--text-dim)",
+                  opacity: i > stepIdx ? 0.35 : 1,
+                  display: "flex", alignItems: "center", gap: 4,
+                }}
               >
-                {s.icon} {s.label}
+                <span style={{
+                  width: 20, height: 20, borderRadius: "50%", display: "inline-flex",
+                  alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700,
+                  background: i === stepIdx ? "rgba(255,255,255,0.25)" : i < stepIdx ? "var(--accent)" : "var(--border)",
+                  color: i === stepIdx ? "#fff" : i < stepIdx ? "#fff" : "var(--text-dim)",
+                }}>
+                  {i < stepIdx ? "✓" : s.number}
+                </span>
+                <span>{s.icon} {s.label}</span>
               </button>
-              {i < STEPS.length - 1 && <div style={{ width: 10, height: 1, background: "var(--border)" }} />}
+              {i < STEPS.length - 1 && <div style={{
+                width: 16, height: 2, flexShrink: 0,
+                background: i < stepIdx ? "var(--accent)" : "var(--border)",
+              }} />}
             </div>
           ))}
-        </div>
-        <div style={{ height: 3, background: "var(--bg-hover)", borderRadius: 2 }}>
-          <div style={{
-            height: "100%", width: `${((stepIdx + 1) / STEPS.length) * 100}%`,
-            background: "var(--accent)", borderRadius: 2, transition: "width 0.3s",
-          }} />
         </div>
       </div>
 
@@ -926,7 +943,7 @@ export default function UnpackPage() {
                 style={{ padding: 24, height: "auto", flexDirection: "column", gap: 12, textAlign: "center", border: scenario === "existing" ? "2px solid var(--accent)" : "2px solid var(--border)" }}
               >
                 <span style={{ fontSize: 32 }}>🏢</span>
-                <span style={{ fontWeight: 600 }}>Уже есть продукт</span>
+                <span style={{ fontWeight: 600 }}>Уже есть проект</span>
                 <span className="text-xs text-dim">Загрузите материалы, AI распакует бренд из них</span>
               </button>
               <button
@@ -936,7 +953,7 @@ export default function UnpackPage() {
                 style={{ padding: 24, height: "auto", flexDirection: "column", gap: 12, textAlign: "center", border: scenario === "new" ? "2px solid var(--accent)" : "2px solid var(--border)" }}
               >
                 <span style={{ fontSize: 32 }}>🚀</span>
-                <span style={{ fontWeight: 600 }}>Создаём новый продукт</span>
+                <span style={{ fontWeight: 600 }}>Создаём новый проект</span>
                 <span className="text-xs text-dim">Пройдём шаги вместе, AI поможет проработать всё с нуля</span>
               </button>
             </div>
@@ -1535,49 +1552,73 @@ export default function UnpackPage() {
             {valuePropResult && (
               <div className="flex flex-col gap-4" style={{ marginTop: 16 }}>
                 <div className="card">
-                  <label className="text-xs text-dim" style={{ fontWeight: 600 }}>Формула</label>
-                  <div style={{ fontSize: 15, lineHeight: 1.6, marginTop: 4, fontWeight: 500 }}>
-                    {valuePropResult.formula}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label className="text-xs text-dim" style={{ fontWeight: 600 }}>Формула</label>
+                    <button className="btn btn-ghost" style={{ fontSize: 10, padding: "2px 6px" }}
+                      onClick={() => { setVpEditing("formula"); setVpEditBuffer(valuePropResult.formula || ""); }}>✏️</button>
                   </div>
+                  {vpEditing === "formula" ? (
+                    <div>
+                      <textarea className="input" style={{ fontSize: 13, width: "100%", minHeight: 60, marginTop: 4 }}
+                        value={vpEditBuffer} onChange={(e) => setVpEditBuffer(e.target.value)} rows={3} />
+                      <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                        <button className="btn btn-primary" style={{ fontSize: 10, padding: "2px 10px" }}
+                          onClick={() => { setValuePropResult((p: any) => ({ ...p, formula: vpEditBuffer })); setVpEditing(null); }}>✅</button>
+                        <button className="btn btn-ghost" style={{ fontSize: 10, padding: "2px 10px" }} onClick={() => setVpEditing(null)}>✕</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 15, lineHeight: 1.6, marginTop: 4, fontWeight: 500 }}>
+                      {valuePropResult.formula}
+                    </div>
+                  )}
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div className="card">
-                    <label className="text-xs text-dim" style={{ fontWeight: 600 }}>Задачи и цели ЦА</label>
-                    {(valuePropResult.tasks || []).map((t: any, i: number) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid var(--border)" }}>
-                        <span>{t.text}</span>
-                        <span style={{ color: "var(--accent)" }}>{"★".repeat(t.score)}{"☆".repeat(3 - t.score)}</span>
+
+                {["tasks", "products", "problems", "gains"].map((field) => {
+                  const items = valuePropResult[field] || [];
+                  const labels: Record<string, string> = {
+                    tasks: "Задачи и цели ЦА",
+                    products: "Товары и услуги",
+                    problems: "Проблемы",
+                    gains: "Выгоды и результат",
+                  };
+                  const isEditing = vpEditing === field;
+                  const serialize = (arr: any[]) => arr.map((i: any) => `${i.text}|${i.score}`).join("\n");
+                  const deserialize = (str: string) => str.split("\n").filter(Boolean).map(line => {
+                    const [text = "", score = "1"] = line.split("|");
+                    return { text: text.trim(), score: Math.min(3, Math.max(1, parseInt(score) || 1)) };
+                  });
+
+                  return (
+                    <div className="card" key={field}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label className="text-xs text-dim" style={{ fontWeight: 600 }}>{labels[field]}</label>
+                        <button className="btn btn-ghost" style={{ fontSize: 10, padding: "2px 6px" }}
+                          onClick={() => { setVpEditing(field); setVpEditBuffer(serialize(items)); }}>✏️</button>
                       </div>
-                    ))}
-                  </div>
-                  <div className="card">
-                    <label className="text-xs text-dim" style={{ fontWeight: 600 }}>Товары и услуги</label>
-                    {(valuePropResult.products || []).map((p: any, i: number) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid var(--border)" }}>
-                        <span>{p.text}</span>
-                        <span style={{ color: "var(--accent)" }}>{"★".repeat(p.score)}{"☆".repeat(3 - p.score)}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="card">
-                    <label className="text-xs text-dim" style={{ fontWeight: 600 }}>Проблемы</label>
-                    {(valuePropResult.problems || []).map((p: any, i: number) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid var(--border)" }}>
-                        <span>{p.text}</span>
-                        <span style={{ color: "var(--accent)" }}>{"★".repeat(p.score)}{"☆".repeat(3 - p.score)}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="card">
-                    <label className="text-xs text-dim" style={{ fontWeight: 600 }}>Выгоды и результат</label>
-                    {(valuePropResult.gains || []).map((g: any, i: number) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid var(--border)" }}>
-                        <span>{g.text}</span>
-                        <span style={{ color: "var(--accent)" }}>{"★".repeat(g.score)}{"☆".repeat(3 - g.score)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                      {isEditing ? (
+                        <div>
+                          <textarea className="input" style={{ fontSize: 12, width: "100%", minHeight: 80, marginTop: 4, fontFamily: "monospace" }}
+                            value={vpEditBuffer} onChange={(e) => setVpEditBuffer(e.target.value)}
+                            rows={Math.max(items.length + 1, 3)} />
+                          <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                            <button className="btn btn-primary" style={{ fontSize: 10, padding: "2px 10px" }}
+                              onClick={() => { setValuePropResult((p: any) => ({ ...p, [field]: deserialize(vpEditBuffer) })); setVpEditing(null); }}>✅</button>
+                            <button className="btn btn-ghost" style={{ fontSize: 10, padding: "2px 10px" }} onClick={() => setVpEditing(null)}>✕</button>
+                          </div>
+                          <div className="text-xs text-dim" style={{ marginTop: 4 }}>Формат: текст|оценка (1-3), одна строка на пункт</div>
+                        </div>
+                      ) : (
+                        items.map((t: any, i: number) => (
+                          <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, borderBottom: "1px solid var(--border)" }}>
+                            <span>{t.text}</span>
+                            <span style={{ color: "var(--accent)" }}>{"★".repeat(t.score)}{"☆".repeat(3 - t.score)}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

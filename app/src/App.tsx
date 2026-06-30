@@ -5,7 +5,7 @@ import { api } from "./lib/api";
 import { getStoredProjectId, setStoredProjectId, clearStoredProjectId, getStoredPlatformId, setStoredPlatformId, clearStoredPlatformId, getStoredProductId, setStoredProductId, clearStoredProductId } from "./lib/project";
 import { PLATFORM_COLORS } from "./lib/constants";
 import { LicenseGate } from "./components/LicenseGate";
-import { UpdateBanner } from "./components/UpdateBanner";
+
 import Dashboard from "./pages/Dashboard";
 import CalendarPage from "./pages/CalendarPage";
 import FreeContentPage from "./pages/FreeContentPage";
@@ -350,7 +350,6 @@ export default function App() {
 
   return (
     <LicenseGate>
-      <UpdateBanner />
       <div className="app-layout">
       <aside className="sidebar">
         <div className="sidebar-logo">

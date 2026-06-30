@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useState, useEffect } from "react";
+import { useUpdater } from "../lib/useUpdater";
 
 const FALLBACK_MODELS = [
   "vsellm/google/gemini-3-flash-preview",
@@ -169,6 +170,8 @@ export default function SettingsPage() {
     queryFn: () => fetch("/api/instagram/check").then((r) => r.json()),
     enabled: !!(igStatus as any)?.configured,
   });
+
+  const { data: updateData } = useUpdater();
 
   return (
     <div>
@@ -351,6 +354,39 @@ export default function SettingsPage() {
             <button className="btn btn-ghost" style={{ alignSelf: "flex-start" }}>📦 Экспорт в JSON</button>
             <button className="btn btn-ghost" style={{ alignSelf: "flex-start" }}>📁 Экспорт папки публикации</button>
           </div>
+        </div>
+
+        {/* Updates */}
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Обновления</span>
+          </div>
+          {updateData?.hasUpdate ? (
+            <div className="flex flex-col gap-4">
+              <p className="text-sm" style={{ color: "var(--accent)", fontWeight: 600 }}>
+                Доступна новая версия {updateData.latest}
+              </p>
+              <p className="text-xs text-dim">
+                Текущая версия: {updateData.current}
+              </p>
+              <a
+                href={updateData.releaseUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn btn-primary"
+                style={{ alignSelf: "flex-start", textDecoration: "none" }}
+              >
+                📥 Скачать {updateData.latest}
+              </a>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-dim">✓ У вас актуальная версия</p>
+              <p className="text-xs text-dim">
+                Проверка обновлений происходит автоматически. При появлении новой версии здесь появится уведомление.
+              </p>
+            </div>
+          )}
         </div>
 
       </div>
