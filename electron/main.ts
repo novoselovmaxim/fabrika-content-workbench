@@ -2,11 +2,15 @@ import { app, BrowserWindow } from "electron";
 import path from "path";
 import http from "http";
 import fs from "fs";
+import net from "net";
 
 process.env.ELECTRON_APP = "true";
 
 const isDev = !app.isPackaged;
 const PORT = 3001;
+const HEALTH_URL_PATH = "/api/health";
+
+const gotLock = app.requestSingleInstanceLock();
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -24,6 +28,23 @@ function logError(msg: string, err?: unknown): void {
     fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
     fs.appendFileSync(LOG_FILE, lines.join("\n") + "\n");
   } catch {}
+}
+
+function findFreePort(start: number, maxTries = 10): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.listen(start, () => {
+      const port = (server.address() as net.AddressInfo).port;
+      server.close(() => resolve(port));
+    });
+    server.on("error", (err: NodeJS.ErrnoException) => {
+      if (err.code === "EADDRINUSE" && start < PORT + maxTries) {
+        findFreePort(start + 1, maxTries).then(resolve, reject);
+      } else {
+        reject(err);
+      }
+    });
+  });
 }
 
 function waitForServer(url: string, timeout = 30000): Promise<void> {
@@ -48,7 +69,7 @@ function waitForServer(url: string, timeout = 30000): Promise<void> {
   });
 }
 
-function createWindow() {
+function createWindow(port: number) {
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -66,7 +87,7 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadURL(`http://localhost:${process.env.SERVER_PORT || PORT}`);
+    mainWindow.loadURL(`http://localhost:${port}`);
   }
 
   mainWindow.webContents.on("did-fail-load", (_e, code, desc) => {
@@ -78,7 +99,19 @@ function createWindow() {
   });
 }
 
+app.on("second-instance", () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
 app.whenReady().then(async () => {
+  if (!gotLock) {
+    app.quit();
+    return;
+  }
+
   try {
     if (!isDev) {
       const serverPath = path.join(__dirname, "../../server/dist/bundle.cjs");
@@ -86,6 +119,11 @@ app.whenReady().then(async () => {
         logError(`Server bundle not found at ${serverPath}`);
         throw new Error(`Server bundle not found at ${serverPath}`);
       }
+
+      // Find a free port before starting the server
+      const freePort = await findFreePort(PORT);
+      process.env.INITIAL_PORT = String(freePort);
+      logError(`Using port ${freePort}`);
 
       // Перехватываем console.log/error сервера в лог-файл
       const logStream = fs.createWriteStream(LOG_FILE, { flags: "a" });
@@ -105,11 +143,10 @@ app.whenReady().then(async () => {
       require(serverPath);
       logError("Server module loaded, waiting for it to listen...");
 
-      const serverPort = process.env.SERVER_PORT || String(PORT);
-      await waitForServer(`http://localhost:${serverPort}`);
+      await waitForServer(`http://localhost:${freePort}${HEALTH_URL_PATH}`);
       logError("Server is ready");
     }
-    createWindow();
+    createWindow(parseInt(process.env.INITIAL_PORT || String(PORT), 10));
   } catch (err) {
     logError("Startup failed", err);
     mainWindow = new BrowserWindow({
@@ -137,5 +174,5 @@ app.on("window-all-closed", () => {
 });
 
 app.on("activate", () => {
-  if (mainWindow === null) createWindow();
+  if (mainWindow === null) createWindow(parseInt(process.env.INITIAL_PORT || String(PORT), 10));
 });
