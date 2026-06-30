@@ -92,6 +92,7 @@ const isDev = !process.env.PKG_EXECPATH && !process.env.ELECTRON_APP;
 
 export function requireLicense(req: any, res: any, next: any): void {
   if (isDev) return next();
+  if (!req.path.startsWith("/api")) return next();
   if (FREE_PATHS.some(p => req.path.startsWith(p))) return next();
 
   const info = getLicense();
