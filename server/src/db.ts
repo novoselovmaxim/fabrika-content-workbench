@@ -14,7 +14,7 @@ export const db = drizzle(sqlite, { schema });
 export { sqlite };
 
 // В dev режиме миграции не нужны — drizzle-kit push синхронизирует схему
-const isDev = !process.env.PKG_EXECPATH && !process.env.NODE_ENV;
+const isDev = !process.env.PKG_EXECPATH && !process.env.ELECTRON_APP && !process.env.NODE_ENV;
 
 export function runMigrations(): void {
   if (isDev) {

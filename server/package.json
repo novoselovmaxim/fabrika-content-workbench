@@ -9,18 +9,7 @@
     "db:migrate": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
     "db:seed": "tsx database/seeds/seed.ts",
-    "db:studio": "drizzle-kit studio",
-    "pkg:macos": "pkg dist/bundle.cjs --target node22-macos-x64 --output ../dist-bin/fabrika-server-macos",
-    "pkg:macos-arm": "pkg dist/bundle.cjs --target node22-macos-arm64 --output ../dist-bin/fabrika-server-macos-arm",
-    "pkg:win": "pkg dist/bundle.cjs --target node22-win-x64 --output ../dist-bin/fabrika-server-win.exe"
-  },
-  "pkg": {
-    "assets": [
-      "../migrations/**",
-      "../content/**",
-      "../node_modules/better-sqlite3/build/**",
-      "../node_modules/jimp/**"
-    ]
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",

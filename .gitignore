@@ -3,6 +3,10 @@ dist/
 dist-bin/
 release/
 releases/
+electron/dist/
+*.db-journal
+*.db-wal
+*.db-shm
 server/assets/uploads/*
 server/assets/generated/*
 server/assets/knowledge/*

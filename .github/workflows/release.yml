@@ -17,28 +17,18 @@ jobs:
         with:
           node-version: '20'
       - run: npm install
-      - run: cd app && npm run build
+      - run: npm install -g @yao-pkg/pkg
       - run: cd server && npm run build
-      - run: cd server && npm run pkg:macos-arm
-      - name: Package zip
-        run: |
-          VERSION=$(cat version.txt)
-          mkdir -p releases release/macos-arm64/FabrikaContent
-          cp dist-bin/fabrika-server-macos-arm release/macos-arm64/FabrikaContent/fabrika-server-macos
-          cp -r app/dist release/macos-arm64/FabrikaContent/app
-          cp -r migrations release/macos-arm64/FabrikaContent/
-          cp version.txt release/macos-arm64/FabrikaContent/
-          chmod +x release/macos-arm64/FabrikaContent/fabrika-server-macos
-          cd release/macos-arm64 && zip -r ../../releases/FabrikaContent-${VERSION}-macos-arm64.zip FabrikaContent
-      - name: Build .app bundle
-        run: |
-          VERSION=$(cat version.txt)
-          bash installers/macos/make-app-bundle.sh fabrika-server-macos-arm $VERSION
-          cd release && zip -r ../releases/FabrikaContent-${VERSION}-macos-arm64-app.zip FabrikaContent.app
+      - run: cd app && npm run build
+      - run: npx tsc -p electron/tsconfig.json
+      - name: Build Electron app
+        run: npx electron-builder --mac --arm64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4
         with:
           name: artifacts-macos-arm64
-          path: releases/FabrikaContent-*.zip
+          path: release/electron/*.dmg
 
   build-macos-x64:
     runs-on: macos-13
@@ -48,28 +38,17 @@ jobs:
         with:
           node-version: '20'
       - run: npm install
-      - run: cd app && npm run build
       - run: cd server && npm run build
-      - run: cd server && npm run pkg:macos
-      - name: Package zip
-        run: |
-          VERSION=$(cat version.txt)
-          mkdir -p releases release/macos-x64/FabrikaContent
-          cp dist-bin/fabrika-server-macos release/macos-x64/FabrikaContent/fabrika-server-macos
-          cp -r app/dist release/macos-x64/FabrikaContent/app
-          cp -r migrations release/macos-x64/FabrikaContent/
-          cp version.txt release/macos-x64/FabrikaContent/
-          chmod +x release/macos-x64/FabrikaContent/fabrika-server-macos
-          cd release/macos-x64 && zip -r ../../releases/FabrikaContent-${VERSION}-macos-x64.zip FabrikaContent
-      - name: Build .app bundle
-        run: |
-          VERSION=$(cat version.txt)
-          bash installers/macos/make-app-bundle.sh fabrika-server-macos $VERSION
-          cd release && zip -r ../releases/FabrikaContent-${VERSION}-macos-x64-app.zip FabrikaContent.app
+      - run: cd app && npm run build
+      - run: npx tsc -p electron/tsconfig.json
+      - name: Build Electron app
+        run: npx electron-builder --mac --x64
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4
         with:
           name: artifacts-macos-x64
-          path: releases/FabrikaContent-*.zip
+          path: release/electron/*.dmg
 
   build-windows:
     runs-on: windows-latest
@@ -88,37 +67,21 @@ jobs:
         shell: pwsh
         run: |
           if (-not (Test-Path "node_modules/better-sqlite3/build/Release/better_sqlite3.node")) {
-            Write-Host "Native addon missing after rebuild, trying prebuild-install..."
+            Write-Host "::warning::better-sqlite3 .node file not found, attempting prebuild-install..."
             npx prebuild-install --runtime node --target 22.23.0 --platform win32 --arch x64 -d node_modules/better-sqlite3
-            if (-not (Test-Path "node_modules/better-sqlite3/build/Release/better_sqlite3.node")) {
-              Write-Host "::warning::better-sqlite3 .node file still not found, pkg will likely fail at runtime"
-            }
           } else {
-            Write-Host "Native addon found at node_modules/better-sqlite3/build/Release/better_sqlite3.node"
+            Write-Host "Native addon found"
           }
       - run: cd server && npm run build
-      - run: npm install -g @yao-pkg/pkg
-      - run: cd server && npm run pkg:win
-      - name: Package zip
-        shell: pwsh
-        run: |
-          $VERSION = Get-Content version.txt
-          New-Item -ItemType Directory -Force -Path releases, release/win/FabrikaContent | Out-Null
-          Copy-Item dist-bin/fabrika-server-win.exe release/win/FabrikaContent/
-          Copy-Item -Recurse app/dist release/win/FabrikaContent/app
-          Copy-Item -Recurse migrations release/win/FabrikaContent/
-          Copy-Item version.txt release/win/FabrikaContent/
-          Compress-Archive -Path release/win/FabrikaContent -DestinationPath releases/FabrikaContent-${VERSION}-windows.zip
-      - name: Build installer
-        shell: pwsh
-        run: |
-          choco install innosetup --no-progress -y
-          $VERSION = Get-Content version.txt
-          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "/DMyAppVersion=$VERSION" installers/windows/setup.iss
+      - run: npx tsc -p electron/tsconfig.json
+      - name: Build Electron app
+        run: npx electron-builder --win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-artifact@v4
         with:
           name: artifacts-windows
-          path: releases\*
+          path: release\electron\*.exe
 
   create-release:
     needs: [build-macos-arm64, build-windows]
@@ -128,7 +91,7 @@ jobs:
       - name: Collect all artifacts
         run: |
           mkdir -p releases
-          find . -type f \( -name '*.zip' -o -name '*.exe' \) -exec cp {} releases/ \;
+          find . -type f \( -name '*.dmg' -o -name '*.exe' \) -exec cp {} releases/ \;
           ls -la releases/
       - uses: softprops/action-gh-release@v1
         with:

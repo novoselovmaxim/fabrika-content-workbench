@@ -229,13 +229,15 @@ setTimeout(() => checkLicenseOnline(), 5000);
 
 app.listen(PORT, () => {
   console.log(`\n  🏭 Фабрика Контента → http://localhost:${PORT}\n`);
-  const url = `http://localhost:${PORT}`;
-  const browserCmd = process.platform === "win32"
-    ? `start "" "${url}"`
-    : process.platform === "darwin"
-      ? `open "${url}"`
-      : `xdg-open "${url}"`;
-  exec(browserCmd, (err) => {
-    if (err) console.log("  Откройте браузер вручную:", url);
-  });
+  if (!process.env.ELECTRON_APP) {
+    const url = `http://localhost:${PORT}`;
+    const browserCmd = process.platform === "win32"
+      ? `start "" "${url}"`
+      : process.platform === "darwin"
+        ? `open "${url}"`
+        : `xdg-open "${url}"`;
+    exec(browserCmd, (err) => {
+      if (err) console.log("  Откройте браузер вручную:", url);
+    });
+  }
 });
