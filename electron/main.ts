@@ -7,7 +7,6 @@ process.env.ELECTRON_APP = "true";
 
 const isDev = !app.isPackaged;
 const PORT = 3001;
-const SERVER_URL = `http://localhost:${PORT}`;
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -67,7 +66,7 @@ function createWindow() {
     mainWindow.loadURL("http://localhost:5173");
     mainWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadURL(SERVER_URL);
+    mainWindow.loadURL(`http://localhost:${process.env.SERVER_PORT || PORT}`);
   }
 
   mainWindow.webContents.on("did-fail-load", (_e, code, desc) => {
@@ -87,10 +86,27 @@ app.whenReady().then(async () => {
         logError(`Server bundle not found at ${serverPath}`);
         throw new Error(`Server bundle not found at ${serverPath}`);
       }
+
+      // Перехватываем console.log/error сервера в лог-файл
+      const logStream = fs.createWriteStream(LOG_FILE, { flags: "a" });
+      const origLog = console.log.bind(console);
+      const origError = console.error.bind(console);
+      type ConsoleFn = (...args: any[]) => void;
+      console.log = ((...args: any[]) => {
+        logStream.write(`[${new Date().toISOString()}] ${args.join(" ")}\n`);
+        origLog(...args);
+      }) as ConsoleFn;
+      console.error = ((...args: any[]) => {
+        logStream.write(`[${new Date().toISOString()}] [ERR] ${args.join(" ")}\n`);
+        origError(...args);
+      }) as ConsoleFn;
+
       logError(`Loading server from ${serverPath}`);
       require(serverPath);
       logError("Server module loaded, waiting for it to listen...");
-      await waitForServer(SERVER_URL);
+
+      const serverPort = process.env.SERVER_PORT || String(PORT);
+      await waitForServer(`http://localhost:${serverPort}`);
       logError("Server is ready");
     }
     createWindow();

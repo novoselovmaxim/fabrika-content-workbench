@@ -227,17 +227,30 @@ app.get("/{*path}", (_req, res) => {
 // Фоновая проверка лицензии
 setTimeout(() => checkLicenseOnline(), 5000);
 
-app.listen(PORT, () => {
-  console.log(`\n  🏭 Фабрика Контента → http://localhost:${PORT}\n`);
-  if (!process.env.ELECTRON_APP) {
-    const url = `http://localhost:${PORT}`;
-    const browserCmd = process.platform === "win32"
-      ? `start "" "${url}"`
-      : process.platform === "darwin"
-        ? `open "${url}"`
-        : `xdg-open "${url}"`;
-    exec(browserCmd, (err) => {
-      if (err) console.log("  Откройте браузер вручную:", url);
-    });
-  }
-});
+function startServer(port: number): void {
+  const server = app.listen(port, () => {
+    process.env.SERVER_PORT = String(port);
+    console.log(`\n  🏭 Фабрика Контента → http://localhost:${port}\n`);
+    if (!process.env.ELECTRON_APP) {
+      const url = `http://localhost:${port}`;
+      const browserCmd = process.platform === "win32"
+        ? `start "" "${url}"`
+        : process.platform === "darwin"
+          ? `open "${url}"`
+          : `xdg-open "${url}"`;
+      exec(browserCmd, (err) => {
+        if (err) console.log("  Откройте браузер вручную:", url);
+      });
+    }
+  });
+  server.on("error", (err: any) => {
+    if (err.code === "EADDRINUSE" && port < 3010) {
+      console.error(`Port ${port} is in use, trying ${port + 1}...`);
+      startServer(port + 1);
+    } else {
+      console.error("Failed to start server:", err);
+    }
+  });
+}
+
+startServer(PORT);
