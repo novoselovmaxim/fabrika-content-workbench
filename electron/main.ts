@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from "electron";
 import path from "path";
 import http from "http";
+import fs from "fs";
 
 process.env.ELECTRON_APP = "true";
 
@@ -10,7 +11,23 @@ const SERVER_URL = `http://localhost:${PORT}`;
 
 let mainWindow: BrowserWindow | null = null;
 
-function waitForServer(url: string, timeout = 15000): Promise<void> {
+const LOG_FILE = path.join(
+  app.getPath("userData"),
+  "startup-error.log"
+);
+
+function logError(msg: string, err?: unknown): void {
+  const lines = [
+    `[${new Date().toISOString()}] ${msg}`,
+    ...(err ? [String(err), err instanceof Error ? (err.stack || "") : ""] : []),
+  ];
+  try {
+    fs.mkdirSync(path.dirname(LOG_FILE), { recursive: true });
+    fs.appendFileSync(LOG_FILE, lines.join("\n") + "\n");
+  } catch {}
+}
+
+function waitForServer(url: string, timeout = 30000): Promise<void> {
   return new Promise((resolve, reject) => {
     const start = Date.now();
     function check() {
@@ -53,18 +70,50 @@ function createWindow() {
     mainWindow.loadURL(SERVER_URL);
   }
 
+  mainWindow.webContents.on("did-fail-load", (_e, code, desc) => {
+    logError(`Page load failed: ${code} ${desc}`);
+  });
+
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
 }
 
 app.whenReady().then(async () => {
-  if (!isDev) {
-    const serverPath = path.join(__dirname, "../server/dist/bundle.cjs");
-    require(serverPath);
-    await waitForServer(SERVER_URL);
+  try {
+    if (!isDev) {
+      const serverPath = path.join(__dirname, "../server/dist/bundle.cjs");
+      if (!fs.existsSync(serverPath)) {
+        logError(`Server bundle not found at ${serverPath}`);
+        throw new Error(`Server bundle not found at ${serverPath}`);
+      }
+      logError(`Loading server from ${serverPath}`);
+      require(serverPath);
+      logError("Server module loaded, waiting for it to listen...");
+      await waitForServer(SERVER_URL);
+      logError("Server is ready");
+    }
+    createWindow();
+  } catch (err) {
+    logError("Startup failed", err);
+    mainWindow = new BrowserWindow({
+      width: 600,
+      height: 400,
+      title: "Ошибка запуска",
+      webPreferences: { contextIsolation: true, nodeIntegration: false },
+    });
+    mainWindow.loadURL(
+      `data:text/html;charset=utf-8,${encodeURIComponent(
+        `<!DOCTYPE html>
+<html><body style="font-family:sans-serif;padding:2em;background:#1a1a2e;color:#eee">
+<h2>Ошибка запуска</h2>
+<p>Приложение не смогло запуститься.</p>
+<p style="font-size:0.85em;color:#aaa">Лог ошибки:<br><pre style="white-space:pre-wrap;font-size:0.8em">${String(err)}</pre></p>
+<p style="font-size:0.85em;color:#aaa">Полный лог: <code>${LOG_FILE}</code></p>
+</body></html>`
+      )}`
+    );
   }
-  createWindow();
 });
 
 app.on("window-all-closed", () => {

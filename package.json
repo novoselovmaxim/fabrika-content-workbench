@@ -12,9 +12,10 @@
     "dev": "concurrently -n server,app -c blue,green \"npm run dev -w server\" \"npm run dev -w app\"",
     "dev:electron": "concurrently -n server,app -c blue,green \"npm run dev -w server\" \"npm run dev -w app\" \"npx wait-on http://localhost:5173 && npx electron electron/dist/main.js\"",
     "build": "npm run build -w app && npm run build -w server && tsc -p electron/tsconfig.json",
-    "dist:win": "npm run build && npx electron-builder --win",
-    "dist:mac": "npm run build && npx electron-builder --mac",
-    "dist:linux": "npm run build && npx electron-builder --linux"
+    "rebuild": "npx electron-rebuild -f -w better-sqlite3",
+    "dist:win": "npm run build && npm run rebuild && npx electron-builder --win",
+    "dist:mac": "npm run build && npm run rebuild && npx electron-builder --mac",
+    "dist:linux": "npm run build && npm run rebuild && npx electron-builder --linux"
   },
   "build": {
     "appId": "com.fabrika.content.workbench",
@@ -50,6 +51,7 @@
     "better-sqlite3": "^12.11.1"
   },
   "devDependencies": {
+    "@electron/rebuild": "^4.0.0",
     "concurrently": "^9.1.0",
     "electron": "^34.0.0",
     "electron-builder": "^26.0.0",

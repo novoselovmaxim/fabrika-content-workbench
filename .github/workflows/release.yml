@@ -56,24 +56,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
       - run: npm install
-      - run: cd app && npm run build
-      - name: Rebuild better-sqlite3 native addon
-        run: npm rebuild better-sqlite3
-        env:
-          GYP_MSVS_VERSION: "2022"
-      - name: Verify better-sqlite3 .node file exists
-        shell: pwsh
-        run: |
-          if (-not (Test-Path "node_modules/better-sqlite3/build/Release/better_sqlite3.node")) {
-            Write-Host "::warning::better-sqlite3 .node file not found, attempting prebuild-install..."
-            npx prebuild-install --runtime node --target 22.23.0 --platform win32 --arch x64 -d node_modules/better-sqlite3
-          } else {
-            Write-Host "Native addon found"
-          }
       - run: cd server && npm run build
+      - run: cd app && npm run build
       - run: npx tsc -p electron/tsconfig.json
+      - name: Rebuild native addon for Electron
+        run: npx electron-rebuild -f -w better-sqlite3
       - name: Build Electron app
         run: npx electron-builder --win
         env:
