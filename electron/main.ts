@@ -82,7 +82,7 @@ function createWindow() {
 app.whenReady().then(async () => {
   try {
     if (!isDev) {
-      const serverPath = path.join(__dirname, "../server/dist/bundle.cjs");
+      const serverPath = path.join(__dirname, "../../server/dist/bundle.cjs");
       if (!fs.existsSync(serverPath)) {
         logError(`Server bundle not found at ${serverPath}`);
         throw new Error(`Server bundle not found at ${serverPath}`);
