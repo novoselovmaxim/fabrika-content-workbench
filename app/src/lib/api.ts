@@ -35,6 +35,8 @@ export const api = {
       request<any>(`/projects/${id}/unpack-from-interview`, { method: "POST", body: JSON.stringify({ answers }) }),
     generateDesignSystem: (id: string) =>
       request<any>(`/projects/${id}/generate-design-system`, { method: "POST" }),
+    importChannel: (id: string, data: { platform: string; identifier: string }) =>
+      request<any>(`/onboarding/${id}/import-channel`, { method: "POST", body: JSON.stringify(data) }),
   },
 
   platforms: {
@@ -225,5 +227,21 @@ export const api = {
   funnels: {
     list: () => request<any[]>("/funnels"),
     get: (id: string) => request<any>(`/funnels/${id}`),
+  },
+
+  metrics: {
+    check: (platform: string, identifier: string) =>
+      request<{ valid: boolean; error?: string; name?: string; subscribers?: number | null }>(
+        "/metrics/check", { method: "POST", body: JSON.stringify({ platform, identifier }) }
+      ),
+    fetch: (platform: string, identifier: string) =>
+      request<any>("/metrics/fetch", { method: "POST", body: JSON.stringify({ platform, identifier }) }),
+    savePlatform: (platform: string, identifier: string, label?: string) =>
+      request<{ success: boolean }>("/metrics/platforms", {
+        method: "POST", body: JSON.stringify({ platform, identifier, label })
+      }),
+    listPlatforms: () => request<any[]>("/metrics/platforms"),
+    deletePlatform: (id: string) =>
+      request<void>(`/metrics/platforms/${id}`, { method: "DELETE" }),
   },
 };

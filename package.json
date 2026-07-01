@@ -30,7 +30,8 @@
     ],
     "extraResources": [
       { "from": "database/migrations", "to": "migrations" },
-      { "from": "app/dist", "to": "app" }
+      { "from": "app/dist", "to": "app" },
+      { "from": "version.txt", "to": "version.txt" }
     ],
     "asarUnpack": [
       "node_modules/better-sqlite3/**"

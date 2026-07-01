@@ -377,6 +377,15 @@ export const projectKnowledge = sqliteTable("project_knowledge", {
   updatedAt: text("updated_at").default(sql`(current_timestamp)`),
 });
 
+// ── Connected Platforms (metrics) ──────────────────────────
+export const connectedPlatforms = sqliteTable("connected_platforms", {
+  id: text("id").primaryKey(),
+  platform: text("platform").notNull(),
+  identifier: text("identifier").notNull(),
+  label: text("label"),
+  createdAt: text("created_at").default(sql`(current_timestamp)`),
+});
+
 // ── License ────────────────────────────────────────────────
 export const license = sqliteTable("license", {
   id:           text("id").primaryKey().default("singleton"),

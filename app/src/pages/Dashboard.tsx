@@ -2,13 +2,17 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+} from "recharts";
 import {
   FileText, Sparkles, Library, Calendar,
-  Edit3, Send, BarChart3, TrendingUp, CheckCircle,
+  Edit3, Send, BarChart3, TrendingUp, CheckCircle, Users,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { getStoredProjectId } from "../lib/project";
+import { PLATFORM_COLORS } from "../lib/constants";
 
 const statusLabels: Record<string, string> = {
   idea: "Идея", planned: "Запланирован", draft: "Черновик",
@@ -345,6 +349,76 @@ function DashboardSkeleton() {
   );
 }
 
+function AudienceBlock() {
+  const { data: connectedPlatforms } = useQuery({
+    queryKey: ["metrics", "platforms"],
+    queryFn: () => api.metrics.listPlatforms(),
+  });
+  const platforms = (connectedPlatforms || []) as { platform: string; identifier: string; id: string }[];
+
+  if (platforms.length === 0) return null;
+
+  return (
+    <motion.div className="dash-card" variants={itemVariants}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <h3 className="dash-card-title" style={{ margin: 0 }}>Аудитория</h3>
+      </div>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        {platforms.map((p) => {
+          const color = PLATFORM_COLORS[p.platform] || "#6366f1";
+          return (
+            <PlatformAudienceCard key={p.platform + p.identifier} platform={p.platform} identifier={p.identifier} color={color} />
+          );
+        })}
+      </div>
+    </motion.div>
+  );
+}
+
+function PlatformAudienceCard({ platform, identifier, color }: { platform: string; identifier: string; color: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["metrics", "fetch", platform, identifier],
+    queryFn: () => api.metrics.fetch(platform, identifier),
+    refetchInterval: 60_000 * 5,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="dash-kpi" style={{ flex: "1 1 140px", padding: "12px 16px", gap: 10 }}>
+        <div className="skeleton" style={{ width: "100%", height: 60 }} />
+      </div>
+    );
+  }
+
+  const subscribers = data?.subscribers || data?.followerCount || 0;
+  const label = PLATFORM_LABELS[platform] || platform;
+
+  return (
+    <div className="dash-kpi" style={{ flex: "1 1 140px", padding: "12px 16px", gap: 10 }}>
+      <div className="dash-kpi-icon" style={{ color, width: 34, height: 34 }}>
+        <Users size={16} />
+      </div>
+      <div className="dash-kpi-body">
+        <span className="dash-kpi-label">{label}</span>
+        {subscribers > 0 ? (
+          <span className="dash-kpi-value" style={{ fontSize: 18, color }}>
+            {subscribers.toLocaleString()}
+          </span>
+        ) : (
+          <span className="dash-kpi-label" style={{ opacity: 0.5 }}>—</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const PLATFORM_LABELS: Record<string, string> = {
+  telegram: "Telegram",
+  youtube: "YouTube",
+  vk: "ВКонтакте",
+  instagram: "Instagram",
+};
+
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
@@ -424,6 +498,8 @@ export default function Dashboard() {
         <ContentFunnel data={postsByStatus} total={totalPosts} />
         <RubricDonut data={postsByRubric} />
       </div>
+
+      <AudienceBlock />
 
       <WeekCalendar days={data?.weekDistribution || []} />
 

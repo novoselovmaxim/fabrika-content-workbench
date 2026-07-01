@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import PlatformMetrics from "../components/PlatformMetrics";
+import { PLATFORM_COLORS } from "../lib/constants";
 
 const statusLabels: Record<string, string> = {
   idea: "Идея", planned: "Запланирован", draft: "Черновик",
@@ -8,10 +10,15 @@ const statusLabels: Record<string, string> = {
   scheduled: "В очереди", published: "Опубликован", archived: "Архив",
 };
 
-export default function AnalyticsPage() {
-  const [activeTab, setActiveTab] = useState<"content" | "instagram">("content");
+const PLATFORM_LABELS: Record<string, string> = {
+  telegram: "Telegram",
+  youtube: "YouTube",
+  vk: "ВКонтакте",
+};
 
-  // Content analytics
+export default function AnalyticsPage() {
+  const [activeTab, setActiveTab] = useState<string>("content");
+
   const { data: stats } = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => api.dashboard.stats(),
@@ -22,7 +29,6 @@ export default function AnalyticsPage() {
     queryFn: () => api.posts.list(),
   });
 
-  // Instagram data
   const { data: igStatus } = useQuery({
     queryKey: ["instagram", "status"],
     queryFn: () => fetch("/api/instagram/status").then((r) => r.json()),
@@ -41,7 +47,11 @@ export default function AnalyticsPage() {
     enabled: !!(igStatus as any)?.configured,
   });
 
-  // Rubric stats
+  const { data: connectedPlatforms } = useQuery({
+    queryKey: ["metrics", "platforms"],
+    queryFn: () => api.metrics.listPlatforms(),
+  });
+
   const rubricStats = new Map<string, { count: number; name: string; color: string }>();
   (allPosts || []).forEach((p: any) => {
     const key = p.rubricName || "Без рубрики";
@@ -59,32 +69,41 @@ export default function AnalyticsPage() {
   const maxRubric = Math.max(...Array.from(rubricStats.values()).map((r) => r.count), 1);
   const maxType = Math.max(...Array.from(typeStats.values()), 1);
 
-  const tabs = [
-    { key: "content" as const, label: "📝 Контент" },
-    { key: "instagram" as const, label: "📊 Instagram" },
+  const platforms = (connectedPlatforms || []) as { platform: string; identifier: string; id: string }[];
+  const hasIG = !!(igStatus as any)?.configured;
+
+  const tabs: { key: string; label: string; color?: string }[] = [
+    { key: "content", label: "Контент" },
   ];
+  if (hasIG) tabs.push({ key: "instagram", label: "Instagram" });
+  for (const p of platforms) {
+    tabs.push({ key: p.platform, label: PLATFORM_LABELS[p.platform] || p.platform, color: PLATFORM_COLORS[p.platform] });
+  }
+
+  if (activeTab !== "content" && activeTab !== "instagram" && !platforms.find(p => p.platform === activeTab)) {
+    setActiveTab("content");
+  }
 
   return (
     <div>
       <div className="page-header">
         <h2>Аналитика</h2>
-        <p>Обзор контента и Instagram-метрики</p>
+        <p>Обзор контента и метрики площадок</p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6" style={{ borderBottom: "1px solid var(--border)", paddingBottom: 8 }}>
+      <div className="flex gap-2 mb-6" style={{ borderBottom: "1px solid var(--border)", paddingBottom: 8, flexWrap: "wrap" }}>
         {tabs.map((t) => (
           <button
             key={t.key}
-            className={`btn ${activeTab === t.key ? "btn-primary" : "btn-ghost"}`}
+            className={`btn btn-sm ${activeTab === t.key ? "btn-primary" : "btn-ghost"}`}
             onClick={() => setActiveTab(t.key)}
+            style={activeTab === t.key && t.color ? { background: t.color } : undefined}
           >
             {t.label}
           </button>
         ))}
       </div>
 
-      {/* Content tab */}
       {activeTab === "content" && (
         <>
           <div className="card mb-6">
@@ -210,12 +229,10 @@ export default function AnalyticsPage() {
         </>
       )}
 
-      {/* Instagram tab */}
       {activeTab === "instagram" && (
         <>
-          {(igStatus as any)?.configured ? (
+          {hasIG ? (
             <>
-              {/* Account metrics */}
               {igAccount && (
                 <div className="stats-grid">
                   <div className="stat-card">
@@ -237,7 +254,6 @@ export default function AnalyticsPage() {
                 </div>
               )}
 
-              {/* Recent media */}
               <div className="card">
                 <div className="card-header">
                   <span className="card-title">Недавние публикации ({(igMedia as any)?.length || 0})</span>
@@ -283,6 +299,13 @@ export default function AnalyticsPage() {
             </div>
           )}
         </>
+      )}
+
+      {activeTab !== "content" && activeTab !== "instagram" && (
+        (() => {
+          const p = platforms.find(p => p.platform === activeTab);
+          return p ? <PlatformMetrics platform={p.platform} identifier={p.identifier} /> : null;
+        })()
       )}
     </div>
   );

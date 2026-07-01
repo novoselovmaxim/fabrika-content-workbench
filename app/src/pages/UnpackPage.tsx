@@ -121,6 +121,12 @@ export default function UnpackPage() {
   const [keywordsEdits, setKeywordsEdits] = useState<Record<string, string>>({});
   const [keywordsSaving, setKeywordsSaving] = useState(false);
 
+  const [importPlatform, setImportPlatform] = useState("telegram");
+  const [importIdentifier, setImportIdentifier] = useState("");
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult, setImportResult] = useState<any>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+
   const createKnowledge = useMutation({
     mutationFn: async (data: any) => {
       const pid = await ensureProject();
@@ -972,9 +978,9 @@ export default function UnpackPage() {
             </p>
 
             <div className="flex gap-2" style={{ marginBottom: 20 }}>
-              {["files", "notes", "interview"].map((t) => (
+              {["files", "notes", "interview", "import"].map((t) => (
                 <button key={t} className={`btn ${unpackTab === t ? "btn-primary" : "btn-ghost"}`} style={{ fontSize: 13 }} onClick={() => setUnpackTab(t)}>
-                  {t === "files" ? "📁 Загрузить файлы" : t === "notes" ? "🔗 Ссылки и заметки" : "💬 Интервью с нуля"}
+                  {t === "files" ? "📁 Загрузить файлы" : t === "notes" ? "🔗 Ссылки и заметки" : t === "interview" ? "💬 Интервью с нуля" : "📱 Импорт канала"}
                 </button>
               ))}
             </div>
@@ -1049,13 +1055,158 @@ export default function UnpackPage() {
               }} onCancel={() => setUnpackTab("files")} />
             )}
 
+            {unpackTab === "import" && (
+              <div>
+                <div className="flex flex-col gap-4">
+                  <div className="card">
+                    <h4 style={{ fontSize: 15, marginBottom: 12 }}>Импорт контента из канала</h4>
+                    <p className="text-xs text-dim" style={{ marginBottom: 16 }}>
+                      Введите ссылку или @username канала. Система загрузит последние посты и проанализирует их.
+                    </p>
+                    <div className="flex flex-col gap-3">
+                      <div className="flex gap-2">
+                        {["telegram", "youtube"].map((p) => (
+                          <button
+                            key={p}
+                            className={`btn ${importPlatform === p ? "btn-primary" : "btn-ghost"}`}
+                            style={{ fontSize: 13, flex: 1 }}
+                            onClick={() => { setImportPlatform(p); setImportResult(null); setImportError(null); }}
+                          >
+                            {p === "telegram" ? "✈️ Telegram" : "▶️ YouTube"}
+                          </button>
+                        ))}
+                      </div>
+                      <input
+                        className="input"
+                        placeholder={importPlatform === "telegram" ? "@channel_username или https://t.me/channel" : "@channel_username или https://youtube.com/@channel"}
+                        value={importIdentifier}
+                        onChange={(e) => setImportIdentifier(e.target.value)}
+                      />
+                      <button
+                        className="btn btn-primary"
+                        onClick={async () => {
+                          if (!importIdentifier.trim()) return;
+                          setImportLoading(true);
+                          setImportError(null);
+                          setImportResult(null);
+                          try {
+                            const pid = await ensureProject();
+                            const res = await api.projects.importChannel(pid, {
+                              platform: importPlatform,
+                              identifier: importIdentifier.trim().replace(/^https:\/\/(t\.me|youtube\.com)\//, ""),
+                            });
+                            setImportResult(res);
+                            setUnpackKnowledgeCount((c) => c + (res.imported || 0));
+                          } catch (err: any) {
+                            setImportError(err?.message || "Ошибка импорта канала");
+                          } finally {
+                            setImportLoading(false);
+                          }
+                        }}
+                        disabled={importLoading || !importIdentifier.trim()}
+                        style={{ alignSelf: "flex-start" }}
+                      >
+                        {importLoading ? "⏳ Импорт..." : "📥 Импортировать и проанализировать"}
+                      </button>
+                    </div>
+                  </div>
+
+                  {importError && (
+                    <div className="card" style={{ border: "1px solid #ef4444" }}>
+                      <p className="text-sm" style={{ color: "#ef4444" }}>❌ {importError}</p>
+                    </div>
+                  )}
+
+                  {importResult && (
+                    <div className="flex flex-col gap-4">
+                      <div className="card">
+                        <h4 style={{ fontSize: 15, marginBottom: 8 }}>✅ Импортировано: {importResult.imported} постов</h4>
+                        {importResult.channel && (
+                          <div className="text-sm" style={{ marginBottom: 8 }}>
+                            <strong>Канал:</strong> {importResult.channel.name}
+                            {importResult.channel.subscribers > 0 && (
+                              <span style={{ marginLeft: 12 }}>
+                                <strong>Подписчики:</strong> {importResult.channel.subscribers.toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {importResult.analysis && !importResult.analysis.error && (
+                        <>
+                          <div className="card">
+                            <h4 style={{ fontSize: 15, marginBottom: 8 }}>📊 Анализ канала</h4>
+                            <div className="flex flex-col gap-2 text-sm">
+                              {importResult.analysis.niche && (
+                                <div><strong>Ниша:</strong> {importResult.analysis.niche}</div>
+                              )}
+                              {importResult.analysis.toneOfVoice && (
+                                <div><strong>Тон:</strong> {importResult.analysis.toneOfVoice}</div>
+                              )}
+                              {importResult.analysis.contentStyle && (
+                                <div><strong>Стиль:</strong> {importResult.analysis.contentStyle}</div>
+                              )}
+                              {importResult.analysis.targetAudience && (
+                                <div><strong>ЦА:</strong> {importResult.analysis.targetAudience}</div>
+                              )}
+                              {importResult.analysis.postingFrequency && (
+                                <div><strong>Частота:</strong> {importResult.analysis.postingFrequency}</div>
+                              )}
+                            </div>
+                          </div>
+
+                          {importResult.analysis.mainTopics && importResult.analysis.mainTopics.length > 0 && (
+                            <div className="card">
+                              <h4 style={{ fontSize: 15, marginBottom: 8 }}>📌 Ключевые темы</h4>
+                              <div className="flex flex-wrap gap-2">
+                                {importResult.analysis.mainTopics.map((t: any, i: number) => (
+                                  <span key={i} className="badge" style={{ padding: "4px 10px", background: "rgba(99,102,241,0.12)", borderRadius: 6, fontSize: 13 }}>
+                                    {typeof t === "string" ? t : t.title || t}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {importResult.analysis.rubrics && importResult.analysis.rubrics.length > 0 && (
+                            <div className="card">
+                              <h4 style={{ fontSize: 15, marginBottom: 8 }}>📂 Рубрики</h4>
+                              <div className="flex flex-col gap-2">
+                                {importResult.analysis.rubrics.map((r: any, i: number) => (
+                                  <div key={i} className="flex items-center gap-3 text-sm">
+                                    <span style={{ width: 120, fontWeight: 500 }}>{r.name}</span>
+                                    <div style={{ flex: 1, height: 8, background: "var(--border)", borderRadius: 4 }}>
+                                      <div style={{ width: `${r.percentage || r.percent || 0}%`, height: 8, background: "var(--accent)", borderRadius: 4 }} />
+                                    </div>
+                                    <span className="text-dim">{r.percentage || r.percent || 0}%</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {importResult.analysis.recommendations && (
+                            <div className="card">
+                              <h4 style={{ fontSize: 15, marginBottom: 8 }}>💡 Рекомендации</h4>
+                              <p className="text-sm">{importResult.analysis.recommendations}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {unpackKnowledgeCount > 0 && (
               <div className="text-sm text-dim" style={{ marginTop: 12, textAlign: "center" }}>
                 ✅ Загружено: {unpackKnowledgeCount} записей в базу знаний
               </div>
             )}
 
-            {unpackTab !== "interview" && (
+            {unpackTab !== "interview" && unpackTab !== "import" && (
               <div style={{ marginTop: 20, display: "flex", gap: 12, justifyContent: "center" }}>
                 <button className="btn btn-primary" onClick={handleGenerateKeywords} disabled={keywordsLoading || (unpackKnowledgeCount === 0 && realKnowledgeCount === 0)}>
                   {keywordsLoading ? "⏳ AI извлекает..." : "🔑 Извлечь ключевые слова"}

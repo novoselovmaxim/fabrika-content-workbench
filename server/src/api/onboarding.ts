@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db.js";
-import { projects, projectKnowledge, onboardingSteps, products, projectKeywords, platforms, competitorSearches, audiences, savedCompetitors } from "../schema.js";
+import { projects, projectKnowledge, onboardingSteps, products, projectKeywords, platforms, competitorSearches, audiences, savedCompetitors, rubrics, topics } from "../schema.js";
 import { sql, eq, and, desc } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import { generate, getModelForTask, extractJSON } from "../services/aiGateway.js";
@@ -1078,5 +1078,191 @@ onboardingRouter.post("/:projectId/suggest-platforms", async (req, res) => {
     res.json(created);
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Platform suggestion failed" });
+  }
+});
+
+// POST /:projectId/import-channel
+onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { platform, identifier } = req.body;
+
+    if (!platform || !identifier) {
+      return res.status(400).json({ error: "platform and identifier required" });
+    }
+
+    const project = db.select().from(projects).where(eq(projects.id, projectId)).get();
+    if (!project) return res.status(404).json({ error: "Project not found" });
+
+    // 1. Fetch posts from VPS via metrics proxy
+    let fetchData: any;
+    try {
+      const VPS = "http://80.87.111.142:4000";
+      const r = await fetch(`${VPS}/api/metrics/fetch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform, identifier }),
+        signal: AbortSignal.timeout(15000),
+      });
+      fetchData = await r.json();
+    } catch (e: any) {
+      return res.status(503).json({
+        error: "VPS недоступен. Импорт канала требует подключения к серверу метрик.",
+        detail: e.message,
+      });
+    }
+
+    if (fetchData.error) {
+      return res.status(502).json({ error: fetchData.error });
+    }
+
+    // 2. Save each post as knowledge entry
+    const posts: any[] = fetchData.posts || [];
+    if (posts.length === 0) {
+      return res.status(200).json({
+        imported: 0,
+        message: "Канал найден, но посты не получены",
+        channel: fetchData.channel || null,
+        analysis: null,
+      });
+    }
+
+    const knowledgeIds: string[] = [];
+    for (const post of posts) {
+      const id = uuid();
+      const text = post.text || "";
+      const title = post.title || text.slice(0, 100);
+      const tags = JSON.stringify({
+        source: platform,
+        identifier,
+        url: post.url || post.link || "",
+        date: post.date || post.publishedAt || "",
+        views: post.views || post.viewCount || 0,
+        likes: post.likes || post.likeCount || 0,
+        comments: post.comments || post.commentCount || 0,
+        reposts: post.reposts || post.shareCount || 0,
+      });
+      db.insert(projectKnowledge).values({
+        id,
+        projectId,
+        type: "channel_post",
+        title,
+        content: text,
+        sourceUrl: post.url || post.link || null,
+        tags,
+        createdAt: new Date().toISOString(),
+      }).run();
+      knowledgeIds.push(id);
+    }
+
+    // 3. Run AI analysis on imported posts
+    const combinedTexts = posts.map((p, i) => `[Пост ${i + 1}] ${p.text || ""}`).join("\n\n---\n\n");
+    const channelInfo = fetchData.channel || {};
+    const model = getModelForTask("strategy");
+    const result = await generate({
+      provider: model.startsWith("vsellm/") ? "vsellm" : model.includes("/") ? "zveno" : "openai",
+      model,
+      prompt: JSON.stringify({
+        action: "analyze_channel",
+        platform,
+        identifier,
+        channelName: channelInfo.title || channelInfo.name || identifier,
+        subscriberCount: channelInfo.subscriberCount || channelInfo.subscribers || 0,
+        postCount: posts.length,
+        posts: posts.map((p) => ({
+          text: (p.text || "").slice(0, 1500),
+          date: p.date || p.publishedAt || "",
+          views: p.views || p.viewCount || 0,
+        })),
+      }),
+      systemPrompt: `Ты — контент-стратег. Проанализируй посты канала и верни ТОЛЬКО JSON.
+Поля:
+- niche (string): ниша канала
+- toneOfVoice (string): тон общения
+- contentStyle (string): стиль контента
+- targetAudience (string): целевая аудитория
+- postingFrequency (string): частота публикаций
+- mainTopics (string[]): 3-7 ключевых тем
+- rubrics (array of {name, description, percentage}): 2-5 рубрик с процентом встречаемости в этих постах
+- recommendations (string): рекомендации по контент-стратегии`,
+      temperature: 0.3,
+      maxTokens: 4000,
+      responseFormat: "json",
+    });
+
+    let analysis: any = {};
+    try {
+      const extracted = extractJSON(result.content);
+      analysis = JSON.parse(extracted);
+    } catch {
+      analysis = { error: "Failed to parse AI response", raw: result.content.slice(0, 500) };
+    }
+
+    // 4. Save rubrics from analysis
+    const savedRubricIds: string[] = [];
+    if (analysis.rubrics && Array.isArray(analysis.rubrics)) {
+      for (const r of analysis.rubrics) {
+        const rid = uuid();
+        db.insert(rubrics).values({
+          id: rid,
+          projectId,
+          name: r.name || "Без названия",
+          description: r.description || null,
+          ordering: savedRubricIds.length,
+          active: 1,
+          color: ["#6366f1", "#ef4444", "#22c55e", "#f59e0b", "#3b82f6", "#ec4899"][savedRubricIds.length % 6],
+        }).run();
+        savedRubricIds.push(rid);
+      }
+    }
+
+    // 5. Save topics from analysis
+    if (analysis.mainTopics && Array.isArray(analysis.mainTopics)) {
+      for (const t of analysis.mainTopics) {
+        db.insert(topics).values({
+          id: uuid(),
+          projectId,
+          title: typeof t === "string" ? t : t.title || t,
+          description: typeof t === "string" ? null : t.description || null,
+          source: "channel_import",
+          status: "active",
+          rubricId: savedRubricIds[0] || null,
+          priority: 0,
+        }).run();
+      }
+    }
+
+    // 6. Update project fields if empty
+    const updates: Record<string, any> = { updatedAt: new Date().toISOString() };
+    if (!project.niche && analysis.niche) updates.niche = analysis.niche;
+    if (!project.tone && analysis.toneOfVoice) updates.tone = analysis.toneOfVoice;
+    if (!project.audience && analysis.targetAudience) updates.audience = analysis.targetAudience;
+    if (!project.style && analysis.contentStyle) updates.style = analysis.contentStyle;
+    if (Object.keys(updates).length > 1) {
+      db.update(projects).set(updates).where(eq(projects.id, projectId)).run();
+    }
+
+    // 7. Update onboarding step if exists
+    db.update(onboardingSteps).set({
+      status: "done",
+      aiOutput: JSON.stringify(analysis),
+      completedAt: new Date().toISOString(),
+    }).where(and(
+      eq(onboardingSteps.projectId, projectId),
+      eq(onboardingSteps.stepKey, "materials")
+    )).run();
+
+    res.json({
+      imported: posts.length,
+      channel: {
+        name: channelInfo.title || channelInfo.name || identifier,
+        subscribers: channelInfo.subscriberCount || channelInfo.subscribers || 0,
+        platform,
+      },
+      analysis,
+      knowledgeIds,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Channel import failed" });
   }
 });

@@ -26,6 +26,7 @@ import { audiencesRouter } from "./api/audiences.js";
 import { keywordsRouter } from "./api/keywords.js";
 import { competitorsRouter } from "./api/competitors.js";
 import { licenseRouter } from "./api/license.js";
+import { metricsRouter } from "./api/metrics.js";
 import { seedContentTextures } from "./seeds/contentTextures.js";
 import { seedFunnels } from "./seeds/funnels.js";
 import { db, runMigrations } from "./db.js";
@@ -178,6 +179,9 @@ app.get("/api/dashboard/stats", (req, res) => {
     totalRuns: totalRuns?.count || 0,
   });
 });
+
+// Mount metrics router (before license check — always available)
+app.use("/api/metrics", metricsRouter);
 
 // License middleware — блокирует API без активной лицензии
 app.use(requireLicense);
