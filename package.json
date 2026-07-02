@@ -11,7 +11,8 @@
   "scripts": {
     "dev": "concurrently -n server,app -c blue,green \"npm run dev -w server\" \"npm run dev -w app\"",
     "dev:electron": "concurrently -n server,app -c blue,green \"npm run dev -w server\" \"npm run dev -w app\" \"npx wait-on http://localhost:5173 && npx electron electron/dist/main.js\"",
-    "build": "npm run build -w app && npm run build -w server && tsc -p electron/tsconfig.json",
+    "build:instagram": "mkdir -p scripts/dist && if [ -f .venv/bin/pyinstaller ]; then .venv/bin/pyinstaller --onefile --name ig-fetcher --distpath scripts/dist --workpath /tmp/pyi_build scripts/instagram.py; else echo '⚠️  PyInstaller not found, skipping Instagram binary build'; fi",
+    "build": "npm run build:instagram && npm run build -w app && npm run build -w server && tsc -p electron/tsconfig.json",
     "rebuild": "npx electron-rebuild -f -w better-sqlite3",
     "dist:win": "npm run build && npm run rebuild && npx electron-builder --win",
     "dist:mac": "npm run build && npm run rebuild && npx electron-builder --mac",

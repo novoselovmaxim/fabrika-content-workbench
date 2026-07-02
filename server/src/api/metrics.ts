@@ -3,6 +3,9 @@ import { db } from "../db.js";
 import { sql, eq } from "drizzle-orm";
 import { connectedPlatforms } from "../schema.js";
 import crypto from "crypto";
+import { execFile } from "child_process";
+import path from "path";
+import fs from "fs";
 
 const VPS = "http://80.87.111.142:4000";
 
@@ -12,6 +15,17 @@ metricsRouter.post("/check", async (req, res) => {
   const { platform, identifier } = req.body;
   if (!platform || !identifier)
     return res.status(400).json({ error: "platform and identifier required" });
+  
+  // Instagram handled locally via instagrapi
+  if (platform === "instagram") {
+    try {
+      const result = await runInstagramScript(["check", identifier]);
+      return res.json(result);
+    } catch (e: any) {
+      return res.json({ valid: false, error: e.message });
+    }
+  }
+
   try {
     const r = await fetch(`${VPS}/api/metrics/check`, {
       method: "POST",
@@ -30,6 +44,17 @@ metricsRouter.post("/fetch", async (req, res) => {
   const { platform, identifier } = req.body;
   if (!platform || !identifier)
     return res.status(400).json({ error: "platform and identifier required" });
+  
+  // Instagram handled locally via instagrapi
+  if (platform === "instagram") {
+    try {
+      const result = await runInstagramScript(["fetch", identifier, "20"]);
+      return res.json(result);
+    } catch (e: any) {
+      return res.json({ valid: false, error: e.message });
+    }
+  }
+
   try {
     const r = await fetch(`${VPS}/api/metrics/fetch`, {
       method: "POST",
@@ -78,3 +103,35 @@ metricsRouter.delete("/platforms/:id", (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+function findInstagramBinary() {
+  const scriptDir = path.resolve(__dirname, "../../../scripts");
+  const binaryName = "ig-fetcher" + (process.platform === "win32" ? ".exe" : "");
+  const binary = path.join(scriptDir, "dist", binaryName);
+  if (fs.existsSync(binary)) return { cmd: binary, args: [] };
+  const script = path.join(scriptDir, "instagram.py");
+  const venvPython = path.join(process.cwd(), ".venv", "bin", "python3");
+  if (fs.existsSync(venvPython)) return { cmd: venvPython, args: [script] };
+  return { cmd: "python3", args: [script] };
+}
+
+const IG_BIN = findInstagramBinary();
+
+function runInstagramScript(args: string[]): Promise<any> {
+  return new Promise((resolve, reject) => {
+    execFile(IG_BIN.cmd, [...IG_BIN.args, ...args], {
+      timeout: 60_000,
+      env: { ...process.env },
+    }, (err, stdout, stderr) => {
+      if (err) {
+        reject(new Error(`Instagram script: ${err.message}`));
+        return;
+      }
+      try {
+        resolve(JSON.parse(stdout));
+      } catch {
+        reject(new Error(`Instagram script: invalid JSON output`));
+      }
+    });
+  });
+}

@@ -123,6 +123,7 @@ export default function UnpackPage() {
 
   const [importPlatform, setImportPlatform] = useState("telegram");
   const [importIdentifier, setImportIdentifier] = useState("");
+  const [importDescription, setImportDescription] = useState("");
   const [importLoading, setImportLoading] = useState(false);
   const [importResult, setImportResult] = useState<any>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -1064,24 +1065,40 @@ export default function UnpackPage() {
                       Введите ссылку или @username канала. Система загрузит последние посты и проанализирует их.
                     </p>
                     <div className="flex flex-col gap-3">
-                      <div className="flex gap-2">
-                        {["telegram", "youtube"].map((p) => (
+                      <div className="flex gap-2 flex-wrap">
+                        {["telegram", "youtube", "vk", "zen", "instagram"].map((p) => (
                           <button
                             key={p}
                             className={`btn ${importPlatform === p ? "btn-primary" : "btn-ghost"}`}
-                            style={{ fontSize: 13, flex: 1 }}
-                            onClick={() => { setImportPlatform(p); setImportResult(null); setImportError(null); }}
+                            style={{ fontSize: 13, flex: 1, minWidth: 80 }}
+                            onClick={() => { setImportPlatform(p); setImportResult(null); setImportError(null); setImportDescription(""); }}
                           >
-                            {p === "telegram" ? "✈️ Telegram" : "▶️ YouTube"}
+                            {p === "telegram" ? "✈️ Telegram" : p === "youtube" ? "▶️ YouTube" : p === "vk" ? "📱 VK" : p === "zen" ? "📰 Дзен" : "📸 Instagram"}
                           </button>
                         ))}
                       </div>
                       <input
                         className="input"
-                        placeholder={importPlatform === "telegram" ? "@channel_username или https://t.me/channel" : "@channel_username или https://youtube.com/@channel"}
+                        placeholder={
+                          importPlatform === "telegram" ? "@channel_username или https://t.me/channel" :
+                          importPlatform === "youtube" ? "@channel_username или https://youtube.com/@channel" :
+                          importPlatform === "vk" ? "@public_page или https://vk.com/public_page" :
+                          importPlatform === "zen" ? "https://dzen.ru/media/... или https://dzen.ru/a/..." :
+                          "https://www.instagram.com/p/XXXXX/"
+                        }
                         value={importIdentifier}
                         onChange={(e) => setImportIdentifier(e.target.value)}
                       />
+                      {importPlatform === "instagram" && (
+                        <textarea
+                          className="input"
+                          rows={2}
+                          placeholder="Описание визуала (для рилсов/каруселей): что в кадре, вайб, музыка, текст на экране"
+                          value={importDescription}
+                          onChange={(e) => setImportDescription(e.target.value)}
+                          style={{ marginTop: 8 }}
+                        />
+                      )}
                       <button
                         className="btn btn-primary"
                         onClick={async () => {
@@ -1091,10 +1108,19 @@ export default function UnpackPage() {
                           setImportResult(null);
                           try {
                             const pid = await ensureProject();
-                            const res = await api.projects.importChannel(pid, {
+                            const urlMap: Record<string, string> = { "telegram": "t.me", "youtube": "youtube.com", "vk": "vk.com", "m.vk": "m.vk.com" };
+                            let cleaned = importIdentifier.trim();
+                            if (importPlatform === "telegram" || importPlatform === "youtube" || importPlatform === "vk") {
+                              cleaned = cleaned.replace(/^https:\/\/(t\.me|youtube\.com|vk\.com|m\.vk\.com)\//, "");
+                            }
+                            const body: any = {
                               platform: importPlatform,
-                              identifier: importIdentifier.trim().replace(/^https:\/\/(t\.me|youtube\.com)\//, ""),
-                            });
+                              identifier: cleaned,
+                            };
+                            if (importPlatform === "instagram" && importDescription.trim()) {
+                              body.description = importDescription.trim();
+                            }
+                            const res = await api.projects.importChannel(pid, body);
                             setImportResult(res);
                             setUnpackKnowledgeCount((c) => c + (res.imported || 0));
                           } catch (err: any) {
@@ -1108,6 +1134,16 @@ export default function UnpackPage() {
                       >
                         {importLoading ? "⏳ Импорт..." : "📥 Импортировать и проанализировать"}
                       </button>
+                      {importPlatform === "zen" && (
+                        <p className="text-xs text-dim" style={{ marginTop: 6 }}>
+                          Вставьте ссылку на статью Дзен. Сервер загрузит заголовок и текст статьи.
+                        </p>
+                      )}
+                      {importPlatform === "instagram" && (
+                        <p className="text-xs text-dim" style={{ marginTop: 6 }}>
+                          Вставьте ссылку на пост Instagram. caption загрузится автоматически, для рилсов и каруселей добавьте описание визуала.
+                        </p>
+                      )}
                     </div>
                   </div>
 

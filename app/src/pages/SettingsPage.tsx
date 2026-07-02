@@ -227,9 +227,9 @@ export default function SettingsPage() {
         <p>Настройки приложения</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {/* Server status */}
-        <div className="card">
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Server status — standalone row so it doesn't stretch */}
+        <div className="card" style={{ alignSelf: "flex-start", minWidth: 360 }}>
           <div className="card-header">
             <span className="card-title">Сервер</span>
           </div>
@@ -249,6 +249,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
         {/* AI Providers */}
         <div className="card">
           <div className="card-header">
@@ -288,8 +289,6 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-
-        {/* Models per task */}
         <div className="card">
           <div className="card-header">
             <span className="card-title">Модели по задачам</span>
@@ -509,6 +508,7 @@ export default function SettingsPage() {
           )}
         </div>
 
+      </div>
       </div>
     </div>
   );

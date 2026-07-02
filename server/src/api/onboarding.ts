@@ -1,6 +1,8 @@
 import { Router } from "express";
+import path from "path";
+import fs from "fs";
 import { db } from "../db.js";
-import { projects, projectKnowledge, onboardingSteps, products, projectKeywords, platforms, competitorSearches, audiences, savedCompetitors, rubrics, topics } from "../schema.js";
+import { projects, projectKnowledge, onboardingSteps, products, projectKeywords, platforms, competitorSearches, audiences, savedCompetitors, rubrics, topics, settings } from "../schema.js";
 import { sql, eq, and, desc } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import { generate, getModelForTask, extractJSON } from "../services/aiGateway.js";
@@ -1085,7 +1087,7 @@ onboardingRouter.post("/:projectId/suggest-platforms", async (req, res) => {
 onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
   try {
     const { projectId } = req.params;
-    const { platform, identifier } = req.body;
+    const { platform, identifier, description } = req.body;
 
     if (!platform || !identifier) {
       return res.status(400).json({ error: "platform and identifier required" });
@@ -1094,26 +1096,97 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
     const project = db.select().from(projects).where(eq(projects.id, projectId)).get();
     if (!project) return res.status(404).json({ error: "Project not found" });
 
-    // 1. Fetch posts from VPS via metrics proxy
+    // 1. Fetch posts
     let fetchData: any;
-    try {
-      const VPS = "http://80.87.111.142:4000";
-      const r = await fetch(`${VPS}/api/metrics/fetch`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ platform, identifier }),
-        signal: AbortSignal.timeout(15000),
-      });
-      fetchData = await r.json();
-    } catch (e: any) {
-      return res.status(503).json({
-        error: "VPS недоступен. Импорт канала требует подключения к серверу метрик.",
-        detail: e.message,
-      });
-    }
 
-    if (fetchData.error) {
-      return res.status(502).json({ error: fetchData.error });
+    if (platform === "vk") {
+      const dbKey = db.select().from(settings).where(eq(settings.key, "vk_service_key")).get()?.value;
+      const vkKey = process.env.VK_SERVICE_KEY || dbKey || "";
+      if (!vkKey) {
+        return res.status(503).json({ error: "VK Service Key не настроен. Настройте в Settings → VK Service Key." });
+      }
+      try {
+        const { fetchVKPosts } = await import("../services/vk.js");
+        const result = await fetchVKPosts(identifier, vkKey);
+        fetchData = {
+          posts: result.posts,
+          channel: { title: result.name, name: result.name, subscriberCount: result.subscribers },
+        };
+      } catch (e: any) {
+        return res.status(502).json({ error: `VK API: ${e.message}` });
+      }
+    } else if (platform === "zen") {
+      try {
+        const { fetchZenArticle } = await import("../services/zen.js");
+        const result = await fetchZenArticle(identifier);
+        fetchData = {
+          posts: result.posts,
+          channel: { title: result.name, name: result.name, subscriberCount: 0 },
+        };
+      } catch (e: any) {
+        return res.status(502).json({ error: `Дзен: ${e.message}` });
+      }
+    } else if (platform === "instagram") {
+      const isPostUrl = /instagram\.com\/(p|reel|reels)\//.test(identifier);
+      if (isPostUrl) {
+        try {
+          const { fetchInstagramPost } = await import("../services/instagram.js");
+          const result = await fetchInstagramPost(identifier, description);
+          fetchData = {
+            posts: result.posts,
+            channel: { title: result.name, name: result.name, subscriberCount: 0 },
+          };
+        } catch (e: any) {
+          return res.status(502).json({ error: `Instagram: ${e.message}` });
+        }
+      } else {
+        try {
+          const fetchResult = await runInstagramScript(["fetch", identifier.replace(/^@/, ""), "20"]);
+          if (fetchResult.error) {
+            return res.status(502).json({ error: fetchResult.error });
+          }
+          const profile = fetchResult.profile || {};
+          const posts = (fetchResult.posts || []).map((p: any) => ({
+            title: (p.caption || "Пост Instagram").slice(0, 200),
+            text: p.caption || "",
+            date: p.taken_at || new Date().toISOString(),
+            url: p.permalink || "",
+            views: 0,
+            likes: p.like_count || 0,
+            comments: p.comment_count || 0,
+            media_type: p.media_type || "image",
+          }));
+          fetchData = {
+            posts,
+            channel: {
+              title: profile.full_name || profile.username || identifier,
+              name: profile.username || identifier,
+              subscriberCount: profile.follower_count || 0,
+            },
+          };
+        } catch (e: any) {
+          return res.status(502).json({ error: `Instagram: ${e.message}` });
+        }
+      }
+    } else {
+      try {
+        const VPS = "http://80.87.111.142:4000";
+        const r = await fetch(`${VPS}/api/metrics/fetch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ platform, identifier }),
+          signal: AbortSignal.timeout(15000),
+        });
+        fetchData = await r.json();
+      } catch (e: any) {
+        return res.status(503).json({
+          error: `VPS недоступен (${e.message}). Импорт канала требует подключения к серверу метрик.`,
+          detail: e.message,
+        });
+      }
+      if (fetchData.error) {
+        return res.status(502).json({ error: fetchData.error });
+      }
     }
 
     // 2. Save each post as knowledge entry
@@ -1266,3 +1339,37 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
     res.status(500).json({ error: err.message || "Channel import failed" });
   }
 });
+
+import { execFile } from "child_process";
+
+function findInstagramBinary() {
+  const scriptDir = path.resolve(__dirname, "../../../scripts");
+  const binaryName = "ig-fetcher" + (process.platform === "win32" ? ".exe" : "");
+  const binary = path.join(scriptDir, "dist", binaryName);
+  if (fs.existsSync(binary)) return { cmd: binary, args: [] };
+  const script = path.join(scriptDir, "instagram.py");
+  const venvPython = path.join(process.cwd(), ".venv", "bin", "python3");
+  if (fs.existsSync(venvPython)) return { cmd: venvPython, args: [script] };
+  return { cmd: "python3", args: [script] };
+}
+
+const IG_BIN = findInstagramBinary();
+
+function runInstagramScript(args: string[]): Promise<any> {
+  return new Promise((resolve, reject) => {
+    execFile(IG_BIN.cmd, [...IG_BIN.args, ...args], {
+      timeout: 60_000,
+      env: { ...process.env },
+    }, (err, stdout, stderr) => {
+      if (err) {
+        reject(new Error(`Instagram script: ${err.message}`));
+        return;
+      }
+      try {
+        resolve(JSON.parse(stdout));
+      } catch {
+        reject(new Error(`Instagram script: invalid JSON output`));
+      }
+    });
+  });
+}

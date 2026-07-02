@@ -14,3 +14,6 @@ database/fabrika.db
 .env
 *.db
 .DS_Store
+ig-fetcher.spec
+__pycache__/
+scripts/dist/

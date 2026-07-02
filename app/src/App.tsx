@@ -170,7 +170,7 @@ function ProductSection() {
 
   return (
     <div>
-      <div className="sidebar-section-label">Продукты</div>
+      <div className="sidebar-section-label" style={{ fontSize: 10, letterSpacing: 1, opacity: 0.5, textAlign: "center" }}>─  Контекст  ─</div>
       {products.map((product: any) => {
         const isActiveProduct = product.id === selectedProductId;
         const productPlatforms = platformsByProduct[product.id] || [];
@@ -274,9 +274,12 @@ function PlatformNavSection() {
 
   if (!activePlatform) return null;
 
-  const primaryItems = [
+  const planItems = [
     { to: `/strategy${qs}`, label: "Стратегия", icon: "🎯" },
     { to: `/free-content${qs}`, label: "Свободный контент", icon: "✍️" },
+  ];
+
+  const launchItems = [
     { to: `/calendar${qs}`, label: "Календарь", icon: "📅" },
     { to: `/queue${qs}`, label: "Публикации", icon: "📋" },
   ];
@@ -286,6 +289,35 @@ function PlatformNavSection() {
     { to: `/analytics${qs}`, label: "Аналитика", icon: "📈" },
     { to: `/assets${qs}`, label: "Медиатека", icon: "🖼" },
   ];
+
+  const renderLink = (item: { to: string; label: string; icon: string }) => {
+    if (item.to.startsWith("/queue")) {
+      return (
+        <NavLink key={item.to} to={item.to} end
+          className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+        >
+          <span>{item.icon}</span>
+          <span style={{ flex: 1 }}>{item.label}</span>
+          {queueCount > 0 && (
+            <span style={{
+              background: "var(--accent)", color: "#fff", borderRadius: 10,
+              padding: "1px 7px", fontSize: 11, fontWeight: 600, lineHeight: "18px",
+            }}>
+              {queueCount}
+            </span>
+          )}
+        </NavLink>
+      );
+    }
+    return (
+      <NavLink key={item.to} to={item.to} end
+        className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+      >
+        <span>{item.icon}</span>
+        {item.label}
+      </NavLink>
+    );
+  };
 
   return (
     <div>
@@ -303,43 +335,12 @@ function PlatformNavSection() {
           </span>
         )}
       </div>
-      {primaryItems.map((item) => {
-        if (item.to.startsWith("/queue")) {
-          return (
-            <NavLink key={item.to} to={item.to} end
-              className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-            >
-              <span>{item.icon}</span>
-              <span style={{ flex: 1 }}>{item.label}</span>
-              {queueCount > 0 && (
-                <span style={{
-                  background: "var(--accent)", color: "#fff", borderRadius: 10,
-                  padding: "1px 7px", fontSize: 11, fontWeight: 600, lineHeight: "18px",
-                }}>
-                  {queueCount}
-                </span>
-              )}
-            </NavLink>
-          );
-        }
-        return (
-          <NavLink key={item.to} to={item.to} end
-            className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-          >
-            <span>{item.icon}</span>
-            {item.label}
-          </NavLink>
-        );
-      })}
-      <div className="sidebar-section-label">Ресурсы</div>
-      {resourceItems.map((item) => (
-        <NavLink key={item.to} to={item.to} end
-          className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-        >
-          <span>{item.icon}</span>
-          {item.label}
-        </NavLink>
-      ))}
+      <div className="sidebar-section-label">❷  План</div>
+      {planItems.map(renderLink)}
+      <div className="sidebar-section-label">❸  Запуск</div>
+      {launchItems.map(renderLink)}
+      <div className="sidebar-section-label">Инструменты</div>
+      {resourceItems.map(renderLink)}
     </div>
   );
 }
@@ -358,7 +359,7 @@ export default function App() {
         <ProjectSelector />
         <nav className="sidebar-nav">
           <NavSection label="Приложение" items={globalNavItems} />
-          <NavSection label="Проект" items={projectGlobalItems} />
+          <NavSection label="❶  Разведка" items={projectGlobalItems} />
           <ProductSection />
           <PlatformNavSection />
         </nav>

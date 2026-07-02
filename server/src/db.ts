@@ -20,6 +20,12 @@ sqlite.exec(`
   )
 `);
 
+// Seed default VK service key if not set
+const existingVkKey = sqlite.prepare("SELECT value FROM settings WHERE key = ?").get("vk_service_key") as any;
+if (!existingVkKey) {
+  sqlite.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)").run("vk_service_key", "196b7984196b7984196b7984ab1a2969bf1196b196b7984732f9ecac093a3543146dc74");
+}
+
 export const db = drizzle(sqlite, { schema });
 export { sqlite };
 

@@ -1,7 +1,7 @@
 # Development Log
 
-Текущий `version.txt`: `1.0.13`  
-Следующий релиз: **v1.0.13**
+Текущий `version.txt`: `1.0.14`  
+Следующий релиз: **v1.0.14**
 
 ---
 
@@ -20,8 +20,11 @@
 ### Онбординг: импорт канала
 - [x] **VPS:** `fetchTelegramPosts` (парсинг `t.me/s/` — последние 20 постов с текстом/датой/просмотрами)
 - [x] **Сервер:** `POST /api/onboarding/:projectId/import-channel` — стягивание постов с площадки → сохранение в knowledge → AI-анализ (ниша, тон, стиль, ЦА, рубрики, темы) → создание рубрик/тем в БД
-- [x] **UnpackPage:** вкладка «📱 Импорт канала» — 4-я в Step 1 (после Files, Notes/Links, Interview)
-- [x] **YouTube fetch:** полная интеграция (название канала, подписчики, просмотры, посты)
+- [x] **Вкладки:** Telegram + YouTube + **VK** + **Дзен** + **Instagram**
+- [x] **VK:** `server/src/services/vk.ts` — `fetchVKPosts()` (resolveScreenName → wall.get → groups.getById)
+- [x] **VK Service Key:** `196b7984...` — автосидится в `settings` таблицу при старте сервера
+- [x] **Дзен:** `server/src/services/zen.ts` — парсинг статьи по URL (HTML → JSON-LD → текст). Одна статья = один пост.
+- [x] **Instagram:** `server/src/services/instagram.ts` — oEmbed API (caption + author) + опциональное описание визуала для рилсов/каруселей
 
 ### Прочее
 - [x] **VPS:** метрики читают `.env` самостоятельно при импорте (фикс ленивой загрузки)
@@ -34,11 +37,25 @@
 # 1. Проверить version.txt
 cat version.txt
 # 2. Закоммитить все правки
-git add -A && git commit -m "v1.0.13: metrics + import channel"
+git add -A && git commit -m "v1.0.14: VK import"
 # 3. Подписать тег и запушить
-git tag v1.0.13 && git push origin main --tags
+git tag v1.0.14 && git push origin main --tags
 # 4. CI соберёт .exe + .dmg и выложит релиз
 ```
+
+---
+
+## Сессия 4 (2026-07-01) — VK + Дзен + Instagram импорт
+
+**Сделано:**
+- `server/src/services/vk.ts` — VK API: `resolveScreenName` → `wall.get` → `groups.getById`
+- VK работает напрямую с сервера (Service Key в `settings` таблице), не через VPS
+- `server/src/services/zen.ts` — парсинг статей Дзен по URL: JSON-LD → HTML-парсинг → чистый текст
+- `server/src/services/instagram.ts` — oEmbed API (caption + author) + описание визуала
+- Вкладки: Telegram + YouTube + VK + Дзен + Instagram в Step 1 UnpackPage
+- Для Instagram: отдельное поле «Описание визуала» для рилсов/каруселей
+- Для Дзена: одна ссылка = одна статья, текст парсится автоматически
+- `version.txt` → 1.0.14
 
 ---
 

@@ -219,12 +219,48 @@ export async function fetchVK(input) {
   return { valid: false, error: "VK API ещё не настроен (ожидается ключ)" };
 }
 
-// ── Instagram (placeholder) ──
+// ── Instagram (via compiled ig-fetcher) ──
+
+import { execFile } from "child_process";
+
+function findInstagramBinary() {
+  const binaryName = "ig-fetcher" + (process.platform === "win32" ? ".exe" : "");
+  const binary = path.join(__dirname, "dist", binaryName);
+  if (fs.existsSync(binary)) return { cmd: binary, args: [] };
+  const script = path.join(__dirname, "instagram.py");
+  const venvPython = path.join(__dirname, "..", ".venv", "bin", "python3");
+  if (fs.existsSync(venvPython)) return { cmd: venvPython, args: [script] };
+  return { cmd: "python3", args: [script] };
+}
+
+const IG_BIN = findInstagramBinary();
+
+function runInstagram(args) {
+  return new Promise((resolve) => {
+    execFile(IG_BIN.cmd, [...IG_BIN.args, ...args], {
+      timeout: 60_000,
+      env: { ...process.env },
+    }, (err, stdout, stderr) => {
+      if (err) {
+        resolve({ valid: false, error: `Instagram script: ${err.message}` });
+        return;
+      }
+      try {
+        const data = JSON.parse(stdout);
+        resolve(data);
+      } catch {
+        resolve({ valid: false, error: `Instagram script: invalid JSON output` });
+      }
+    });
+  });
+}
 
 export async function checkInstagram(input) {
-  return { valid: false, error: "Instagram Basic Display ожидает настройки (client_id / client_secret)" };
+  const result = await runInstagram(["check", input]);
+  return result;
 }
 
 export async function fetchInstagram(input) {
-  return { valid: false, error: "Instagram Basic Display ожидает настройки" };
+  const result = await runInstagram(["fetch", input, "20"]);
+  return result;
 }
