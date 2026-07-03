@@ -397,17 +397,17 @@ export default function TopicsPage() {
           <div className="topic-row-actions">
             {isUnused ? (
               <button className="btn btn-primary topic-create-btn" onClick={() => createPost.mutate(topic)} disabled={createPost.isPending}>
-                ✍️ Создать пост
+                Создать пост
               </button>
             ) : (
               <button className="btn btn-ghost topic-create-btn-sm" onClick={() => createPost.mutate(topic)} disabled={createPost.isPending}>
-                ✍️
+                +
               </button>
             )}
             {!isEditing && (
               <div className="topic-row-menu">
-                <button className="btn btn-ghost topic-menu-btn" onClick={() => startEdit(topic)} title="Редактировать">✏️</button>
-                <button className="btn btn-ghost topic-menu-btn" onClick={() => { if (confirm('Удалить тему?')) deleteTopic.mutate(topic.id); }} title="Удалить">🗑</button>
+                <button className="btn btn-ghost topic-menu-btn" onClick={() => startEdit(topic)} title="Редактировать">ред</button>
+                <button className="btn btn-ghost topic-menu-btn" onClick={() => { if (confirm('Удалить тему?')) deleteTopic.mutate(topic.id); }} title="Удалить">уд</button>
               </div>
             )}
           </div>
@@ -476,8 +476,8 @@ export default function TopicsPage() {
                 <div className="rubric-progress-fill" style={{ width: `${usedPct}%`, background: rg.rubric.color || "#6366f1" }} />
               </div>
             )}
-            <button className="btn btn-ghost btn-xs" onClick={(e) => { e.stopPropagation(); startEdit({ id: `new-${rg.rubric.id}`, rubricId: rg.rubric.id, title: "", description: "" }); }} title="Добавить тему">➕</button>
-            <button className="btn btn-ghost btn-xs" onClick={(e) => { e.stopPropagation(); setShowGenerate(true); setGenRubricId(rg.rubric.id); }} title="Сгенерировать темы">🤖</button>
+            <button className="btn btn-ghost btn-xs" onClick={(e) => { e.stopPropagation(); startEdit({ id: `new-${rg.rubric.id}`, rubricId: rg.rubric.id, title: "", description: "" }); }} title="Добавить тему">+</button>
+            <button className="btn btn-ghost btn-xs" onClick={(e) => { e.stopPropagation(); setShowGenerate(true); setGenRubricId(rg.rubric.id); }} title="Сгенерировать темы">AI</button>
           </div>
         </div>
         {isExpanded && (
@@ -488,7 +488,7 @@ export default function TopicsPage() {
             {sortedTopics.map(renderTopicRow)}
             {rg.orphanedPosts.length > 0 && (
               <div className="orphaned-section">
-                <div className="orphaned-header text-xs text-dim">📄 Посты без темы ({rg.orphanedPosts.length})</div>
+                <div className="orphaned-header text-xs text-dim">Посты без темы ({rg.orphanedPosts.length})</div>
                 {rg.orphanedPosts.map(renderPostRow)}
               </div>
             )}
@@ -502,7 +502,7 @@ export default function TopicsPage() {
   return (
     <div className="topics-page">
       <div className="page-header">
-        <h2>📚 Библиотека контента</h2>
+        <h2>Библиотека контента</h2>
         <p>{totalPosts} постов · {usedTopics} тем в работе · {unusedTopics} свободно · {publishedPosts} опубликовано · {rubrics?.length || 0} рубрик</p>
       </div>
 
@@ -569,11 +569,11 @@ export default function TopicsPage() {
           <select className="input filter-select" value={rubricFilter || ""} onChange={(e) => setRubricFilter(e.target.value || null)}>
             <option value="">🏷 Все рубрики</option>
             {rubrics?.map((r: any) => <option key={r.id} value={r.id} style={{ borderLeft: `3px solid ${r.color}` }}>{r.name}</option>)}
-            {(unrubicPosts.length > 0 || unrubicTopics.length > 0) && <option value="__n__">📄 Без рубрики</option>}
+            {(unrubicPosts.length > 0 || unrubicTopics.length > 0) && <option value="__n__">Без рубрики</option>}
           </select>
           <select className="input filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
             <option value="all">📊 Все темы</option>
-            <option value="used">✅ Использованные</option>
+            <option value="used">Использованные</option>
             <option value="unused">⚪ Свободные</option>
           </select>
           <select className="input filter-select" value={sortBy} onChange={(e) => setSortBy(e.target.value as any)}>
@@ -588,7 +588,7 @@ export default function TopicsPage() {
         </div>
         <div className="filter-bar-right">
           <button className="btn btn-ghost btn-sm" onClick={() => setShowGenerate(!showGenerate)}>
-            {showGenerate ? "✕ Отмена" : "🤖 Создать темы AI"}
+            {showGenerate ? "✕ Отмена" : "Создать темы AI"}
           </button>
         </div>
       </div>
@@ -603,7 +603,7 @@ export default function TopicsPage() {
           </select>
           <button className="btn btn-primary btn-sm" onClick={() => suggestTopics.mutate()}
             disabled={!genRubricId || suggestTopics.isPending}>
-            {suggestTopics.isPending ? "⏳ Генерация..." : "🚀 Сгенерировать"}
+            {suggestTopics.isPending ? "⏳ Генерация..." : "Сгенерировать"}
           </button>
         </div>
       )}
@@ -632,7 +632,7 @@ export default function TopicsPage() {
                 {unrubicTopics.map((t: any) => renderTopicRow(t))}
                 {unrubicPosts.length > 0 && (
                   <div className="orphaned-section">
-                    <div className="orphaned-header text-xs text-dim">📄 Посты без рубрики ({unrubicPosts.length})</div>
+                    <div className="orphaned-header text-xs text-dim">Посты без рубрики ({unrubicPosts.length})</div>
                     {unrubicPosts.map(renderPostRow)}
                   </div>
                 )}
@@ -649,7 +649,7 @@ export default function TopicsPage() {
           <div className="bulk-bar-actions">
             <button className="btn btn-primary btn-sm" onClick={() => bulkCreatePosts.mutate([...selectedTopicIds])}
               disabled={bulkCreatePosts.isPending}>
-              ✍️ Создать посты ({selectedTopicIds.size})
+              Создать посты ({selectedTopicIds.size})
             </button>
             <button className="btn btn-ghost btn-sm" onClick={() => {
               const newRubric = prompt("ID рубрики для назначения:");
@@ -667,7 +667,7 @@ export default function TopicsPage() {
               if (confirm(`Удалить ${selectedTopicIds.size} тем?`))
                 selectedTopicIds.forEach((id) => deleteTopic.mutate(id));
             }}>
-              🗑 Удалить
+              Удалить
             </button>
             <button className="btn btn-ghost btn-sm" onClick={clearSelection}>✕ Отменить</button>
           </div>

@@ -132,7 +132,7 @@ export default function BrandStylesPage() {
     const updated = { ...designSystem, systemPrompt: editSysPrompt };
     const dsEntry = {
       id: "design-system",
-      name: "🎨 Дизайн-система: " + (updated.name || "без названия"),
+      name: "Дизайн-система: " + (updated.name || "без названия"),
       contentType: "design_system",
       systemPrompt: JSON.stringify(updated),
       isActive: false,
@@ -178,7 +178,7 @@ export default function BrandStylesPage() {
     return (
       <div>
         <div className="page-header">
-          <h2>🎨 Фирменный стиль</h2>
+          <h2>Фирменный стиль</h2>
           <p>Сначала создайте проект в Стратегии</p>
         </div>
       </div>
@@ -188,7 +188,7 @@ export default function BrandStylesPage() {
   return (
     <div>
       <div className="page-header">
-        <h2>🎨 Фирменный стиль</h2>
+        <h2>Фирменный стиль</h2>
         <p>Дизайн-система и системные промпты для генерации изображений</p>
       </div>
 
@@ -206,7 +206,7 @@ export default function BrandStylesPage() {
             </div>
           </div>
           <button className="btn btn-primary" onClick={handleGenerate} style={{ fontSize: 14, padding: "10px 24px" }}>
-            🎨 Сгенерировать
+            Сгенерировать
           </button>
         </div>
       )}
@@ -223,7 +223,7 @@ export default function BrandStylesPage() {
       {designSystem && !genLoading && (
         <div className="card" style={{ marginBottom: 20 }}>
           <div className="card-header">
-            <span className="card-title">🎨 {designSystem.name || "Дизайн-система"}</span>
+            <span className="card-title">{designSystem.name || "Дизайн-система"}</span>
             <div className="flex gap-2">
               <button className="btn btn-primary" onClick={handleSaveDesignSystem} disabled={saveStyles.isPending}>
                 {saveStyles.isPending ? "Сохранение..." : "💾 Сохранить"}

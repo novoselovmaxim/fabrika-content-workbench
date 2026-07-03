@@ -243,7 +243,7 @@ function DraftsSection({ id, drafts, queryClient, post, updatePost }: {
                     <button className="btn btn-ghost" style={{ fontSize: 12 }}
                       disabled={generatingTags}
                       onClick={generateTags}>
-                      {generatingTags ? "⏳" : "🏷"} Тэги
+                      {generatingTags ? "⏳" : ""} Тэги
                     </button>
                     <button className="btn btn-ghost" style={{ fontSize: 12 }}
                       onClick={() => setEditId(null)}>
@@ -421,11 +421,11 @@ const contentTabRef = useRef<ContentTabHandle>(null);
     return true;
   };
 
-  const steps: { key: Step; label: string; icon: string }[] = [
-    { key: "meta", label: "Метаданные", icon: "📋" },
-    { key: "content", label: "Контент", icon: "✍️" },
-    { key: "drafts", label: "Черновики", icon: "📄" },
-    { key: "publication", label: "Публикация", icon: "🚀" },
+  const steps: { key: Step; label: string }[] = [
+    { key: "meta", label: "Метаданные" },
+    { key: "content", label: "Контент" },
+    { key: "drafts", label: "Черновики" },
+    { key: "publication", label: "Публикация" },
   ];
 
   if (isLoading) return <div className="text-dim">Loading...</div>;
@@ -478,7 +478,7 @@ const contentTabRef = useRef<ContentTabHandle>(null);
                 transition: "all 0.15s",
               }}
             >
-              {done && !active && "✓ "}{s.icon} {s.label}
+              {done && !active && "✓ "}{s.label}
             </div>
           );
         })}
@@ -496,10 +496,10 @@ const contentTabRef = useRef<ContentTabHandle>(null);
         return (
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
             {showSaved ? (
-              <span className="text-xs" style={{ color: "var(--green)" }}>✅ Сохранено</span>
+              <span className="text-xs" style={{ color: "var(--green)" }}>Сохранено</span>
             ) : (
               <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 12px" }} onClick={saveCurrentStep}>
-                {saveStatus === "saving" ? "⏳ Сохранение..." : saveStatus === "error" ? "❌ Ошибка" : "💾 Сохранить"}
+                    {saveStatus === "saving" ? "⏳ Сохранение..." : saveStatus === "error" ? "❌ Ошибка" : "Сохранить"}
               </button>
             )}
           </div>
@@ -511,7 +511,7 @@ const contentTabRef = useRef<ContentTabHandle>(null);
         <div className="card">
           <div className="card-header">
             <span className="card-title">Метаданные</span>
-            <span className="text-xs text-dim">Нажмите ✨ чтобы сгенерировать поле на основе контекста</span>
+            <span className="text-xs text-dim">Нажмите для генерации поля на основе контекста</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div className="flex flex-col gap-4">
@@ -607,10 +607,10 @@ const contentTabRef = useRef<ContentTabHandle>(null);
                   disabled={alreadyThere}
                 >
                   {alreadyThere
-                    ? "✅ Пост готов к публикации"
+                    ? "Пост готов к публикации"
                     : post.scheduledDate
-                      ? "📅 Отправить в очередь"
-                      : "🚀 Пометить готовым к публикации"}
+                      ? "Отправить в очередь"
+                      : "Пометить готовым к публикации"}
                 </button>
               );
             })()}

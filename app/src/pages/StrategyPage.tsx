@@ -16,21 +16,12 @@ function loadSaved<T>(key: string, fallback: T): T {
 }
 
 const STEPS = [
-  { key: "onboarding", label: "Онбординг", icon: "📋" },
-  { key: "strategy", label: "Стратегия", icon: "📄" },
-  { key: "funnels", label: "Воронки", icon: "🔗" },
-  { key: "plan", label: "Контент-план", icon: "📅" },
+  { key: "onboarding", label: "Онбординг" },
+  { key: "strategy", label: "Стратегия" },
+  { key: "funnels", label: "Воронки" },
+  { key: "plan", label: "Контент-план" },
 ];
 // Old steps kept for reference but removed from array
-const OLD_STEPS_UNUSED = [
-  { key: "onboarding", label: "Онбординг", icon: "📋" },
-  { key: "strategy", label: "Стратегия", icon: "📄" },
-  { key: "rubrics", label: "Рубрики", icon: "🏷️" },
-  { key: "ideas", label: "Идеи", icon: "💡" },
-  { key: "topics", label: "Темы", icon: "📝" },
-  { key: "plan", label: "Контент-план", icon: "📅" },
-];
-
 const STYLE_OPTIONS = ["Бережный", "Мотивационный", "Экспертный", "Дружеский", "Ироничный"];
 
 function DateBadge({ date }: { date: string }) {
@@ -127,7 +118,7 @@ export default function StrategyPage() {
   const [step, setStep] = useState(() => loadSaved("step", 0));
   const [showChat, setShowChat] = useState(false);
 
-  const [projectId, setProjectId] = useState<string | null>(() => loadSaved("projectId", null) || getStoredProjectId() || null);
+  const [projectId, setProjectId] = useState<string | null>(() => getStoredProjectId() || null);
   const [platforms, setPlatforms] = useState<string[]>(() => loadSaved("platforms", []));
   const [currentPlatformId, setCurrentPlatformId] = useState<string | null>(() => urlPlatformId || loadSaved("currentPlatformId", null) || getStoredPlatformId() || null);
   const [platformMap, setPlatformMap] = useState<Record<string, { id: string; type: string; name: string }>>(() => loadSaved("platformMap", {}));
@@ -586,7 +577,7 @@ export default function StrategyPage() {
                   opacity: i > step ? 0.4 : 1,
                 }}
               >
-                {s.icon} {s.label}
+                {s.label}
               </button>
               {i < STEPS.length - 1 && <div style={{ width: 16, height: 1, background: "var(--border)" }} />}
             </div>
@@ -622,12 +613,12 @@ export default function StrategyPage() {
           <div>
             {currentProject?.onboardingComplete === 1 ? (
               <div>
-                <h3 style={{ fontSize: 18, marginBottom: 20 }}>📋 Данные распаковки проекта</h3>
+                <h3 style={{ fontSize: 18, marginBottom: 20 }}>Данные распаковки проекта</h3>
                 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
                   {/* Basic Info */}
                   <div className="card" style={{ padding: 16 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: "var(--accent)" }}>🎯 Проект и Миссия</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: "var(--accent)" }}>Проект и Миссия</div>
                     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                       <div>
                         <div className="text-xs text-dim">Название</div>
@@ -646,7 +637,7 @@ export default function StrategyPage() {
 
                   {/* Value Prop */}
                   <div className="card" style={{ padding: 16 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: "var(--accent)" }}>💎 Ценностное предложение</div>
+                    <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 12, color: "var(--accent)" }}>Ценностное предложение</div>
                     {currentProject.valueProp ? (() => {
                       try {
                         const v = JSON.parse(currentProject.valueProp);
@@ -721,7 +712,7 @@ export default function StrategyPage() {
               </div>
             ) : (
               <div>
-                <h3 style={{ fontSize: 18, marginBottom: 20 }}>📋 Расскажите о проекте</h3>
+                <h3 style={{ fontSize: 18, marginBottom: 20 }}>Расскажите о проекте</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                   <div className="flex flex-col gap-4">
                     <div>
@@ -787,10 +778,10 @@ export default function StrategyPage() {
                     onClick={() => updateOnboarding.mutate()}
                     disabled={updateOnboarding.isPending}
                   >
-                    {updateOnboarding.isPending ? "⏳ Анализ..." : "📚 Обновить из базы знаний"}
+                    {updateOnboarding.isPending ? "⏳ Анализ..." : "Обновить из базы знаний"}
                   </button>
                   <button className="btn btn-primary" style={{ fontSize: 13 }} onClick={() => navigate("/unpack")}>
-                    🔍 Открыть фабрику контента
+                    Открыть фабрику контента
                   </button>
                 </div>
               </div>
@@ -802,7 +793,7 @@ export default function StrategyPage() {
         {step === 1 && (
           <div>
             <h3 style={{ fontSize: 18, marginBottom: 12 }}>
-              📄 Стратегия продвижения
+              Стратегия продвижения
               {currentPlatform && (
                 <span className="tag tag-planned" style={{ fontSize: 11, marginLeft: 8, verticalAlign: "middle" }}>
                   {currentPlatform.name}
@@ -814,7 +805,7 @@ export default function StrategyPage() {
             </p>
             <div className="flex gap-4 mb-4">
               <button className="btn btn-primary" onClick={() => generateContent.mutate({ action: "generate_strategy" })} disabled={generateContent.isPending}>
-                {generateContent.isPending ? "Генерация..." : "⚡ Сгенерировать стратегию"}
+                {generateContent.isPending ? "Генерация..." : "Сгенерировать стратегию"}
               </button>
               <input
                 type="file" accept=".txt,.md,.docx"
@@ -875,7 +866,7 @@ export default function StrategyPage() {
                 onClick={() => document.getElementById("strategy-ai-input")?.click()}
                 disabled={aiImporting}
               >
-                {aiImporting ? "⏳ AI анализирует..." : "🤖 AI-импорт"}
+                {aiImporting ? "⏳ AI анализирует..." : "AI-импорт"}
               </button>
             </div>
             {strategyBlocks.length > 0 ? (
@@ -962,7 +953,7 @@ export default function StrategyPage() {
           <div>
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 style={{ fontSize: 18, marginBottom: 4 }}>🔗 Воронки продаж</h3>
+                <h3 style={{ fontSize: 18, marginBottom: 4 }}>Воронки продаж</h3>
                 <p className="text-sm text-dim">Выберите системную воронку или свободный контент</p>
               </div>
               <button className="btn btn-ghost" onClick={() => navigate("/free-content")} style={{ fontSize: 13 }}>
@@ -1025,7 +1016,7 @@ export default function StrategyPage() {
         {/* Step 3: Content plan */}
         {step === 3 && (
           <div>
-            <h3 style={{ fontSize: 18, marginBottom: 12 }}>📅 Контент‑план по неделям</h3>
+            <h3 style={{ fontSize: 18, marginBottom: 12 }}>Контент‑план по неделям</h3>
             <p className="text-sm text-dim" style={{ marginBottom: 16 }}>
               {(() => {
                 const fn = allFunnels?.find((f: any) => f.id === activeFunnelId)?.name;
@@ -1062,10 +1053,10 @@ export default function StrategyPage() {
                 }}
                 disabled={aiImporting}
               >
-                {aiImporting ? "⏳ Генерация..." : "➕ Генерировать план"}
+                {aiImporting ? "⏳ Генерация..." : "Генерировать план"}
               </button>
               <button className="btn btn-ghost" onClick={() => navigate("/calendar")}>
-                📅 Открыть календарь
+                Открыть календарь
               </button>
             </div>
 

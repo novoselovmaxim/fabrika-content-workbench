@@ -1,11 +1,8 @@
 import { Routes, Route, NavLink, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
-import { Sun, Moon } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { api } from "./lib/api";
-import { useTheme } from "./lib/theme";
 import { getStoredProjectId, setStoredProjectId, clearStoredProjectId, getStoredPlatformId, setStoredPlatformId, clearStoredPlatformId, getStoredProductId, setStoredProductId, clearStoredProductId } from "./lib/project";
-import { PLATFORM_COLORS } from "./lib/constants";
 import { LicenseGate } from "./components/LicenseGate";
 
 import Dashboard from "./pages/Dashboard";
@@ -24,13 +21,13 @@ import UnpackPage from "./pages/UnpackPage";
 import ChatPanel from "./components/ChatPanel";
 
 const globalNavItems = [
-  { to: "/", label: "Дашборд", icon: "📊" },
+  { to: "/", label: "Дашборд" },
 ];
 
 const projectGlobalItems = [
-  { to: "/unpack", label: "Распаковка", icon: "🔍" },
-  { to: "/brand-styles", label: "Фирменный стиль", icon: "🎨" },
-  { to: "/knowledge", label: "База знаний", icon: "📚" },
+  { to: "/unpack", label: "Распаковка" },
+  { to: "/brand-styles", label: "Фирменный стиль" },
+  { to: "/knowledge", label: "База знаний" },
 ];
 
 function ProjectSelector() {
@@ -38,6 +35,10 @@ function ProjectSelector() {
   const queryClient = useQueryClient();
   const storedId = getStoredProjectId();
   const [selectedId, setSelectedId] = useState(storedId);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
 
   const deleteProject = useMutation({
     mutationFn: (id: string) => api.projects.delete(id),
@@ -50,6 +51,22 @@ function ProjectSelector() {
       }
     },
   });
+
+  const createProject = useMutation({
+    mutationFn: (name: string) => api.projects.create({ name }),
+    onSuccess: (project) => {
+      setStoredProjectId(project.id);
+      setSelectedId(project.id);
+      setCreating(false);
+      setNewName("");
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      navigate("/unpack");
+    },
+  });
+
+  useEffect(() => {
+    if (creating) inputRef.current?.focus();
+  }, [creating]);
 
   // Auto-save first project to localStorage if nothing is stored yet
   useEffect(() => {
@@ -67,22 +84,60 @@ function ProjectSelector() {
     ? selectedId
     : projects?.[0]?.id;
 
-  const navigate = useNavigate();
-
   const handleChange = (id: string) => {
     setSelectedId(id);
     setStoredProjectId(id);
+  };
+
+  const handleCreate = () => {
+    const name = newName.trim();
+    if (name) createProject.mutate(name);
+  };
+
+  const cancelCreate = () => {
+    setCreating(false);
+    setNewName("");
   };
 
   return (
     <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)" }}>
       <div className="flex items-center justify-between" style={{ marginBottom: 8 }}>
         <span className="text-xs text-dim" style={{ textTransform: "uppercase", letterSpacing: 0.5 }}>Проект</span>
-        <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px" }} onClick={() => navigate("/strategy")}>
-          + Новый
-        </button>
+        {!creating && (
+          <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px" }} onClick={() => setCreating(true)}>
+            + Новый
+          </button>
+        )}
       </div>
-      {projects?.length ? (
+      {creating ? (
+        <div className="flex flex-col gap-2">
+          <input
+            ref={inputRef}
+            className="input"
+            placeholder="Название проекта"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleCreate();
+              if (e.key === "Escape") cancelCreate();
+            }}
+            style={{ fontSize: 13, fontWeight: 600 }}
+          />
+          <div className="flex items-center gap-2">
+            <button
+              className="btn btn-primary"
+              style={{ fontSize: 12, padding: "4px 12px" }}
+              onClick={handleCreate}
+              disabled={!newName.trim() || createProject.isPending}
+            >
+              {createProject.isPending ? "Создание..." : "Создать"}
+            </button>
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px" }} onClick={cancelCreate}>
+              Отмена
+            </button>
+          </div>
+        </div>
+      ) : projects?.length ? (
         <div className="flex items-center gap-1">
           <select
             className="input"
@@ -121,9 +176,10 @@ function ProjectSelector() {
   );
 }
 
-function ProductSection() {
+function ContextSection() {
   const navigate = useNavigate();
   const currentProjectId = getStoredProjectId();
+
   const { data: products } = useQuery({
     queryKey: ["products", currentProjectId],
     queryFn: () => api.products.listByProject(currentProjectId!),
@@ -134,125 +190,6 @@ function ProductSection() {
     queryFn: () => api.platforms.listByProject(currentProjectId!),
     enabled: !!currentProjectId,
   });
-  const storedProductId = getStoredProductId();
-  const [selectedProductId, setSelectedProductId] = useState(storedProductId);
-  const storedPlatformId = getStoredPlatformId();
-  const [selectedPlatformId, setSelectedPlatformId] = useState(storedPlatformId);
-
-  useEffect(() => {
-    if (!products?.length) return;
-    const valid = products.some((p: any) => p.id === selectedProductId);
-    if (!selectedProductId || !valid) {
-      const first = products[0].id;
-      setSelectedProductId(first);
-      setStoredProductId(first);
-    }
-  }, [products, selectedProductId]);
-
-  useEffect(() => {
-    if (!platforms?.length) return;
-    const valid = platforms.some((p: any) => p.id === selectedPlatformId);
-    if (!selectedPlatformId || !valid) {
-      const first = platforms[0].id;
-      setSelectedPlatformId(first);
-      setStoredPlatformId(first);
-    }
-  }, [platforms, selectedPlatformId]);
-
-  if (!products?.length) return null;
-
-  const platformsByProduct: Record<string, any[]> = {};
-  if (platforms) {
-    for (const pl of platforms) {
-      const pid = pl.productId || "unknown";
-      if (!platformsByProduct[pid]) platformsByProduct[pid] = [];
-      platformsByProduct[pid].push(pl);
-    }
-  }
-
-  return (
-    <div>
-      <div className="sidebar-section-label" style={{ fontSize: 10, letterSpacing: 1, opacity: 0.5, textAlign: "center" }}>─  Контекст  ─</div>
-      {products.map((product: any) => {
-        const isActiveProduct = product.id === selectedProductId;
-        const productPlatforms = platformsByProduct[product.id] || [];
-        return (
-          <div key={product.id}>
-            <div
-              className="sidebar-link"
-              style={{
-                cursor: "pointer",
-                fontWeight: isActiveProduct ? 600 : 400,
-                color: isActiveProduct ? "var(--text)" : "var(--text-dim)",
-              }}
-              onClick={() => { setSelectedProductId(product.id); setStoredProductId(product.id); }}
-            >
-              <span>📦</span>
-              {product.name}
-            </div>
-            <div style={{ paddingLeft: 8 }}>
-              {productPlatforms.map((pl: any) => (
-                <div
-                  key={pl.id}
-                  className="sidebar-link"
-                  style={{
-                    cursor: "pointer", fontSize: 13, padding: "6px 12px",
-                    background: pl.id === selectedPlatformId ? "var(--accent)" : "transparent",
-                    color: pl.id === selectedPlatformId ? "white" : "var(--text-dim)",
-                    borderRadius: 6, marginBottom: 1,
-                  }}
-                  onClick={() => { setSelectedPlatformId(pl.id); setStoredPlatformId(pl.id); navigate(`/strategy?platformId=${pl.id}`); }}
-                >
-                  <span style={{ width: 8, height: 8, borderRadius: 4, background: PLATFORM_COLORS[pl.type] || "var(--accent)", display: "inline-block", flexShrink: 0 }} />
-                  {pl.name}
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function NavSection({ label, items }: { label: string; items: { to: string; label: string; icon: string }[] }) {
-  return (
-    <div>
-      <div className="sidebar-section-label">{label}</div>
-      {items.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.to === "/"}
-          className={({ isActive }) =>
-            `sidebar-link ${isActive ? "active" : ""}`
-          }
-        >
-          <span>{item.icon}</span>
-          {item.label}
-        </NavLink>
-      ))}
-    </div>
-  );
-}
-
-function PlatformNavSection() {
-  const currentProjectId = getStoredProjectId();
-  const storedPlatformId = getStoredPlatformId();
-  const qs = storedPlatformId ? `?platformId=${storedPlatformId}` : "";
-
-  const { data: platforms } = useQuery({
-    queryKey: ["platforms", currentProjectId],
-    queryFn: () => api.platforms.listByProject(currentProjectId!),
-    enabled: !!currentProjectId,
-  });
-  const activePlatform = platforms?.find((p: any) => p.id === storedPlatformId);
-  const { data: products } = useQuery({
-    queryKey: ["products", currentProjectId],
-    queryFn: () => api.products.listByProject(currentProjectId!),
-    enabled: !!currentProjectId,
-  });
-  const activeProduct = products?.find((p: any) => p.id === activePlatform?.productId);
 
   const { data: readyPosts } = useQuery({
     queryKey: ["posts", "ready", currentProjectId],
@@ -274,32 +211,148 @@ function PlatformNavSection() {
   });
   const queueCount = (readyPosts?.length || 0) + (scheduledPosts?.length || 0);
 
-  if (!activePlatform) return null;
+  const storedProductId = getStoredProductId();
+  const storedPlatformId = getStoredPlatformId();
+  const [selectedProductId, setSelectedProductId] = useState(storedProductId);
+  const [selectedPlatformId, setSelectedPlatformId] = useState(storedPlatformId);
 
-  const planItems = [
-    { to: `/strategy${qs}`, label: "Стратегия", icon: "🎯" },
-    { to: `/free-content${qs}`, label: "Свободный контент", icon: "✍️" },
-  ];
+  useEffect(() => {
+    if (!products?.length) return;
+    const valid = products.some((p: any) => p.id === selectedProductId);
+    if (!selectedProductId || !valid) {
+      const first = products[0].id;
+      setSelectedProductId(first);
+      setStoredProductId(first);
+    }
+  }, [products, selectedProductId]);
 
-  const launchItems = [
-    { to: `/calendar${qs}`, label: "Календарь", icon: "📅" },
-    { to: `/queue${qs}`, label: "Публикации", icon: "📋" },
-  ];
+  const productPlatforms = (platforms || []).filter((p: any) => p.productId === selectedProductId);
+  const activePlatformId = productPlatforms.some((p: any) => p.id === selectedPlatformId)
+    ? selectedPlatformId
+    : productPlatforms[0]?.id;
 
-  const resourceItems = [
-    { to: `/topics${qs}`, label: "Библиотека", icon: "📚" },
-    { to: `/analytics${qs}`, label: "Аналитика", icon: "📈" },
-    { to: `/assets${qs}`, label: "Медиатека", icon: "🖼" },
-  ];
+  useEffect(() => {
+    if (activePlatformId) {
+      setSelectedPlatformId(activePlatformId);
+      setStoredPlatformId(activePlatformId);
+    }
+  }, [activePlatformId]);
 
-  const renderLink = (item: { to: string; label: string; icon: string }) => {
-    if (item.to.startsWith("/queue")) {
-      return (
-        <NavLink key={item.to} to={item.to} end
-          className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-        >
-          <span>{item.icon}</span>
-          <span style={{ flex: 1 }}>{item.label}</span>
+  const hasContent = !!(products?.length && platforms?.length);
+
+  if (!hasContent) {
+    const skeletonNav = [
+      { section: "❷  План", items: [
+        "Стратегия",
+        "Свободный контент",
+      ]},
+      { section: "❸  Запуск", items: [
+        "Календарь",
+        "Публикации",
+      ]},
+      { section: "Инструменты", items: [
+        "Библиотека",
+        "Аналитика",
+        "Медиатека",
+      ]},
+    ];
+
+    return (
+      <div style={{ opacity: 0.35, pointerEvents: "none", userSelect: "none" }}>
+        <div className="sidebar-section-label" style={{ fontSize: 10, letterSpacing: 1, opacity: 0.5, textAlign: "center" }}>
+          ─  Контекст  ─
+        </div>
+        <div style={{ padding: "4px 12px", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+          Продукт
+        </div>
+        <div style={{ padding: "4px 12px", fontSize: 12, fontWeight: 500, color: "var(--text-dim)" }}>
+          Платформа
+        </div>
+        <div style={{ marginTop: 4 }}>
+          {skeletonNav.map((g) => (
+            <div key={g.section}>
+              <div className="sidebar-section-label">{g.section}</div>
+              {g.items.map((label) => (
+                <div key={label} style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "10px 12px", borderRadius: 8,
+                  color: "var(--text-dim)", textDecoration: "none", fontSize: 14,
+                }}>
+                  {label}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <div style={{ padding: "8px 12px", fontSize: 11, color: "var(--text-dim)", textAlign: "center", pointerEvents: "auto" }}>
+          👆 Пройдите <span style={{ color: "var(--accent)", cursor: "pointer", textDecoration: "underline" }} onClick={() => navigate("/unpack")}>распаковку</span>, чтобы активировать разделы
+        </div>
+      </div>
+    );
+  }
+
+  const activeProduct = products.find((p: any) => p.id === selectedProductId);
+  const qs = activePlatformId ? `?platformId=${activePlatformId}` : "";
+
+  return (
+    <div>
+      <div className="sidebar-section-label" style={{ fontSize: 10, letterSpacing: 1, opacity: 0.5, textAlign: "center" }}>
+        ─  Контекст  ─
+      </div>
+
+      {products.length > 1 ? (
+        <div style={{ padding: "4px 12px" }}>
+          <select
+            className="input"
+            value={selectedProductId || ""}
+            onChange={(e) => { setSelectedProductId(e.target.value); setStoredProductId(e.target.value); }}
+            style={{ fontSize: 12, fontWeight: 600 }}
+          >
+            {products.map((p: any) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+      ) : activeProduct ? (
+        <div style={{ padding: "4px 12px", fontSize: 13, fontWeight: 600, color: "var(--text)" }}>
+          {activeProduct.name}
+        </div>
+      ) : null}
+
+      {productPlatforms.length > 1 ? (
+        <div style={{ padding: "4px 12px" }}>
+          <select
+            className="input"
+            value={activePlatformId || ""}
+            onChange={(e) => { setSelectedPlatformId(e.target.value); setStoredPlatformId(e.target.value); }}
+            style={{ fontSize: 12, fontWeight: 500 }}
+          >
+            {productPlatforms.map((p: any) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+      ) : productPlatforms.length === 1 ? (
+        <div style={{ padding: "4px 12px", fontSize: 12, fontWeight: 500, color: "var(--text-dim)" }}>
+          {productPlatforms[0].name}
+        </div>
+      ) : null}
+
+      <div style={{ marginTop: 4 }}>
+        <div className="sidebar-section-label">❷  План</div>
+        <NavLink to={`/strategy${qs}`} end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+          Стратегия
+        </NavLink>
+        <NavLink to={`/free-content${qs}`} end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+          Свободный контент
+        </NavLink>
+
+        <div className="sidebar-section-label">❸  Запуск</div>
+        <NavLink to={`/calendar${qs}`} end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+          Календарь
+        </NavLink>
+        <NavLink to={`/queue${qs}`} end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+          <span style={{ flex: 1 }}>Публикации</span>
           {queueCount > 0 && (
             <span style={{
               background: "var(--accent)", color: "#fff", borderRadius: 10,
@@ -309,84 +362,46 @@ function PlatformNavSection() {
             </span>
           )}
         </NavLink>
-      );
-    }
-    return (
-      <NavLink key={item.to} to={item.to} end
-        className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
-      >
-        <span>{item.icon}</span>
-        {item.label}
-      </NavLink>
-    );
-  };
 
-  return (
-    <div>
-      <div className="sidebar-section-label">
-        <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 4, background: PLATFORM_COLORS[activePlatform.type] || "var(--accent)", marginRight: 6 }} />
-        {activePlatform.name}
-        {activeProduct && (
-          <span style={{
-            marginLeft: 6, fontSize: 10, fontWeight: 500,
-            background: "var(--accent)", color: "#fff",
-            borderRadius: 4, padding: "1px 6px", lineHeight: "16px",
-            verticalAlign: "middle",
-          }}>
-            {activeProduct.name}
-          </span>
-        )}
+        <div className="sidebar-section-label">Инструменты</div>
+        <NavLink to={`/topics${qs}`} end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+          Библиотека
+        </NavLink>
+        <NavLink to={`/analytics${qs}`} end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+          Аналитика
+        </NavLink>
+        <NavLink to={`/assets${qs}`} end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+          Медиатека
+        </NavLink>
       </div>
-      <div className="sidebar-section-label">❷  План</div>
-      {planItems.map(renderLink)}
-      <div className="sidebar-section-label">❸  Запуск</div>
-      {launchItems.map(renderLink)}
-      <div className="sidebar-section-label">Инструменты</div>
-      {resourceItems.map(renderLink)}
     </div>
   );
 }
 
-function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+function NavSection({ label, items }: { label: string; items: { to: string; label: string }[] }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderTop: "1px solid var(--border)" }}>
-      <span className="text-xs text-dim" style={{ textTransform: "uppercase", letterSpacing: 0.5 }}>Тема</span>
-      <div style={{ display: "flex", gap: 4, background: "var(--bg-hover)", borderRadius: 8, padding: 2 }}>
-        <button
-          onClick={() => setTheme("light")}
-          style={{
-            width: 30, height: 30, borderRadius: 6, border: "none", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: theme === "light" ? "var(--accent)" : "transparent",
-            color: theme === "light" ? "#fff" : "var(--text-dim)",
-            transition: "all 0.15s",
-          }}
-          title="Светлая"
+    <div>
+      <div className="sidebar-section-label">{label}</div>
+      {items.map((item) => (
+        <NavLink
+          key={item.to}
+          to={item.to}
+          end={item.to === "/"}
+          className={({ isActive }) =>
+            `sidebar-link ${isActive ? "active" : ""}`
+          }
         >
-          <Sun size={14} />
-        </button>
-        <button
-          onClick={() => setTheme("dark")}
-          style={{
-            width: 30, height: 30, borderRadius: 6, border: "none", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: theme === "dark" ? "var(--accent)" : "transparent",
-            color: theme === "dark" ? "#fff" : "var(--text-dim)",
-            transition: "all 0.15s",
-          }}
-          title="Тёмная"
-        >
-          <Moon size={14} />
-        </button>
-      </div>
+          {item.label}
+        </NavLink>
+      ))}
     </div>
   );
 }
 
 export default function App() {
   const [globalChatOpen, setGlobalChatOpen] = useState(false);
-  const firstProjectId = getStoredProjectId();
+
+  const currentProjectId = getStoredProjectId();
 
   return (
     <LicenseGate>
@@ -399,22 +414,19 @@ export default function App() {
         <nav className="sidebar-nav">
           <NavSection label="Приложение" items={globalNavItems} />
           <NavSection label="❶  Разведка" items={projectGlobalItems} />
-          <ProductSection />
-          <PlatformNavSection />
+          <ContextSection />
         </nav>
-        <ThemeToggle />
         <div style={{ borderTop: "1px solid var(--border)", padding: "8px 16px" }}>
           <NavLink
             to="/settings"
             end
             className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
           >
-            <span>⚙</span>
             Настройки
           </NavLink>
         </div>
       </aside>
-      <main className="main-content">
+      <main className="main-content" key={currentProjectId || "no-project"}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/unpack" element={<UnpackPage />} />
@@ -433,7 +445,7 @@ export default function App() {
       </main>
 
       {/* Global chat button */}
-      {firstProjectId && !globalChatOpen && (
+      {currentProjectId && !globalChatOpen && (
         <button
           onClick={() => setGlobalChatOpen(true)}
           style={{
@@ -448,8 +460,8 @@ export default function App() {
           🤖
         </button>
       )}
-      {globalChatOpen && firstProjectId && (
-        <ChatPanel projectId={firstProjectId} />
+      {globalChatOpen && currentProjectId && (
+        <ChatPanel projectId={currentProjectId} key={currentProjectId} />
       )}
       {globalChatOpen && (
         <style>{`

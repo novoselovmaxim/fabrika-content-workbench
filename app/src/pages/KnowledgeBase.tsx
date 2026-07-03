@@ -96,7 +96,7 @@ export default function KnowledgeBase() {
     return (
       <div>
         <div className="page-header">
-          <h2>📚 База знаний</h2>
+          <h2>База знаний</h2>
           <p>Сначала создайте проект в Стратегии</p>
         </div>
       </div>
@@ -107,7 +107,7 @@ export default function KnowledgeBase() {
     <div>
       <div className="page-header flex items-center justify-between">
         <div>
-          <h2>📚 База знаний</h2>
+          <h2>База знаний</h2>
           <p>Добавляйте информацию о проекте — AI будет использовать её во всех генерациях автоматически</p>
         </div>
         {stats && stats.total > 0 && (

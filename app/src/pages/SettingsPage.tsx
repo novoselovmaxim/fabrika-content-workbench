@@ -264,33 +264,67 @@ export default function SettingsPage() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        {/* Theme */}
-        <div className="card" style={{ alignSelf: "flex-start", minWidth: 360 }}>
-          <div className="card-header">
-            <span className="card-title">Оформление</span>
+        {/* Server + Theme + Updates in one row */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Сервер</span>
+            </div>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between text-sm">
+                <span>Статус</span>
+                <span className="tag tag-ready">{health?.status || "..."}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span>API URL</span>
+                <code className="text-dim">http://localhost:3001</code>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span>База данных</span>
+                <code className="text-dim">database/fabrika.db</code>
+              </div>
+            </div>
           </div>
-          <ThemeSelector />
-        </div>
 
-        {/* Server status — standalone row so it doesn't stretch */}
-        <div className="card" style={{ alignSelf: "flex-start", minWidth: 360 }}>
-          <div className="card-header">
-            <span className="card-title">Сервер</span>
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Оформление</span>
+            </div>
+            <ThemeSelector />
           </div>
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between text-sm">
-              <span>Статус</span>
-              <span className="tag tag-ready">{health?.status || "..."}</span>
+
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Обновления</span>
             </div>
-            <div className="flex items-center justify-between text-sm">
-              <span>API URL</span>
-              <code className="text-dim">http://localhost:3001</code>
-            </div>
-            <div className="flex items-center justify-between text-sm">
-              <span>База данных</span>
-              <code className="text-dim">database/fabrika.db</code>
-            </div>
+            {updateData?.hasUpdate ? (
+              <div className="flex flex-col gap-4">
+                <p className="text-sm" style={{ color: "var(--accent)", fontWeight: 600 }}>
+                  Доступна новая версия {updateData.latest}
+                </p>
+                <p className="text-xs text-dim">
+                  Текущая версия: {updateData.current}
+                </p>
+                <a
+                  href={updateData.releaseUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-primary"
+                  style={{ alignSelf: "flex-start", textDecoration: "none" }}
+                >
+                  📥 Скачать {updateData.latest}
+                </a>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <p className="text-sm text-dim">✓ У вас актуальная версия</p>
+                <p className="text-xs text-dim">
+                  Проверка обновлений происходит автоматически. При появлении новой версии здесь появится уведомление.
+                </p>
+              </div>
+            )}
           </div>
+        </div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -519,41 +553,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Updates */}
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title">Обновления</span>
-          </div>
-          {updateData?.hasUpdate ? (
-            <div className="flex flex-col gap-4">
-              <p className="text-sm" style={{ color: "var(--accent)", fontWeight: 600 }}>
-                Доступна новая версия {updateData.latest}
-              </p>
-              <p className="text-xs text-dim">
-                Текущая версия: {updateData.current}
-              </p>
-              <a
-                href={updateData.releaseUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn btn-primary"
-                style={{ alignSelf: "flex-start", textDecoration: "none" }}
-              >
-                📥 Скачать {updateData.latest}
-              </a>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4">
-              <p className="text-sm text-dim">✓ У вас актуальная версия</p>
-              <p className="text-xs text-dim">
-                Проверка обновлений происходит автоматически. При появлении новой версии здесь появится уведомление.
-              </p>
-            </div>
-          )}
         </div>
-
       </div>
-      </div>
-    </div>
   );
 }

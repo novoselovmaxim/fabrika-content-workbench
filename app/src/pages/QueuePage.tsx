@@ -65,7 +65,11 @@ export default function QueuePage() {
 
   const updatePost = useMutation({
     mutationFn: ({ id, data }: { id: string; data: any }) => api.posts.update(id, data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["posts"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts", "ready"] });
+      queryClient.invalidateQueries({ queryKey: ["posts", "scheduled"] });
+      queryClient.invalidateQueries({ queryKey: ["posts", "published"] });
+    },
   });
 
   const readyCount = readyPosts?.length || 0;
@@ -79,14 +83,14 @@ export default function QueuePage() {
   return (
     <div>
       <div className="page-header">
-        <h2>📋 Публикации</h2>
+        <h2>Публикации</h2>
         <p>Управление публикациями контента</p>
         <div className="flex items-center gap-3" style={{ marginTop: 12, flexWrap: "wrap" }}>
-          <span>📦 {readyCount} готово</span>
+          <span>{readyCount} готово</span>
           <span style={{ color: "var(--dim)" }}>·</span>
-          <span>📅 {scheduledCount} запланировано</span>
+          <span>{scheduledCount} запланировано</span>
           <span style={{ color: "var(--dim)" }}>·</span>
-          <span>✅ {publishedCount} опубликовано</span>
+          <span>{publishedCount} опубликовано</span>
           {(dueToday > 0 || overdue > 0) && (
             <>
               <span style={{ color: "var(--dim)" }}>·</span>
@@ -133,7 +137,7 @@ export default function QueuePage() {
                   ) : (
                     <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px" }}
                       onClick={() => setInlineDatePostId(post.id)}>
-                      📅 Назначить дату
+                      Назначить дату
                     </button>
                   )}
                 </div>
@@ -148,7 +152,7 @@ export default function QueuePage() {
         {/* Колонка: Запланировано */}
         <div className="card" style={{ minHeight: 400 }}>
           <div className="card-header">
-            <span className="card-title">📅 Запланировано</span>
+            <span className="card-title">Запланировано</span>
             <span className="text-dim text-sm">{scheduledCount}</span>
           </div>
           <div className="flex flex-col gap-2">
@@ -166,7 +170,7 @@ export default function QueuePage() {
                     {post.scheduledDate <= todayStr && (
                       <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px", color: "var(--green)" }}
                         onClick={() => updatePost.mutate({ id: post.id, data: { status: "published" } })}>
-                        ✅ Опубликовать
+                        Опубликовать
                       </button>
                     )}
                     {inlineDatePostId === post.id ? (
@@ -186,7 +190,7 @@ export default function QueuePage() {
                     ) : (
                       <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px" }}
                         onClick={() => setInlineDatePostId(post.id)}>
-                        📅 Перенести
+                        Перенести
                       </button>
                     )}
                   </div>
@@ -202,7 +206,7 @@ export default function QueuePage() {
         {/* Колонка: Опубликовано */}
         <div className="card" style={{ minHeight: 400 }}>
           <div className="card-header">
-            <span className="card-title">✅ Опубликовано</span>
+            <span className="card-title">Опубликовано</span>
             <span className="text-dim text-sm">{publishedCount}</span>
           </div>
           <div className="flex flex-col gap-2">

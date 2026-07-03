@@ -120,7 +120,7 @@ export default function AssetsPage() {
   return (
     <div>
       <div className="page-header">
-        <h2>📁 Медиатека — готовый контент</h2>
+        <h2>Медиатека — готовый контент</h2>
         <p>{totalReady} готово · {totalScheduled} запланировано · {totalPublished} опубликовано</p>
       </div>
 
@@ -132,15 +132,15 @@ export default function AssetsPage() {
               onChange={(e) => setSearch(e.target.value)} />
           </div>
           <select className="input med-select" value={filterRubric || ""} onChange={(e) => setFilterRubric(e.target.value || null)}>
-            <option value="">🏷 Все рубрики</option>
+            <option value="">Все рубрики</option>
             {(rubrics || []).map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
           </select>
           <select className="input med-select" value={filterType || ""} onChange={(e) => setFilterType(e.target.value || null)}>
-            <option value="">📋 Все типы</option>
-            <option value="post">📝 Пост</option>
-            <option value="carousel">🎠 Карусель</option>
-            <option value="reel">🎬 Reel</option>
-            <option value="stories">📸 Stories</option>
+            <option value="">Все типы</option>
+            <option value="post">Пост</option>
+            <option value="carousel">Карусель</option>
+            <option value="reel">Reel</option>
+            <option value="stories">Stories</option>
           </select>
         </div>
       </div>
@@ -180,15 +180,15 @@ export default function AssetsPage() {
                     <td className="text-dim">{post.contentTypeName || post.contentTypeCode || "—"}</td>
                     <td className="text-dim">{post.status === "published" ? relativeDate(post.scheduledDate) : "—"}</td>
                     <td className="med-actions" onClick={(e) => e.stopPropagation()}>
-                      <button className="btn btn-ghost btn-xs" onClick={() => navigate(`/posts/${post.id}`)} title="Открыть">📂</button>
+                      <button className="btn btn-ghost btn-xs" onClick={() => navigate(`/posts/${post.id}`)} title="Открыть">откр</button>
                       <button className="btn btn-ghost btn-xs" onClick={() => downloadAssets(post)} title="Скачать картинки">
-                        {downloadingId === post.id ? "⏳" : "📥"}
+                        {downloadingId === post.id ? "⏳" : "скач"}
                       </button>
-                      <button className="btn btn-ghost btn-xs" onClick={() => copyText(post)} title="Копировать текст">📋</button>
+                      <button className="btn btn-ghost btn-xs" onClick={() => copyText(post)} title="Копировать текст">копия</button>
                       {post.status === "ready" && (
                         <>
-                          <button className="btn btn-ghost btn-xs" onClick={() => publishPost.mutate(post)} title="Опубликовать">🚀</button>
-                          <button className="btn btn-ghost btn-xs med-promote-btn" onClick={() => promoteToScheduled.mutate(post)} title="В публикацию">📅</button>
+                          <button className="btn btn-ghost btn-xs" onClick={() => publishPost.mutate(post)} title="Опубликовать">опубл</button>
+                          <button className="btn btn-ghost btn-xs med-promote-btn" onClick={() => promoteToScheduled.mutate(post)} title="В публикацию">в публ</button>
                         </>
                       )}
                     </td>

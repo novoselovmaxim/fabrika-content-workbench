@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useState } from "react";
+import { getStoredProjectId } from "../lib/project";
 import PlatformMetrics from "../components/PlatformMetrics";
 import { PLATFORM_COLORS } from "../lib/constants";
 
@@ -18,15 +19,18 @@ const PLATFORM_LABELS: Record<string, string> = {
 
 export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<string>("content");
+  const projectId = getStoredProjectId();
 
   const { data: stats } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: () => api.dashboard.stats(),
+    queryKey: ["dashboard", projectId],
+    queryFn: () => api.dashboard.stats(projectId ? `?projectId=${projectId}` : undefined),
+    enabled: !!projectId,
   });
 
   const { data: allPosts } = useQuery({
-    queryKey: ["posts", "all"],
-    queryFn: () => api.posts.list(),
+    queryKey: ["posts", "all", projectId],
+    queryFn: () => api.posts.list(projectId ? { projectId } : {}),
+    enabled: !!projectId,
   });
 
   const { data: igStatus } = useQuery({

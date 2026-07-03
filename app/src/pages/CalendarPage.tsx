@@ -39,19 +39,18 @@ export default function CalendarPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const firstProjectId = getStoredProjectId();
+  const [filterProjectId, setFilterProjectId] = useState<string | undefined>(() => getStoredProjectId());
+
+  const { data: allProjects } = useQuery({ queryKey: ["projects"], queryFn: api.projects.list });
 
   const { data: posts } = useQuery({
-    queryKey: ["posts", year, month, firstProjectId],
+    queryKey: ["posts", year, month, filterProjectId],
     queryFn: () => {
       const start = `${year}-${String(month + 1).padStart(2, "0")}-01`;
       const end = `${year}-${String(month + 1).padStart(2, "0")}-31`;
-      return api.posts.list(start && end && firstProjectId
-        ? { startDate: start, endDate: end, projectId: firstProjectId }
-        : { startDate: start, endDate: end }
-      );
+      return api.posts.list({ startDate: start, endDate: end, ...(filterProjectId ? { projectId: filterProjectId } : {}) });
     },
-    enabled: !!firstProjectId,
+    enabled: true,
   });
 
   const movePost = useMutation({
@@ -62,7 +61,7 @@ export default function CalendarPage() {
       return api.posts.update(id, updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["posts", year, month] });
+      queryClient.invalidateQueries({ queryKey: ["posts", year, month, filterProjectId] });
       queryClient.invalidateQueries({ queryKey: ["posts"] });
     },
   });
@@ -70,7 +69,7 @@ export default function CalendarPage() {
   const deletePost = useMutation({
     mutationFn: (id: string) => api.posts.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["posts", year, month] });
+      queryClient.invalidateQueries({ queryKey: ["posts", year, month, filterProjectId] });
     },
   });
 
@@ -134,12 +133,25 @@ export default function CalendarPage() {
             <h2>Календарь</h2>
             <p>Календарь контента — перетащите пост на другую дату</p>
           </div>
-          <div className="flex gap-2" style={{ alignItems: "center" }}>
-            <button className="btn btn-ghost" onClick={prevMonth}>←</button>
-            <span style={{ fontSize: 16, fontWeight: 600, minWidth: 150, textAlign: "center" }}>
-              {monthNames[month]} {year}
-            </span>
-            <button className="btn btn-ghost" onClick={nextMonth}>→</button>
+          <div className="flex items-center gap-3">
+            <select
+              className="input"
+              value={filterProjectId || ""}
+              onChange={(e) => setFilterProjectId(e.target.value || undefined)}
+              style={{ fontSize: 13, fontWeight: 500, minWidth: 180 }}
+            >
+              <option value="">📋 Все проекты</option>
+              {(allProjects || []).map((p: any) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <div className="flex gap-2" style={{ alignItems: "center" }}>
+              <button className="btn btn-ghost" onClick={prevMonth}>←</button>
+              <span style={{ fontSize: 16, fontWeight: 600, minWidth: 150, textAlign: "center" }}>
+                {monthNames[month]} {year}
+              </span>
+              <button className="btn btn-ghost" onClick={nextMonth}>→</button>
+            </div>
           </div>
         </div>
       </div>

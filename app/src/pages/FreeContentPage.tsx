@@ -5,10 +5,10 @@ import { getStoredProjectId, getStoredPlatformId } from "../lib/project";
 import { useNavigate } from "react-router-dom";
 
 const STEPS = [
-  { key: "rubric", label: "Рубрика", icon: "📁" },
-  { key: "topic", label: "Тема", icon: "💡" },
-  { key: "type", label: "Тип поста", icon: "📋" },
-  { key: "create", label: "Дата и создание", icon: "📅" },
+  { key: "rubric", label: "Рубрика" },
+  { key: "topic", label: "Тема" },
+  { key: "type", label: "Тип поста" },
+  { key: "create", label: "Дата и создание" },
 ];
 
 export default function FreeContentPage() {
@@ -121,7 +121,7 @@ export default function FreeContentPage() {
   return (
     <div style={{ width: "100%" }}>
       <div className="page-header">
-        <h2>✍️ Свободный контент</h2>
+        <h2>Свободный контент</h2>
         <p>Создайте пост вручную с помощью AI на каждом шаге</p>
       </div>
 
@@ -135,7 +135,7 @@ export default function FreeContentPage() {
               style={{ fontSize: 12, padding: "5px 10px", opacity: i > step ? 0.4 : 1, whiteSpace: "nowrap" }}
               disabled={i > step}
             >
-              {i < step ? "✅" : s.icon} {s.label}
+              {i < step ? "✓" : s.label}
             </button>
             {i < STEPS.length - 1 && <div style={{ width: 8, height: 1, background: "var(--border)" }} />}
           </div>
@@ -165,7 +165,7 @@ export default function FreeContentPage() {
         {/* Step 0: Rubric */}
         {step === 0 && (
           <div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>📁 Выберите рубрику</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Выберите рубрику</h3>
 
             <div className="flex gap-2" style={{ marginBottom: 16 }}>
               <button
@@ -173,7 +173,7 @@ export default function FreeContentPage() {
                 onClick={() => suggestRubrics.mutate()}
                 disabled={suggestRubrics.isPending}
               >
-                {suggestRubrics.isPending ? "⏳ AI генерирует..." : "🤖 Сгенерировать рубрики"}
+                {suggestRubrics.isPending ? "⏳ AI генерирует..." : "Сгенерировать рубрики"}
               </button>
             </div>
 
@@ -216,7 +216,7 @@ export default function FreeContentPage() {
         {step === 1 && (
           <div>
             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
-              💡 Выберите тему{selectedRubric ? ` — ${selectedRubric.name}` : ""}
+              Выберите тему{selectedRubric ? ` — ${selectedRubric.name}` : ""}
             </h3>
             <p className="text-xs text-dim" style={{ marginBottom: 16 }}>
               Выберите из существующих, сгенерируйте AI или напишите вручную
@@ -228,7 +228,7 @@ export default function FreeContentPage() {
                 onClick={() => suggestTopics.mutate()}
                 disabled={suggestTopics.isPending}
               >
-                {suggestTopics.isPending ? "⏳ AI генерирует..." : "🤖 Предложить темы"}
+                {suggestTopics.isPending ? "⏳ AI генерирует..." : "Предложить темы"}
               </button>
             </div>
 
@@ -287,7 +287,7 @@ export default function FreeContentPage() {
         {/* Step 2: Content type */}
         {step === 2 && (
           <div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>📋 Выберите тип поста</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Выберите тип поста</h3>
             {contentTypes && contentTypes.length > 0 ? (
               <div className="flex flex-col gap-2">
                 {contentTypes.map((ct: any) => (
@@ -321,7 +321,7 @@ export default function FreeContentPage() {
         {/* Step 3: Date & Create */}
         {step === 3 && (
           <div>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>📅 Дата публикации</h3>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Дата публикации</h3>
 
             <div style={{ marginBottom: 24 }}>
               <label className="text-xs text-dim" style={{ display: "block", marginBottom: 6, fontWeight: 600 }}>
@@ -352,7 +352,7 @@ export default function FreeContentPage() {
               onClick={() => createPost.mutate()}
               disabled={createPost.isPending || !scheduledDate}
             >
-              {createPost.isPending ? "⏳ Создание..." : "🚀 Создать пост и перейти к редактированию"}
+              {createPost.isPending ? "⏳ Создание..." : "Создать пост и перейти к редактированию"}
             </button>
           </div>
         )}

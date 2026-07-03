@@ -120,6 +120,7 @@ body {
   gap: 10px;
   padding: 10px 12px;
   border-radius: 8px;
+  border: 1px solid transparent;
   color: var(--text-dim);
   text-decoration: none;
   font-size: 14px;
@@ -132,8 +133,9 @@ body {
 }
 
 .sidebar-link.active {
-  background: var(--accent);
-  color: white;
+  background: transparent;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .sidebar-link svg {
@@ -187,7 +189,7 @@ body {
 .btn {
   padding: 8px 16px;
   border-radius: 8px;
-  border: none;
+  border: 1px solid transparent;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -195,16 +197,20 @@ body {
 }
 
 .btn-primary {
-  background: var(--accent);
-  color: white;
+  background: transparent;
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .btn-primary:hover {
-  background: var(--accent-hover);
+  background: var(--bg-hover);
+  border-color: var(--accent-hover);
+  color: var(--accent-hover);
 }
 
 .btn-ghost {
   background: transparent;
+  border-color: transparent;
   color: var(--text-dim);
 }
 
@@ -214,8 +220,16 @@ body {
 }
 
 .btn-danger {
-  background: var(--red);
-  color: white;
+  background: transparent;
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.btn-danger:hover {
+  background: var(--bg-hover);
+  border-color: var(--red);
+  color: var(--red);
+  opacity: 0.8;
 }
 
 .stats-grid {
@@ -793,10 +807,10 @@ select.input {
 .dash-funnel-pct { font-size: 11px; color: var(--text-dim); }
 
 /* ── Donut ── */
-.dash-donut-wrap { display: flex; align-items: center; gap: 16px; }
+.dash-donut-wrap { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .dash-empty-chart { padding: 48px 0; text-align: center; color: var(--text-dim); font-size: 13px; }
-.dash-donut-legend { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.dash-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.dash-donut-legend { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; overflow: hidden; }
+.dash-legend-item { display: flex; align-items: center; gap: 6px; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dash-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 .dash-legend-name { color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
 .dash-legend-count { font-family: var(--mono); font-size: 13px; font-weight: 600; }

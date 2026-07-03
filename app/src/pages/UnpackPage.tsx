@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { getStoredProjectId, setStoredProjectId } from "../lib/project";
@@ -17,16 +17,16 @@ type OnboardingStepType =
   | "platforms"
   | "complete";
 
-const STEPS: { key: OnboardingStepType; label: string; icon: string; number: number }[] = [
-  { key: "scenario", label: "Сценарий", icon: "🎯", number: 1 },
-  { key: "materials", label: "Материалы", icon: "📁", number: 2 },
-  { key: "competitors", label: "Конкуренты", icon: "🔍", number: 3 },
-  { key: "audience", label: "ЦА", icon: "👥", number: 4 },
-  { key: "hant", label: "Лестница Ханта", icon: "🪜", number: 5 },
-  { key: "value_prop", label: "Ценность", icon: "💎", number: 6 },
-  { key: "products", label: "Продукты", icon: "📦", number: 7 },
-  { key: "platforms", label: "Площадки", icon: "📡", number: 8 },
-  { key: "complete", label: "Итог", icon: "✅", number: 9 },
+const STEPS: { key: OnboardingStepType; label: string; number: number }[] = [
+  { key: "scenario", label: "Сценарий", number: 1 },
+  { key: "materials", label: "Материалы", number: 2 },
+  { key: "competitors", label: "Конкуренты", number: 3 },
+  { key: "audience", label: "ЦА", number: 4 },
+  { key: "hant", label: "Лестница Ханта", number: 5 },
+  { key: "value_prop", label: "Ценность", number: 6 },
+  { key: "products", label: "Продукты", number: 7 },
+  { key: "platforms", label: "Площадки", number: 8 },
+  { key: "complete", label: "Итог", number: 9 },
 ];
 
 const HANT_STAGES = [
@@ -94,6 +94,7 @@ export default function UnpackPage() {
   };
 
   const nextStep = () => {
+    if (!isStepComplete(STEPS[stepIdx].key)) return;
     if (stepIdx < STEPS.length - 1) setStepIdx(stepIdx + 1);
   };
 
@@ -357,7 +358,7 @@ export default function UnpackPage() {
                   rows={Array.isArray(value) ? Math.max(value.length + 1, 3) : 3}
                 />
                 <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                  <button className="btn btn-primary" style={{ fontSize: 10, padding: "2px 10px" }} onClick={confirmEditing}>✅</button>
+                  <button className="btn btn-primary" style={{ fontSize: 10, padding: "2px 10px" }} onClick={confirmEditing}>Ок</button>
                   <button className="btn btn-ghost" style={{ fontSize: 10, padding: "2px 10px" }} onClick={cancelEditing}>✕</button>
                 </div>
               </div>
@@ -461,7 +462,7 @@ export default function UnpackPage() {
                   rows={2}
                 />
                 <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
-                  <button className="btn btn-primary" style={{ fontSize: 10, padding: "1px 8px" }} onClick={confirmHantEdit}>✅</button>
+                  <button className="btn btn-primary" style={{ fontSize: 10, padding: "1px 8px" }} onClick={confirmHantEdit}>Ок</button>
                   <button className="btn btn-ghost" style={{ fontSize: 10, padding: "1px 8px" }} onClick={cancelHantEdit}>✕</button>
                 </div>
               </div>
@@ -746,6 +747,29 @@ export default function UnpackPage() {
     enabled: !!projectId,
   });
 
+  const isStepComplete = (key: OnboardingStepType): boolean => {
+    switch (key) {
+      case "scenario": return scenario !== null;
+      case "materials": return (knowledgeStats?.total ?? 0) > 0 || generatedKeywords.length > 0;
+      case "competitors": return competitorResult !== null || (savedCompetitorsList?.length || 0) > 0;
+      case "audience": return audienceResult?.groups?.length > 0;
+      case "hant": return hantData.length > 0;
+      case "value_prop": return valuePropResult !== null;
+      case "products": return productsResult.length > 0;
+      case "platforms": return platformsResult.length > 0;
+      case "complete": return true;
+    }
+  };
+
+  const highestComplete = useMemo(() => {
+    let idx = -1;
+    for (let i = 0; i < STEPS.length; i++) {
+      if (isStepComplete(STEPS[i].key)) idx = i;
+      else break;
+    }
+    return idx;
+  }, [scenario, knowledgeStats, generatedKeywords, competitorResult, savedCompetitorsList, audienceResult, hantData, valuePropResult, productsResult, platformsResult]);
+
   const initialFillRef = useRef(false);
   // Helper: normalize hant data — old format (flat stages) → new format (journeys with stages)
   const normalizeHantData = (data: any): any[] => {
@@ -886,7 +910,7 @@ export default function UnpackPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       <div className="page-header">
-        <h2>🔍 Фабрика контента</h2>
+        <h2>Фабрика контента</h2>
         <p>Пошаговая распаковка: от сценария до площадок</p>
       </div>
 
@@ -900,45 +924,74 @@ export default function UnpackPage() {
       {/* Progress bar */}
       <div>
         <div className="flex items-center gap-0" style={{ marginBottom: 12, overflowX: "auto", paddingBottom: 4 }}>
-          {STEPS.map((s, i) => (
-            <div key={s.key} style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
-              <button
-                onClick={() => goToStep(i)}
-                style={{
-                  fontSize: 12, padding: "6px 10px", whiteSpace: "nowrap", cursor: "pointer",
-                  borderRadius: 6, border: "none", fontWeight: i === stepIdx ? 700 : 400,
-                  background: i === stepIdx ? "var(--accent)" : i < stepIdx ? "var(--bg-hover)" : "transparent",
-                  color: i === stepIdx ? "#fff" : i < stepIdx ? "var(--text)" : "var(--text-dim)",
-                  opacity: i > stepIdx ? 0.35 : 1,
-                  display: "flex", alignItems: "center", gap: 4,
-                }}
-              >
-                <span style={{
-                  width: 20, height: 20, borderRadius: "50%", display: "inline-flex",
-                  alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700,
-                  background: i === stepIdx ? "rgba(255,255,255,0.25)" : i < stepIdx ? "var(--accent)" : "var(--border)",
-                  color: i === stepIdx ? "#fff" : i < stepIdx ? "#fff" : "var(--text-dim)",
-                }}>
-                  {i < stepIdx ? "✓" : s.number}
-                </span>
-                <span>{s.icon} {s.label}</span>
-              </button>
-              {i < STEPS.length - 1 && <div style={{
-                width: 16, height: 2, flexShrink: 0,
-                background: i < stepIdx ? "var(--accent)" : "var(--border)",
-              }} />}
-            </div>
-          ))}
+          {STEPS.map((s, i) => {
+            const isComplete = isStepComplete(s.key);
+            const isCurrent = i === stepIdx;
+            const isLocked = i > highestComplete + 1 && i !== stepIdx;
+            return (
+              <div key={s.key} style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
+                <button
+                  onClick={() => goToStep(i)}
+                  style={{
+                    fontSize: 12, padding: "6px 10px", whiteSpace: "nowrap", cursor: "pointer",
+                    borderRadius: 6, border: isCurrent ? `1.5px solid var(--accent)` : "none",
+                    fontWeight: isCurrent ? 700 : 400,
+                    background: isCurrent ? "transparent" : isComplete ? "var(--bg-hover)" : "transparent",
+                    color: isCurrent ? "var(--accent)" : isComplete ? "var(--text)" : "var(--text-dim)",
+                    opacity: isLocked ? 0.35 : 1,
+                    display: "flex", alignItems: "center", gap: 4,
+                    transition: "opacity 0.15s",
+                  }}
+                >
+                  <span style={{
+                    width: 20, height: 20, borderRadius: "50%", display: "inline-flex",
+                    alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700,
+                    border: `1.5px solid ${isComplete || isCurrent ? "var(--accent)" : "var(--border)"}`,
+                    background: "transparent",
+                    color: isComplete || isCurrent ? "var(--accent)" : "var(--text-dim)",
+                  }}>
+                    {isComplete ? "✓" : isCurrent ? "🚧" : isLocked ? "🔒" : s.number}
+                  </span>
+                  <span>{s.label}</span>
+                </button>
+                {i < STEPS.length - 1 && <div style={{
+                  width: 16, height: 2, flexShrink: 0,
+                  background: isComplete ? "var(--accent)" : "var(--border)",
+                }} />}
+              </div>
+            );
+          })}
         </div>
       </div>
 
       {/* Step content */}
       <div className="card" style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
 
+        {/* Locked step banner */}
+        {stepIdx > highestComplete + 1 && !isStepComplete(STEPS[stepIdx].key) && (
+          <div style={{
+            padding: "12px 16px", background: "rgba(250,204,21,0.1)", border: "1px solid rgba(250,204,21,0.3)",
+            borderRadius: 8, marginBottom: 16, fontSize: 14, display: "flex",
+            alignItems: "center", gap: 12, flexWrap: "wrap",
+          }}>
+            <span style={{ fontSize: 18 }}>⚠️</span>
+            <span style={{ flex: 1, minWidth: 0, color: "var(--text)" }}>
+              Сначала завершите шаг <strong>«{STEPS[highestComplete + 1].label}»</strong> — без его данных этот шаг пока не имеет смысла
+            </span>
+            <button
+              className="btn btn-ghost"
+              style={{ fontSize: 13, padding: "6px 14px", flexShrink: 0 }}
+              onClick={() => setStepIdx(highestComplete + 1)}
+            >
+              → Перейти к шагу {STEPS[highestComplete + 1].number}
+            </button>
+          </div>
+        )}
+
         {/* Step: scenario */}
         {step === "scenario" && (
           <div>
-            <h3 style={{ fontSize: 18, marginBottom: 8 }}>🎯 Выберите сценарий</h3>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>Выберите сценарий</h3>
             <p className="text-sm text-dim" style={{ marginBottom: 24 }}>
               Как будем работать с проектом?
             </p>
@@ -949,7 +1002,6 @@ export default function UnpackPage() {
                 disabled={startScenario.isPending}
                 style={{ padding: 24, height: "auto", flexDirection: "column", gap: 12, textAlign: "center", border: scenario === "existing" ? "2px solid var(--accent)" : "2px solid var(--border)" }}
               >
-                <span style={{ fontSize: 32 }}>🏢</span>
                 <span style={{ fontWeight: 600 }}>Уже есть проект</span>
                 <span className="text-xs text-dim">Загрузите материалы, AI распакует бренд из них</span>
               </button>
@@ -959,7 +1011,6 @@ export default function UnpackPage() {
                 disabled={startScenario.isPending}
                 style={{ padding: 24, height: "auto", flexDirection: "column", gap: 12, textAlign: "center", border: scenario === "new" ? "2px solid var(--accent)" : "2px solid var(--border)" }}
               >
-                <span style={{ fontSize: 32 }}>🚀</span>
                 <span style={{ fontWeight: 600 }}>Создаём новый проект</span>
                 <span className="text-xs text-dim">Пройдём шаги вместе, AI поможет проработать всё с нуля</span>
               </button>
@@ -1132,7 +1183,7 @@ export default function UnpackPage() {
                         disabled={importLoading || !importIdentifier.trim()}
                         style={{ alignSelf: "flex-start" }}
                       >
-                        {importLoading ? "⏳ Импорт..." : "📥 Импортировать и проанализировать"}
+                        {importLoading ? "⏳ Импорт..." : "Импортировать и проанализировать"}
                       </button>
                       {importPlatform === "zen" && (
                         <p className="text-xs text-dim" style={{ marginTop: 6 }}>
@@ -1245,7 +1296,7 @@ export default function UnpackPage() {
             {unpackTab !== "interview" && unpackTab !== "import" && (
               <div style={{ marginTop: 20, display: "flex", gap: 12, justifyContent: "center" }}>
                 <button className="btn btn-primary" onClick={handleGenerateKeywords} disabled={keywordsLoading || (unpackKnowledgeCount === 0 && realKnowledgeCount === 0)}>
-                  {keywordsLoading ? "⏳ AI извлекает..." : "🔑 Извлечь ключевые слова"}
+                  {keywordsLoading ? "⏳ AI извлекает..." : "Извлечь ключевые слова"}
                 </button>
               </div>
             )}
@@ -1254,7 +1305,7 @@ export default function UnpackPage() {
               <div className="card" style={{ marginTop: 16, padding: "10px 14px" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontWeight: 600, fontSize: 13 }}>🔑 Ключевые слова</span>
+                    <span style={{ fontWeight: 600, fontSize: 13 }}>Ключевые слова</span>
                     <span className="text-xs text-dim">{generatedKeywords.length}</span>
                   </div>
                   <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px" }} onClick={() => {
@@ -1301,7 +1352,7 @@ export default function UnpackPage() {
                   ))}
                   {keywordsEditMode && (
                     <button className="btn btn-primary" style={{ alignSelf: "flex-start", fontSize: 12, padding: "4px 16px", marginTop: 4 }} onClick={handleSaveKeywords} disabled={keywordsSaving}>
-                      {keywordsSaving ? "⏳ Сохранение..." : "💾 Сохранить"}
+                      {keywordsSaving ? "⏳ Сохранение..." : "Сохранить"}
                     </button>
                   )}
                 </div>
@@ -1313,7 +1364,7 @@ export default function UnpackPage() {
         {/* Step: competitors */}
         {step === "competitors" && (
           <div>
-            <h3 style={{ fontSize: 18, marginBottom: 8 }}>🔍 Конкуренты</h3>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>Конкуренты</h3>
             <p className="text-sm text-dim" style={{ marginBottom: 16 }}>
               Добавьте URL конкурентов и ключевые слова для анализа рынка
             </p>
@@ -1359,7 +1410,7 @@ export default function UnpackPage() {
                 disabled={analyzeCompetitors.isPending}
                 style={{ alignSelf: "center" }}
               >
-                {analyzeCompetitors.isPending ? "⏳ Анализ..." : "🔍 Анализировать"}
+                {analyzeCompetitors.isPending ? "⏳ Анализ..." : "Анализировать"}
               </button>
 
               {competitorResult && (
@@ -1520,9 +1571,9 @@ export default function UnpackPage() {
                 {generateAudienceDeep.isPending ? (
                   <span>⏳ AI анализирует ЦА...</span>
                 ) : audienceResult ? (
-                  "🔄 Перезапустить анализ"
+                  "Перезапустить анализ"
                 ) : (
-                  "🔍 Запустить анализ ЦА"
+                  "Запустить анализ ЦА"
                 )}
               </button>
             </div>
@@ -1574,7 +1625,7 @@ export default function UnpackPage() {
                     onClick={() => saveAudienceResult.mutate()}
                     disabled={saveAudienceResult.isPending}
                   >
-                    {saveAudienceResult.isPending ? "⏳ Сохранение..." : "💾 Сохранить"}
+                    {saveAudienceResult.isPending ? "⏳ Сохранение..." : "Сохранить"}
                   </button>
                 </div>
               </div>
@@ -1591,7 +1642,7 @@ export default function UnpackPage() {
         {/* Step: hant — лестница Ханта для каждой группы ЦА */}
         {step === "hant" && (
           <div>
-            <h3 style={{ fontSize: 18, marginBottom: 8 }}>🪜 Лестница Ханта</h3>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>Лестница Ханта</h3>
             <p className="text-sm text-dim" style={{ marginBottom: 16 }}>
               Матрица пути клиента по 9 стадиям Ханта — отдельно для каждой группы ЦА
             </p>
@@ -1611,7 +1662,7 @@ export default function UnpackPage() {
                 {generateHant.isPending
                   ? "⏳ Построение..."
                   : hantData.length === 0
-                    ? `🪜 Построить лестницы для ${audienceResult.groups.length} групп ЦА`
+                    ? `Построить лестницы для ${audienceResult.groups.length} групп ЦА`
                     : `🔄 Перестроить лестницы для ${audienceResult.groups.length} групп ЦА`
                 }
               </button>
@@ -1623,7 +1674,7 @@ export default function UnpackPage() {
                 onClick={() => generateHant.mutate()}
                 disabled={generateHant.isPending}
               >
-                {generateHant.isPending ? "⏳ Построение..." : "🪜 Построить лестницу Ханта"}
+                {generateHant.isPending ? "⏳ Построение..." : "Построить лестницу Ханта"}
               </button>
             )}
 
@@ -1712,7 +1763,7 @@ export default function UnpackPage() {
                     onClick={() => saveHantResult.mutate()}
                     disabled={saveHantResult.isPending}
                   >
-                    {saveHantResult.isPending ? "⏳ Сохранение..." : "💾 Сохранить"}
+                    {saveHantResult.isPending ? "⏳ Сохранение..." : "Сохранить"}
                   </button>
                 </div>
               </div>
@@ -1723,7 +1774,7 @@ export default function UnpackPage() {
         {/* Step: value_prop */}
         {step === "value_prop" && (
           <div>
-            <h3 style={{ fontSize: 18, marginBottom: 8 }}>💎 Ценностное предложение</h3>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>Ценностное предложение</h3>
             <p className="text-sm text-dim" style={{ marginBottom: 16 }}>
               AI сформирует ценностное предложение на основе собранных данных
             </p>
@@ -1733,7 +1784,7 @@ export default function UnpackPage() {
               onClick={() => generateValueProp.mutate()}
               disabled={generateValueProp.isPending}
             >
-              {generateValueProp.isPending ? "⏳ Генерация..." : "💎 Сгенерировать ценностное предложение"}
+              {generateValueProp.isPending ? "⏳ Генерация..." : "Сгенерировать ценностное предложение"}
             </button>
 
             {valuePropResult && (
@@ -1750,7 +1801,7 @@ export default function UnpackPage() {
                         value={vpEditBuffer} onChange={(e) => setVpEditBuffer(e.target.value)} rows={3} />
                       <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
                         <button className="btn btn-primary" style={{ fontSize: 10, padding: "2px 10px" }}
-                          onClick={() => { setValuePropResult((p: any) => ({ ...p, formula: vpEditBuffer })); setVpEditing(null); }}>✅</button>
+                          onClick={() => { setValuePropResult((p: any) => ({ ...p, formula: vpEditBuffer })); setVpEditing(null); }}>Ок</button>
                         <button className="btn btn-ghost" style={{ fontSize: 10, padding: "2px 10px" }} onClick={() => setVpEditing(null)}>✕</button>
                       </div>
                     </div>
@@ -1790,7 +1841,7 @@ export default function UnpackPage() {
                             rows={Math.max(items.length + 1, 3)} />
                           <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
                             <button className="btn btn-primary" style={{ fontSize: 10, padding: "2px 10px" }}
-                              onClick={() => { setValuePropResult((p: any) => ({ ...p, [field]: deserialize(vpEditBuffer) })); setVpEditing(null); }}>✅</button>
+                              onClick={() => { setValuePropResult((p: any) => ({ ...p, [field]: deserialize(vpEditBuffer) })); setVpEditing(null); }}>Ок</button>
                             <button className="btn btn-ghost" style={{ fontSize: 10, padding: "2px 10px" }} onClick={() => setVpEditing(null)}>✕</button>
                           </div>
                           <div className="text-xs text-dim" style={{ marginTop: 4 }}>Формат: текст|оценка (1-3), одна строка на пункт</div>
@@ -1825,7 +1876,7 @@ export default function UnpackPage() {
                 onClick={() => generateProducts.mutate()}
                 disabled={generateProducts.isPending}
               >
-                {generateProducts.isPending ? "⏳ Генерация..." : "🤖 Сгенерировать из материалов"}
+                {generateProducts.isPending ? "⏳ Генерация..." : "Сгенерировать из материалов"}
               </button>
               <button className="btn btn-ghost" onClick={addProduct}>
                 ➕ Добавить продукт
@@ -1853,7 +1904,7 @@ export default function UnpackPage() {
                                   rows={Array.isArray(value) ? Math.max(value.length + 1, 2) : 2}
                                 />
                                 <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                                  <button className="btn btn-primary" style={{ fontSize: 10, padding: "2px 10px" }} onClick={confirmProductsEdit}>✅</button>
+                                  <button className="btn btn-primary" style={{ fontSize: 10, padding: "2px 10px" }} onClick={confirmProductsEdit}>Ок</button>
                                   <button className="btn btn-ghost" style={{ fontSize: 10, padding: "2px 10px" }} onClick={cancelProductsEdit}>✕</button>
                                 </div>
                               </div>
@@ -1906,7 +1957,7 @@ export default function UnpackPage() {
                     onClick={saveProducts}
                     disabled={productsSaving}
                   >
-                    {productsSaving ? "⏳ Сохранение..." : "💾 Сохранить"}
+                    {productsSaving ? "⏳ Сохранение..." : "Сохранить"}
                   </button>
                 </div>
               </div>
@@ -1934,7 +1985,7 @@ export default function UnpackPage() {
                 onClick={() => suggestPlatforms.mutate()}
                 disabled={suggestPlatforms.isPending || productsResult.length === 0}
               >
-                {suggestPlatforms.isPending ? "⏳ Подбор..." : "🤖 Подобрать площадки"}
+                {suggestPlatforms.isPending ? "⏳ Подбор..." : "Подобрать площадки"}
               </button>
             </div>
 
@@ -1974,7 +2025,7 @@ export default function UnpackPage() {
                                   <input className="input" style={{ fontSize: 13, flex: 1 }} value={platformsEditBuffer}
                                     onChange={(e) => setPlatformsEditBuffer(e.target.value)}
                                     placeholder="Название" />
-                                  <button className="btn btn-primary" style={{ fontSize: 10, padding: "1px 8px" }} onClick={confirmPlatformsEdit}>✅</button>
+                                  <button className="btn btn-primary" style={{ fontSize: 10, padding: "1px 8px" }} onClick={confirmPlatformsEdit}>Ок</button>
                                   <button className="btn btn-ghost" style={{ fontSize: 10, padding: "1px 8px" }} onClick={cancelPlatformsEdit}>✕</button>
                                 </div>
                                 <textarea className="input" style={{ fontSize: 11, width: "100%", minHeight: 28, marginBottom: 2 }}
@@ -2058,7 +2109,7 @@ export default function UnpackPage() {
                     onClick={savePlatforms}
                     disabled={platformsSaving}
                   >
-                    {platformsSaving ? "⏳ Сохранение..." : "💾 Сохранить"}
+                    {platformsSaving ? "⏳ Сохранение..." : "Сохранить"}
                   </button>
                 </div>
               </div>
@@ -2069,7 +2120,7 @@ export default function UnpackPage() {
         {/* Step: complete */}
         {step === "complete" && (
           <div>
-            <h3 style={{ fontSize: 18, marginBottom: 8 }}>✅ Онбординг завершён</h3>
+            <h3 style={{ fontSize: 18, marginBottom: 8 }}>Онбординг завершён</h3>
             <p className="text-sm text-dim" style={{ marginBottom: 20 }}>
               Все данные собраны. Можно перейти к стратегии или вернуться к любому шагу
             </p>
@@ -2084,17 +2135,17 @@ export default function UnpackPage() {
                 };
                 const items = [
                   {
-                    key: "scenario", icon: "🎯", label: "Сценарий",
+                    key: "scenario", label: "Сценарий",
                     done: !!scenario,
                     detail: scenario ? `«${scenario.slice(0, 50)}${scenario.length > 50 ? "…" : ""}»` : "Не указан",
                   },
                   {
-                    key: "materials", icon: "📁", label: "Материалы",
+                    key: "materials", label: "Материалы",
                     done: (realKnowledgeCount || 0) > 0,
                     detail: `${realKnowledgeCount || "0"} записей знаний`,
                   },
                   {
-                    key: "competitors", icon: "🔍", label: "Конкуренты",
+                    key: "competitors", label: "Конкуренты",
                     done: (() => {
                       if (savedCompetitorsCount > 0) return true;
                       const d = stepData("competitors");
@@ -2108,7 +2159,7 @@ export default function UnpackPage() {
                     })(),
                   },
                   {
-                    key: "audience", icon: "👥", label: "Целевая аудитория",
+                    key: "audience", label: "Целевая аудитория",
                     done: !!stepData("audience"),
                     detail: (() => {
                       const d = stepData("audience");
@@ -2117,7 +2168,7 @@ export default function UnpackPage() {
                     })(),
                   },
                   {
-                    key: "hant", icon: "🪜", label: "Лестница Ханта",
+                    key: "hant", label: "Лестница Ханта",
                     done: (() => {
                       const d = stepData("hant");
                       return Array.isArray(d) && d.length > 0 && d.some((g: any) => g.stages?.length > 0);
@@ -2129,7 +2180,7 @@ export default function UnpackPage() {
                     })(),
                   },
                   {
-                    key: "value_prop", icon: "💎", label: "Ценностное предложение",
+                    key: "value_prop", label: "Ценностное предложение",
                     done: (() => {
                       const d = stepData("value_prop");
                       return !!(d?.formula || d?.reason);
@@ -2141,12 +2192,12 @@ export default function UnpackPage() {
                     })(),
                   },
                   {
-                    key: "products", icon: "📦", label: "Продукты",
+                    key: "products", label: "Продукты",
                     done: productsResult.length > 0,
                     detail: `${productsResult.length} продуктов`,
                   },
                   {
-                    key: "platforms", icon: "📡", label: "Площадки",
+                    key: "platforms", label: "Площадки",
                     done: platformsResult.length > 0,
                     detail: `${platformsResult.length} площадок`,
                   },
@@ -2165,7 +2216,6 @@ export default function UnpackPage() {
                       color: "var(--text)",
                     }}
                   >
-                    <span style={{ fontSize: 26, flexShrink: 0 }}>{item.done ? "✅" : item.icon}</span>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 15, fontWeight: 700 }}>{item.label}</div>
                       <div className="text-sm text-dim" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>{item.detail}</div>
@@ -2187,7 +2237,7 @@ export default function UnpackPage() {
 
             <div style={{ textAlign: "center", marginTop: 24 }}>
               <button className="btn btn-primary" style={{ fontSize: 16, padding: "12px 40px" }} onClick={finishOnboarding}>
-                🚀 Перейти к стратегии
+                Перейти к стратегии
               </button>
             </div>
           </div>
@@ -2205,7 +2255,8 @@ export default function UnpackPage() {
         <button
           className="btn btn-primary"
           onClick={nextStep}
-          disabled={stepIdx === STEPS.length - 1}
+          disabled={stepIdx === STEPS.length - 1 || !isStepComplete(STEPS[stepIdx].key)}
+          title={!isStepComplete(STEPS[stepIdx].key) ? "Заполните этот шаг, чтобы продолжить" : ""}
         >
           Далее →
         </button>
