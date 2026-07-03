@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useState, useEffect } from "react";
+import { Sun, Moon, Monitor } from "lucide-react";
+import { useTheme } from "../lib/theme";
 import { useUpdater } from "../lib/useUpdater";
 
 const FALLBACK_MODELS = [
@@ -34,6 +36,40 @@ const PLATFORM_META: Record<string, { label: string; placeholder: string; color:
   vk: { label: "ВКонтакте", placeholder: "club1 или @public", color: "#0077FF" },
   instagram: { label: "Instagram", placeholder: "@username", color: "#E4405F" },
 };
+
+function ThemeSelector() {
+  const { theme, setTheme } = useTheme();
+  const options: { value: typeof theme; label: string; icon: typeof Sun }[] = [
+    { value: "light", label: "Светлая", icon: Sun },
+    { value: "dark", label: "Тёмная", icon: Moon },
+    { value: "system", label: "Как в системе", icon: Monitor },
+  ];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {options.map((opt) => {
+        const active = theme === opt.value;
+        const Icon = opt.icon;
+        return (
+          <button
+            key={opt.value}
+            onClick={() => setTheme(opt.value)}
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "10px 14px", borderRadius: 10, border: "none", cursor: "pointer",
+              background: active ? "var(--accent)" : "var(--bg-hover)",
+              color: active ? "#fff" : "var(--text)",
+              fontSize: 13, fontWeight: active ? 600 : 400,
+              transition: "all 0.15s", textAlign: "left",
+            }}
+          >
+            <Icon size={16} />
+            {opt.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const queryClient = useQueryClient();
@@ -228,6 +264,14 @@ export default function SettingsPage() {
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {/* Theme */}
+        <div className="card" style={{ alignSelf: "flex-start", minWidth: 360 }}>
+          <div className="card-header">
+            <span className="card-title">Оформление</span>
+          </div>
+          <ThemeSelector />
+        </div>
+
         {/* Server status — standalone row so it doesn't stretch */}
         <div className="card" style={{ alignSelf: "flex-start", minWidth: 360 }}>
           <div className="card-header">

@@ -17,3 +17,4 @@ database/fabrika.db
 ig-fetcher.spec
 __pycache__/
 scripts/dist/
+.venv/

@@ -1,7 +1,9 @@
 import { Routes, Route, NavLink, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
+import { Sun, Moon } from "lucide-react";
 import { api } from "./lib/api";
+import { useTheme } from "./lib/theme";
 import { getStoredProjectId, setStoredProjectId, clearStoredProjectId, getStoredPlatformId, setStoredPlatformId, clearStoredPlatformId, getStoredProductId, setStoredProductId, clearStoredProductId } from "./lib/project";
 import { PLATFORM_COLORS } from "./lib/constants";
 import { LicenseGate } from "./components/LicenseGate";
@@ -345,6 +347,43 @@ function PlatformNavSection() {
   );
 }
 
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", borderTop: "1px solid var(--border)" }}>
+      <span className="text-xs text-dim" style={{ textTransform: "uppercase", letterSpacing: 0.5 }}>Тема</span>
+      <div style={{ display: "flex", gap: 4, background: "var(--bg-hover)", borderRadius: 8, padding: 2 }}>
+        <button
+          onClick={() => setTheme("light")}
+          style={{
+            width: 30, height: 30, borderRadius: 6, border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: theme === "light" ? "var(--accent)" : "transparent",
+            color: theme === "light" ? "#fff" : "var(--text-dim)",
+            transition: "all 0.15s",
+          }}
+          title="Светлая"
+        >
+          <Sun size={14} />
+        </button>
+        <button
+          onClick={() => setTheme("dark")}
+          style={{
+            width: 30, height: 30, borderRadius: 6, border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: theme === "dark" ? "var(--accent)" : "transparent",
+            color: theme === "dark" ? "#fff" : "var(--text-dim)",
+            transition: "all 0.15s",
+          }}
+          title="Тёмная"
+        >
+          <Moon size={14} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [globalChatOpen, setGlobalChatOpen] = useState(false);
   const firstProjectId = getStoredProjectId();
@@ -363,7 +402,8 @@ export default function App() {
           <ProductSection />
           <PlatformNavSection />
         </nav>
-        <div style={{ marginTop: "auto", borderTop: "1px solid var(--border)", padding: "8px 16px" }}>
+        <ThemeToggle />
+        <div style={{ borderTop: "1px solid var(--border)", padding: "8px 16px" }}>
           <NavLink
             to="/settings"
             end
