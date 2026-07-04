@@ -5,18 +5,49 @@ import { eq } from "drizzle-orm";
 const LICENSE_SERVER = "http://80.87.111.142:4000";
 
 export interface LicenseInfo {
-  status: "active" | "inactive" | "expired" | "invalid";
+  status: "active" | "inactive" | "trial" | "expired" | "invalid";
   email?: string;
   planName?: string;
   expiresAt?: string | null;
   activatedAt?: string;
+  daysLeft?: number;
 }
 
 export function getLicense(): LicenseInfo {
   // В dev режиме всегда активна
   if (isDev) return { status: "active", planName: "Development" };
   const row = db.select().from(license).where(eq(license.id, "singleton")).get();
-  if (!row) return { status: "inactive" };
+  if (!row) {
+    // Автостарт триала
+    const now = new Date().toISOString();
+    db.insert(license).values({
+      id: "singleton",
+      status: "trial",
+      trialStartedAt: now,
+    }).run();
+    return { status: "trial", daysLeft: 14 };
+  }
+  if (row.status === "trial" && row.trialStartedAt) {
+    const daysLeft = 14 - Math.floor((Date.now() - new Date(row.trialStartedAt).getTime()) / 86400000);
+    if (daysLeft <= 0) {
+      db.update(license).set({ status: "expired" }).where(eq(license.id, "singleton")).run();
+      return {
+        status: "expired",
+        email: row.email ?? undefined,
+        planName: row.planName ?? undefined,
+        expiresAt: row.expiresAt,
+        activatedAt: row.activatedAt ?? undefined,
+      };
+    }
+    return {
+      status: "trial",
+      daysLeft,
+      email: row.email ?? undefined,
+      planName: row.planName ?? undefined,
+      expiresAt: row.expiresAt,
+      activatedAt: row.activatedAt ?? undefined,
+    };
+  }
   return {
     status: (row.status as LicenseInfo["status"]) || "inactive",
     email: row.email ?? undefined,
@@ -96,7 +127,7 @@ export function requireLicense(req: any, res: any, next: any): void {
   if (FREE_PATHS.some(p => req.path.startsWith(p))) return next();
 
   const info = getLicense();
-  if (info.status === "active") return next();
+  if (info.status === "active" || info.status === "trial") return next();
 
   res.status(403).json({
     error: "license_required",

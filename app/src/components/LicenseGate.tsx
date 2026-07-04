@@ -22,7 +22,25 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
   const [sent, setSent] = useState(false);
 
   if (isLoading) return <div className="loading">Загрузка...</div>;
-  if (license?.status === "active") return <>{children}</>;
+  if (license?.status === "active" || license?.status === "trial") {
+    return (
+      <>
+        {license?.status === "trial" && (
+          <div style={{
+            background: "var(--accent, #6366f1)", color: "white", padding: "8px 16px",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            fontSize: 14,
+          }}>
+            <span>Триал: осталось {license.daysLeft ?? 14} дн.</span>
+            <a onClick={() => setShowBuy(true)} style={{ color: "white", fontWeight: 600, cursor: "pointer" }}>
+              Купить лицензию →
+            </a>
+          </div>
+        )}
+        {children}
+      </>
+    );
+  }
 
   const handleActivate = async () => {
     setError("");
@@ -43,6 +61,10 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const titleText = license?.status === "expired"
+    ? "Триал закончился. Оставьте почту, чтобы получить лицензию"
+    : "Введите лицензионный ключ для активации";
+
   return (
     <div style={{
       display: "flex", flexDirection: "column", alignItems: "center",
@@ -52,7 +74,7 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
         🏭 Фабрика Контента
       </h1>
       <p style={{ color: "var(--text-dim)" }}>
-        Введите лицензионный ключ для активации
+        {titleText}
       </p>
       <input
         placeholder="FBR-XXXX-XXXX"

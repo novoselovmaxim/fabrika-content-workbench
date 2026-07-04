@@ -395,5 +395,6 @@ export const license = sqliteTable("license", {
   expiresAt:    text("expires_at"),
   status:       text("status").default("inactive"),
   lastChecked:  text("last_checked"),
-  planName:     text("plan_name"),
+  planName:      text("plan_name"),
+  trialStartedAt: text("trial_started_at"),
 });

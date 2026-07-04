@@ -308,7 +308,7 @@ generateRouter.post("/week-plan", async (req, res) => {
       contentTypes: contentTypesList,
       blocks: strategyBlockList,
       plannedPosts,
-      platformName: platform?.name || "Берег.Микрошаги",
+      platformName: platform?.name || "проект",
       topics: existingTopics,
       ideas,
       funnel,

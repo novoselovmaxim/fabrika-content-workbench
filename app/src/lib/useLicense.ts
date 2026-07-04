@@ -1,10 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export interface LicenseInfo {
-  status: "active" | "inactive" | "expired" | "invalid";
+  status: "active" | "inactive" | "trial" | "expired" | "invalid";
   email?: string;
   planName?: string;
   expiresAt?: string | null;
+  daysLeft?: number;
 }
 
 export function useLicense() {
