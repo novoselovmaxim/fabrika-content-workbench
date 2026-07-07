@@ -1,6 +1,6 @@
 {
   "name": "fabrika-content-workbench",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "Фабрика Контента — редакторская платформа для управления контентом",
   "main": "electron/dist/main.js",
@@ -30,9 +30,18 @@
       "server/dist/bundle.cjs"
     ],
     "extraResources": [
-      { "from": "database/migrations", "to": "migrations" },
-      { "from": "app/dist", "to": "app" },
-      { "from": "version.txt", "to": "version.txt" }
+      {
+        "from": "database/migrations",
+        "to": "migrations"
+      },
+      {
+        "from": "app/dist",
+        "to": "app"
+      },
+      {
+        "from": "version.txt",
+        "to": "version.txt"
+      }
     ],
     "asarUnpack": [
       "node_modules/better-sqlite3/**"
