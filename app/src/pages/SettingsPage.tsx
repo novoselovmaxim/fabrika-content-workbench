@@ -346,10 +346,22 @@ export default function SettingsPage() {
             <div>
               <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>ZvenoAI API Key</label>
               <input className="input" type="password" placeholder="sk-zveno-..." value={zvenoKey} onChange={(e) => setZvenoKey(e.target.value)} />
+              <span className="text-xs text-dim" style={{ marginTop: 4, display: "inline-block" }}>
+                получить ключ{' '}
+                <a href="https://zveno.ai/?ref=PLDBkWOG" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+                  тут
+                </a>
+              </span>
             </div>
             <div>
               <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Vsellm API Key</label>
               <input className="input" type="password" placeholder="sk-vsellm-..." value={vsellmKey} onChange={(e) => setVsellmKey(e.target.value)} />
+              <span className="text-xs text-dim" style={{ marginTop: 4, display: "inline-block" }}>
+                получить ключ{' '}
+                <a href="https://vsellm.ru/registration?ref=W0GYAW43WQTB" target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+                  тут
+                </a>
+              </span>
             </div>
             <div>
               <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Tavily API Key (поиск конкурентов)</label>
