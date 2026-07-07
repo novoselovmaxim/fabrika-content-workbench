@@ -10,16 +10,6 @@ const sqlite: Database.Database = new Database(PATHS.db);
 sqlite.pragma("journal_mode = WAL");
 sqlite.pragma("foreign_keys = ON");
 
-sqlite.exec(`
-  CREATE TABLE IF NOT EXISTS connected_platforms (
-    id TEXT PRIMARY KEY,
-    platform TEXT NOT NULL,
-    identifier TEXT NOT NULL,
-    label TEXT,
-    created_at TEXT DEFAULT (current_timestamp)
-  )
-`);
-
 // Seed default VK service key if not set
 const existingVkKey = sqlite.prepare("SELECT value FROM settings WHERE key = ?").get("vk_service_key") as any;
 if (!existingVkKey) {
