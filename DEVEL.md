@@ -1,7 +1,9 @@
 # Development Log
 
-Текущий `version.txt`: `1.0.14`  
-Следующий релиз: **v1.0.14**
+Текущий `version.txt`: `1.1.0`  
+Последний релиз: **v1.1.0**
+
+Процесс релиза описан в `RELEASE_INSTRUCTIONS.md`.
 
 ---
 
@@ -33,17 +35,11 @@
 
 ## Как выпустить релиз
 
-```bash
-# 1. Проверить version.txt
-cat version.txt
-# 2. Закоммитить все правки
-git add -A && git commit -m "v1.0.14: VK import"
-# 3. Подписать тег и запушить
-git tag v1.0.14 && git push origin main --tags
-# 4. CI соберёт .exe + .dmg и выложит релиз
-```
+Подробная инструкция — в `RELEASE_INSTRUCTIONS.md`.
 
 ---
+
+
 
 ## Сессия 4 (2026-07-01) — VK + Дзен + Instagram импорт
 
