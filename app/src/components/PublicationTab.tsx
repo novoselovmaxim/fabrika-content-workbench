@@ -141,9 +141,9 @@ function CarouselPreview({ slides, caption }: { slides: any[]; caption: string }
             <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 600 }}>
               Б
             </div>
-            <span style={{ fontWeight: 600, fontSize: 13 }}>bereg.microshagi</span>
+            <span style={{ fontWeight: 600, fontSize: 13 }}>@username</span>
           </div>
-          <div><strong style={{ fontWeight: 600 }}>bereg.microshagi</strong> {renderMarkdown(caption)}</div>
+          <div><strong style={{ fontWeight: 600 }}>@username</strong> {renderMarkdown(caption)}</div>
         </div>
       )}
     </div>
@@ -227,7 +227,7 @@ function PostPreview({ imageUrl, caption }: { imageUrl?: string; caption: string
           <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 600 }}>
             Б
           </div>
-          <span style={{ fontWeight: 600, fontSize: 13, color: "#262626" }}>bereg.microshagi</span>
+          <span style={{ fontWeight: 600, fontSize: 13, color: "#262626" }}>@username</span>
         </div>
 
         {/* Изображение */}
@@ -266,7 +266,7 @@ function PostPreview({ imageUrl, caption }: { imageUrl?: string; caption: string
               <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
             </svg>
           </button>
-            <strong style={{ fontWeight: 600 }}>bereg.microshagi</strong> {renderMarkdown(caption)}
+            <strong style={{ fontWeight: 600 }}>@username</strong> {renderMarkdown(caption)}
           </div>
         )}
       </div>

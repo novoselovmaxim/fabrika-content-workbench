@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db.js";
-import { postItems, topics as topicsTable, rubrics, contentTypes, funnels, draftVersions, pipelineRuns, assets, analyticsSnapshots, platforms } from "../schema.js";
+import { postItems, topics as topicsTable, rubrics, contentTypes, funnels, draftVersions, pipelineRuns, assets, analyticsSnapshots, platforms, reviewEvents } from "../schema.js";
 import { sql, eq, and } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
@@ -50,6 +50,7 @@ postsRouter.get("/", (req, res) => {
       hook: postItems.hook,
       keyMessage: postItems.keyMessage,
       cta: postItems.cta,
+      reviewStatus: postItems.reviewStatus,
       createdAt: postItems.createdAt,
       updatedAt: postItems.updatedAt,
       topicTitle: topicsTable.title,
@@ -95,6 +96,9 @@ postsRouter.get("/:id", (req, res) => {
       versionCurrentId: postItems.versionCurrentId,
       owner: postItems.owner,
       publishedMediaId: postItems.publishedMediaId,
+      reviewStatus: postItems.reviewStatus,
+      lastReviewedBy: postItems.lastReviewedBy,
+      lastReviewedAt: postItems.lastReviewedAt,
       createdAt: postItems.createdAt,
       updatedAt: postItems.updatedAt,
       topicTitle: topicsTable.title,
@@ -146,7 +150,34 @@ postsRouter.patch("/:id", (req, res) => {
   const { id } = req.params;
   const update = { ...req.body, updatedAt: new Date().toISOString() };
   delete update.id;
+
+  const SIGNIFICANT_FIELDS = new Set(["title", "goal", "hook", "keyMessage", "cta", "scheduledDate", "status"]);
+  const significantChanges: { field: string; from: any; to: any }[] = [];
+
+  for (const key of Object.keys(req.body)) {
+    if (SIGNIFICANT_FIELDS.has(key)) {
+      const current = db.select({ [key]: (postItems as any)[key] }).from(postItems).where(sql`id = ${id}`).get();
+      if (current && String(current[key as keyof typeof current]) !== String(req.body[key])) {
+        significantChanges.push({ field: key, from: current[key as keyof typeof current], to: req.body[key] });
+      }
+    }
+  }
+
   db.update(postItems).set(update).where(sql`id = ${id}`).run();
+
+  if (significantChanges.length > 0) {
+    const now = new Date().toISOString();
+    for (const change of significantChanges) {
+      db.insert(reviewEvents).values({
+        id: uuid(),
+        postItemId: id,
+        eventType: "field_change",
+        payload: JSON.stringify(change),
+        createdAt: now,
+      }).run();
+    }
+  }
+
   const row = db.select().from(postItems).where(sql`id = ${id}`).get();
   res.json(row);
 });

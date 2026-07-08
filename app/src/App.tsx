@@ -17,6 +17,7 @@ import AssetsPage from "./pages/AssetsPage";
 import StrategyPage from "./pages/StrategyPage";
 import BrandStylesPage from "./pages/BrandStylesPage";
 import KnowledgeBase from "./pages/KnowledgeBase";
+import BrandFactsPage from "./pages/BrandFactsPage";
 import UnpackPage from "./pages/UnpackPage";
 import ChatPanel from "./components/ChatPanel";
 
@@ -28,6 +29,7 @@ const projectGlobalItems = [
   { to: "/unpack", label: "Распаковка" },
   { to: "/brand-styles", label: "Фирменный стиль" },
   { to: "/knowledge", label: "База знаний" },
+  { to: "/brand-facts", label: "Факты бренда" },
 ];
 
 function ProjectSelector() {
@@ -433,6 +435,7 @@ export default function App() {
           <Route path="/strategy" element={<StrategyPage />} />
           <Route path="/brand-styles" element={<BrandStylesPage />} />
           <Route path="/knowledge" element={<KnowledgeBase />} />
+          <Route path="/brand-facts" element={<BrandFactsPage />} />
           <Route path="/free-content" element={<FreeContentPage />} />
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/topics" element={<TopicsPage />} />

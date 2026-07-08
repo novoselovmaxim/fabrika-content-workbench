@@ -1,9 +1,105 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useState, useEffect } from "react";
-import { Sun, Moon, Monitor } from "lucide-react";
+import { Sun, Moon, Monitor, Globe } from "lucide-react";
 import { useTheme } from "../lib/theme";
 import { useUpdater } from "../lib/useUpdater";
+import { getStoredProjectId } from "../lib/project";
+
+const LANGUAGES = [
+  { code: "ru", label: "Русский" },
+  { code: "en", label: "English" },
+  { code: "de", label: "Deutsch" },
+  { code: "fr", label: "Français" },
+  { code: "es", label: "Español" },
+  { code: "it", label: "Italiano" },
+  { code: "zh", label: "中文" },
+  { code: "ar", label: "العربية" },
+  { code: "pt", label: "Português" },
+  { code: "tr", label: "Türkçe" },
+  { code: "kz", label: "Қазақ" },
+];
+
+function LanguageSection() {
+  const projectId = getStoredProjectId();
+  const queryClient = useQueryClient();
+
+  const { data: project } = useQuery({
+    queryKey: ["project", projectId],
+    queryFn: () => api.projects.get(projectId!),
+    enabled: !!projectId,
+  });
+
+  const [primary, setPrimary] = useState("ru");
+  const [supported, setSupported] = useState<string[]>(["ru"]);
+
+  useEffect(() => {
+    if (project) {
+      setPrimary(project.primaryLanguage || "ru");
+      try {
+        const sup = project.supportedLanguages
+          ? (typeof project.supportedLanguages === "string" ? JSON.parse(project.supportedLanguages) : project.supportedLanguages)
+          : ["ru"];
+        setSupported(Array.isArray(sup) ? sup : ["ru"]);
+      } catch {
+        setSupported(["ru"]);
+      }
+    }
+  }, [project]);
+
+  const saveLanguages = useMutation({
+    mutationFn: () => api.projects.update(projectId!, { primaryLanguage: primary, supportedLanguages: JSON.stringify(supported) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["project", projectId] }),
+  });
+
+  function toggleSupported(code: string) {
+    setSupported((prev) => prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]);
+  }
+
+  if (!projectId) return null;
+
+  return (
+    <div className="card" style={{ gridColumn: "span 2" }}>
+      <div className="card-header">
+        <span className="card-title flex items-center gap-2">
+          <Globe size={14} />
+          Языки проекта
+        </span>
+        <span className="text-xs text-dim">Задел на мультиязычность</span>
+      </div>
+      <div className="flex flex-col gap-4">
+        <div>
+          <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Основной язык контента</label>
+          <select className="input" value={primary} onChange={(e) => setPrimary(e.target.value)} style={{ maxWidth: 300 }}>
+            {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Дополнительные языки</label>
+          <div className="flex gap-1 flex-wrap">
+            {LANGUAGES.map((l) => (
+              <button
+                key={l.code}
+                className={`btn btn-sm ${supported.includes(l.code) ? "btn-primary" : "btn-ghost"}`}
+                onClick={() => toggleSupported(l.code)}
+                style={{ fontSize: 11 }}
+              >
+                {l.code === primary ? "★" : ""} {l.label}
+              </button>
+            ))}
+          </div>
+          <div className="text-xs text-dim" style={{ marginTop: 4 }}>
+            Выбрано: {supported.length} языков
+          </div>
+        </div>
+        <button className="btn btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => saveLanguages.mutate()} disabled={saveLanguages.isPending}>
+          {saveLanguages.isPending ? "Сохранение..." : "💾 Сохранить языки"}
+        </button>
+        {saveLanguages.isSuccess && <span className="tag tag-ready">Сохранено</span>}
+      </div>
+    </div>
+  );
+}
 
 const FALLBACK_MODELS = [
   "vsellm/google/gemini-3-flash-preview",
@@ -67,6 +163,124 @@ function ThemeSelector() {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+const SEVERITY_LABELS: Record<string, string> = { info: "Инфо", warning: "Предупреждение", block: "Блокирующий" };
+const SEVERITY_COLORS: Record<string, string> = { info: "var(--dim)", warning: "var(--orange, #e68a2e)", block: "var(--red)" };
+
+function ComplianceSection() {
+  const queryClient = useQueryClient();
+  const { data: rules, refetch } = useQuery({
+    queryKey: ["policy-rules"],
+    queryFn: () => api.compliance.listPolicyRules(),
+  });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formCode, setFormCode] = useState("");
+  const [formDesc, setFormDesc] = useState("");
+  const [formPattern, setFormPattern] = useState("");
+  const [formSeverity, setFormSeverity] = useState("warning");
+  const [showForm, setShowForm] = useState(false);
+
+  const toggleRule = useMutation({
+    mutationFn: ({ id, enabled }: { id: string; enabled: number }) =>
+      api.compliance.updatePolicyRule(id, { enabled }),
+    onSuccess: () => refetch(),
+  });
+
+  const deleteRule = useMutation({
+    mutationFn: (id: string) => api.compliance.deletePolicyRule(id),
+    onSuccess: () => refetch(),
+  });
+
+  const createRule = useMutation({
+    mutationFn: () => api.compliance.createPolicyRule({ code: formCode, description: formDesc, pattern: formPattern, severity: formSeverity }),
+    onSuccess: () => { refetch(); setShowForm(false); setFormCode(""); setFormDesc(""); setFormPattern(""); setFormSeverity("warning"); },
+  });
+
+  const updateRule = useMutation({
+    mutationFn: (data: any) => api.compliance.updatePolicyRule(data.id, data),
+    onSuccess: () => { refetch(); setEditingId(null); },
+  });
+
+  function startEdit(rule: any) {
+    setEditingId(rule.id);
+    setFormCode(rule.code);
+    setFormDesc(rule.description);
+    setFormPattern(rule.pattern || "");
+    setFormSeverity(rule.severity || "warning");
+  }
+
+  return (
+    <div className="card" style={{ gridColumn: "span 2" }}>
+      <div className="card-header">
+        <span className="card-title">Правила compliance</span>
+        <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => { setShowForm(!showForm); setEditingId(null); }}>
+          {showForm ? "Отмена" : "+ Добавить"}
+        </button>
+      </div>
+      {(showForm || editingId) && (
+        <div className="flex flex-col gap-3" style={{ marginBottom: 12, padding: 12, background: "var(--bg-hover)", borderRadius: 10 }}>
+          <div>
+            <label className="text-xs text-dim">Код</label>
+            <input className="input" value={formCode} onChange={(e) => setFormCode(e.target.value)} placeholder="no_guaranteed_result" />
+          </div>
+          <div>
+            <label className="text-xs text-dim">Описание</label>
+            <input className="input" value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Запрет обещаний гарантированного результата" />
+          </div>
+          <div>
+            <label className="text-xs text-dim">Регулярное выражение (regex)</label>
+            <input className="input" value={formPattern} onChange={(e) => setFormPattern(e.target.value)} placeholder="\\b(гарантирую|100%)\\b" />
+          </div>
+          <div>
+            <label className="text-xs text-dim">Severity</label>
+            <select className="input" value={formSeverity} onChange={(e) => setFormSeverity(e.target.value)}>
+              {Object.entries(SEVERITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </select>
+          </div>
+          <div className="flex gap-2">
+            {editingId ? (
+              <button className="btn btn-primary" onClick={() => updateRule.mutate({ id: editingId, code: formCode, description: formDesc, pattern: formPattern, severity: formSeverity })}>
+                💾 Сохранить
+              </button>
+            ) : (
+              <button className="btn btn-primary" onClick={() => createRule.mutate()} disabled={!formCode || !formDesc}>
+                Создать
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      <div className="flex flex-col gap-2">
+        {(rules || []).map((rule: any) => (
+          <div key={rule.id} className="flex items-center justify-between" style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+            <div className="flex items-center gap-3" style={{ flex: 1 }}>
+              <label className="switch" style={{ margin: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={!!rule.enabled}
+                  onChange={() => toggleRule.mutate({ id: rule.id, enabled: rule.enabled ? 0 : 1 })}
+                />
+                <span className="slider round" />
+              </label>
+              <div style={{ flex: 1 }}>
+                <div className="text-sm" style={{ fontWeight: 500 }}>{rule.code}</div>
+                <div className="text-xs text-dim">{rule.description}</div>
+              </div>
+              <span className="tag" style={{ background: SEVERITY_COLORS[rule.severity] || "var(--dim)", color: "#fff", fontSize: 10 }}>
+                {SEVERITY_LABELS[rule.severity] || rule.severity}
+              </span>
+            </div>
+            <div className="flex gap-1" style={{ flexShrink: 0 }}>
+              <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px" }} onClick={() => startEdit(rule)}>✏️</button>
+              <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px", color: "var(--red)" }} onClick={() => { if (confirm("Удалить правило?")) deleteRule.mutate(rule.id); }}>🗑</button>
+            </div>
+          </div>
+        ))}
+        {(!rules || rules.length === 0) && <div className="text-dim text-sm">Нет правил compliance</div>}
+      </div>
     </div>
   );
 }
@@ -550,6 +764,10 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
+
+        <LanguageSection />
+
+        <ComplianceSection />
 
         {/* Export */}
         <div className="card">

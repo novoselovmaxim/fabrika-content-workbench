@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useState } from "react";
 import { getStoredProjectId } from "../lib/project";
 import PlatformMetrics from "../components/PlatformMetrics";
 import { PLATFORM_COLORS } from "../lib/constants";
+import { Lightbulb } from "lucide-react";
 
 const statusLabels: Record<string, string> = {
   idea: "Идея", planned: "Запланирован", draft: "Черновик",
@@ -18,6 +19,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 };
 
 export default function AnalyticsPage() {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<string>("content");
   const projectId = getStoredProjectId();
 
@@ -56,6 +58,17 @@ export default function AnalyticsPage() {
     queryFn: () => api.metrics.listPlatforms(),
   });
 
+  const { data: insights, refetch: refetchInsights } = useQuery({
+    queryKey: ["insights", projectId],
+    queryFn: () => api.analytics.listInsights(projectId!),
+    enabled: !!projectId,
+  });
+
+  const recomputeInsights = useMutation({
+    mutationFn: () => api.analytics.recomputeInsights(projectId!),
+    onSuccess: () => refetchInsights(),
+  });
+
   const rubricStats = new Map<string, { count: number; name: string; color: string }>();
   (allPosts || []).forEach((p: any) => {
     const key = p.rubricName || "Без рубрики";
@@ -78,6 +91,7 @@ export default function AnalyticsPage() {
 
   const tabs: { key: string; label: string; color?: string }[] = [
     { key: "content", label: "Контент" },
+    { key: "insights", label: "Insights" },
   ];
   if (hasIG) tabs.push({ key: "instagram", label: "Instagram" });
   for (const p of platforms) {
@@ -305,7 +319,74 @@ export default function AnalyticsPage() {
         </>
       )}
 
-      {activeTab !== "content" && activeTab !== "instagram" && (
+      {activeTab === "insights" && (
+        <div>
+          <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
+            <h3>Insights и рекомендации</h3>
+            <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={() => recomputeInsights.mutate()} disabled={recomputeInsights.isPending}>
+              {recomputeInsights.isPending ? "Пересчёт..." : "🔄 Пересчитать"}
+            </button>
+          </div>
+          {insights && insights.length > 0 ? (
+            <div className="flex flex-col gap-3">
+              {insights.map((ins: any) => (
+                <div key={ins.id} className="card">
+                  <div className="card-header">
+                    <span className="card-title flex items-center gap-2">
+                      <Lightbulb size={14} />
+                      {ins.payload?.title || ins.insightType}
+                    </span>
+                    <span className="text-xs text-dim">{new Date(ins.generatedAt).toLocaleString("ru-RU")}</span>
+                  </div>
+                  {ins.payload?.description && <div className="text-sm text-dim" style={{ marginBottom: 8 }}>{ins.payload.description}</div>}
+                  {ins.payload?.items && (
+                    <div className="flex flex-col gap-2">
+                      {ins.payload.items.map((item: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between text-sm" style={{ padding: "6px 0", borderBottom: "1px solid var(--border)" }}>
+                          <span className="flex items-center gap-2">
+                            {item.name && <span className="rubric-dot" style={{ background: item.color || "var(--accent)" }} />}
+                            {item.name || item.contentTypeId || "—"}
+                          </span>
+                          <span className="text-dim">{item.count || item.avgMetric?.toFixed(1) || "—"}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {ins.payload?.missing && ins.payload.missing.length > 0 && (
+                    <div className="text-sm" style={{ marginTop: 8 }}>
+                      <span style={{ color: "var(--red)" }}>Нет контента на этапах:</span>
+                      <div className="flex gap-1 flex-wrap" style={{ marginTop: 4 }}>
+                        {ins.payload.missing.map((s: string, i: number) => (
+                          <span key={i} className="tag tag-draft">{s}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {ins.payload?.stages && (
+                    <div className="flex gap-1 flex-wrap" style={{ marginTop: 8 }}>
+                      <span className="text-xs text-dim">Покрытие воронки:</span>
+                      {ins.payload.stages.map((s: string, i: number) => {
+                        const isCovered = ins.payload.covered?.includes(s);
+                        return (
+                          <span key={i} className="tag" style={{ background: isCovered ? "var(--green)" : "var(--red)", color: "#fff", fontSize: 10 }}>
+                            {isCovered ? "✓" : "✗"} {s}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card" style={{ textAlign: "center", padding: 40 }}>
+              <p className="text-dim text-sm">Пока нет инсайтов. Нажмите «Пересчитать», чтобы сгенерировать рекомендации.</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab !== "content" && activeTab !== "instagram" && activeTab !== "insights" && (
         (() => {
           const p = platforms.find(p => p.platform === activeTab);
           return p ? <PlatformMetrics platform={p.platform} identifier={p.identifier} /> : null;

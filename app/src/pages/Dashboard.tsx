@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import {
   FileText, Sparkles, Library, Calendar,
-  Edit3, Send, BarChart3, TrendingUp, CheckCircle, Users,
+  Edit3, Send, BarChart3, TrendingUp, CheckCircle, Users, Lightbulb,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { getStoredProjectId } from "../lib/project";
@@ -430,6 +430,7 @@ const itemVariants = {
 };
 
 export default function Dashboard() {
+  const queryClient = useQueryClient();
   const [period, setPeriod] = useState<"week" | "month" | "all">("all");
   const projectId = getStoredProjectId();
 
@@ -452,6 +453,17 @@ export default function Dashboard() {
 
   const totalPosts = data?.totalPosts || 0;
   const postsByStatus: { status: string; count: number }[] = data?.postsByStatus || [];
+
+  const { data: insights } = useQuery({
+    queryKey: ["insights", projectId],
+    queryFn: () => api.analytics.listInsights(projectId!),
+    enabled: !!projectId,
+  });
+
+  const recomputeInsights = useMutation({
+    mutationFn: () => api.analytics.recomputeInsights(projectId!),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["insights", projectId] }),
+  });
 
   const kpiValues = kpiStatuses.map((k) => {
     if (k.key === "all") return { ...k, value: totalPosts };
@@ -500,6 +512,48 @@ export default function Dashboard() {
       </div>
 
       <AudienceBlock />
+
+      {insights && insights.length > 0 && (
+        <div className="card">
+          <div className="card-header">
+            <span className="card-title">Рекомендации</span>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => recomputeInsights.mutate()} disabled={recomputeInsights.isPending}>
+              {recomputeInsights.isPending ? "Расчёт..." : "🔄 Пересчитать"}
+            </button>
+          </div>
+          <div className="flex flex-col gap-3">
+            {insights.map((ins: any) => (
+              <div key={ins.id} style={{ padding: 12, background: "var(--bg-hover)", borderRadius: 10 }}>
+                <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
+                  <Lightbulb size={14} style={{ color: "var(--accent)" }} />
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{ins.payload?.title || ins.insightType}</span>
+                </div>
+                {ins.payload?.description && (
+                  <div className="text-xs text-dim" style={{ marginBottom: 6 }}>{ins.payload.description}</div>
+                )}
+                {ins.payload?.items && (
+                  <div className="flex flex-col gap-1">
+                    {ins.payload.items.map((item: any, i: number) => (
+                      <div key={i} className="text-xs" style={{ color: "var(--text)", padding: "2px 0" }}>
+                        {item.name && <span className="rubric-dot" style={{ background: item.color || "var(--accent)" }} />}
+                        {item.name || item.contentTypeId || item.avgMetric?.toFixed(1)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {ins.payload?.missing && ins.payload.missing.length > 0 && (
+                  <div className="text-xs" style={{ marginTop: 4 }}>
+                    <span style={{ color: "var(--red)" }}>Нет контента: {ins.payload.missing.join(", ")}</span>
+                  </div>
+                )}
+                <Link to="/analytics" className="text-xs" style={{ color: "var(--accent)", marginTop: 6, display: "inline-block" }}>
+                  Подробнее →
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <WeekCalendar days={data?.weekDistribution || []} />
 

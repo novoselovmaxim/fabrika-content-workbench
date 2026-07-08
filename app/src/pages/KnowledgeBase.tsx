@@ -78,6 +78,14 @@ export default function KnowledgeBase() {
     },
   });
 
+  const extractFacts = useMutation({
+    mutationFn: () => api.brandFacts.extract(currentProjectId!),
+    onSuccess: (res) => {
+      alert(`Извлечено фактов: ${res.extracted}`);
+      refetch();
+    },
+  });
+
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
@@ -111,14 +119,24 @@ export default function KnowledgeBase() {
           <p>Добавляйте информацию о проекте — AI будет использовать её во всех генерациях автоматически</p>
         </div>
         {stats && stats.total > 0 && (
-          <button
-            className="btn btn-ghost"
-            onClick={() => compressAll.mutate()}
-            disabled={compressAll.isPending}
-            style={{ fontSize: 12 }}
-          >
-            {compressAll.isPending ? "Сжатие..." : "🔄 Сжать контекст AI"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              className="btn btn-ghost"
+              onClick={() => compressAll.mutate()}
+              disabled={compressAll.isPending}
+              style={{ fontSize: 12 }}
+            >
+              {compressAll.isPending ? "Сжатие..." : "🔄 Сжать контекст AI"}
+            </button>
+            <button
+              className="btn btn-ghost"
+              onClick={() => extractFacts.mutate()}
+              disabled={extractFacts.isPending}
+              style={{ fontSize: 12 }}
+            >
+              {extractFacts.isPending ? "Извлечение..." : "🧠 Извлечь факты"}
+            </button>
+          </div>
         )}
       </div>
 

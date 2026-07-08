@@ -717,15 +717,15 @@ export default function StrategyPage() {
                   <div className="flex flex-col gap-4">
                     <div>
                       <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Название проекта</label>
-                      <input className="input" placeholder="Берег.Микрошаги" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+                      <input className="input" placeholder="Название проекта" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                     </div>
                     <div>
                       <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Ниша / тематика</label>
-                      <textarea className="input" rows={3} placeholder="Психологическая самопомощь, микрошаги, тревога, выгорание" value={form.niche} onChange={(e) => setForm({ ...form, niche: e.target.value })} />
+                      <textarea className="input" rows={3} placeholder="Например: маркетинг, фитнес, кулинария, IT, психология" value={form.niche} onChange={(e) => setForm({ ...form, niche: e.target.value })} />
                     </div>
                     <div>
                       <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Целевая аудитория</label>
-                      <textarea className="input" rows={3} placeholder="Люди 25-40 с тревогой, усталостью, самокритикой" value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value })} />
+                      <textarea className="input" rows={3} placeholder="Пол, возраст, интересы — опишите идеального подписчика" value={form.audience} onChange={(e) => setForm({ ...form, audience: e.target.value })} />
                     </div>
                   </div>
                   <div className="flex flex-col gap-4">

@@ -22,7 +22,10 @@ export function LicenseGate({ children }: { children: React.ReactNode }) {
   const [sent, setSent] = useState(false);
 
   if (isLoading) return <div className="loading">Загрузка...</div>;
-  if (license?.status === "active" || license?.status === "trial") {
+
+  // В dev-режиме (Vite dev server) лицензия не требуется
+  const isViteDev = typeof window !== "undefined" && window.location.hostname === "localhost" && window.location.port === "5173";
+  if (isViteDev || license?.status === "active" || license?.status === "trial") {
     return (
       <>
         {license?.status === "trial" && (

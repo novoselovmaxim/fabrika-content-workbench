@@ -20,6 +20,8 @@ export const projects = sqliteTable("projects", {
   keywords: text("keywords"),
   onboardingScenario: text("onboarding_scenario"),
   onboardingComplete: integer("onboarding_complete").default(0),
+  primaryLanguage: text("primary_language").default("ru"),
+  supportedLanguages: text("supported_languages"),
   status: text("status").default("draft"),
   createdAt: text("created_at").default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").default(sql`(current_timestamp)`),
@@ -291,6 +293,9 @@ export const postItems = sqliteTable("post_items", {
   versionCurrentId: text("version_current_id"),
   owner: text("owner"),
   publishedMediaId: text("published_media_id"),
+  reviewStatus: text("review_status").default("none"),
+  lastReviewedBy: text("last_reviewed_by"),
+  lastReviewedAt: text("last_reviewed_at"),
   createdAt: text("created_at").default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").default(sql`(current_timestamp)`),
 });
@@ -309,6 +314,11 @@ export const draftVersions = sqliteTable("draft_versions", {
   contentJson: text("content_json"),
   isManualEdit: integer("is_manual_edit").default(0),
   parentVersionId: text("parent_version_id"),
+  usedBrandFacts: text("used_brand_facts"),
+  riskScore: real("risk_score"),
+  riskTags: text("risk_tags"),
+  explanation: text("explanation"),
+  language: text("language").default("ru"),
   createdAt: text("created_at").default(sql`(current_timestamp)`),
 });
 
@@ -397,4 +407,58 @@ export const license = sqliteTable("license", {
   lastChecked:  text("last_checked"),
   planName:      text("plan_name"),
   trialStartedAt: text("trial_started_at"),
+});
+
+// ── Brand Facts (ядро знаний) ─────────────────────────────
+export const brandFacts = sqliteTable("brand_facts", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  category: text("category").notNull(),
+  sourceType: text("source_type").notNull(),
+  sourceRef: text("source_ref"),
+  factText: text("fact_text").notNull(),
+  confidence: real("confidence").default(1),
+  validated: integer("validated").default(0),
+  language: text("language").default("ru"),
+  canonicalFactId: text("canonical_fact_id"),
+  createdAt: text("created_at").default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").default(sql`(current_timestamp)`),
+});
+
+// ── Review Events (governance) ────────────────────────────
+export const reviewEvents = sqliteTable("review_events", {
+  id: text("id").primaryKey(),
+  postItemId: text("post_item_id")
+    .notNull()
+    .references(() => postItems.id, { onDelete: "cascade" }),
+  actorId: text("actor_id"),
+  actorName: text("actor_name"),
+  eventType: text("event_type").notNull(),
+  payload: text("payload"),
+  createdAt: text("created_at").default(sql`(current_timestamp)`),
+});
+
+// ── Policy Rules (compliance) ─────────────────────────────
+export const policyRules = sqliteTable("policy_rules", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id"),
+  code: text("code").notNull(),
+  description: text("description").notNull(),
+  pattern: text("pattern"),
+  severity: text("severity").default("warning"),
+  enabled: integer("enabled").default(1),
+  createdAt: text("created_at").default(sql`(current_timestamp)`),
+});
+
+// ── Analytics Insights ─────────────────────────────────────
+export const analyticsInsights = sqliteTable("analytics_insights", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id")
+    .notNull()
+    .references(() => projects.id, { onDelete: "cascade" }),
+  insightType: text("insight_type").notNull(),
+  payload: text("payload").notNull(),
+  generatedAt: text("generated_at").default(sql`(current_timestamp)`),
 });

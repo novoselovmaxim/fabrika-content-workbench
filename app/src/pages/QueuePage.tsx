@@ -16,6 +16,20 @@ const statusColors: Record<string, string> = {
   scheduled: "tag-scheduled", published: "tag-published", archived: "tag-archived",
 };
 
+const REVIEW_LABELS: Record<string, string> = {
+  none: "Без согласования",
+  internal_review: "Внутреннее",
+  client_review: "У клиента",
+  approved: "Утверждено",
+};
+
+const REVIEW_COLORS: Record<string, string> = {
+  none: "var(--dim)",
+  internal_review: "var(--orange, #e68a2e)",
+  client_review: "var(--accent)",
+  approved: "var(--green)",
+};
+
 function relativeDate(dateStr: string): { label: string; color: string } {
   if (!dateStr) return { label: "Дата не назначена", color: "var(--dim)" };
   const today = new Date();
@@ -32,12 +46,18 @@ function relativeDate(dateStr: string): { label: string; color: string } {
 export default function QueuePage() {
   const queryClient = useQueryClient();
   const [inlineDatePostId, setInlineDatePostId] = useState<string | null>(null);
+  const [reviewFilter, setReviewFilter] = useState<string>("all");
   const projectId = getStoredProjectId();
 
   function listParams(status: string) {
     const params: Record<string, string> = { status };
     if (projectId) params.projectId = projectId;
     return params;
+  }
+
+  function filterByReview(posts: any[]): any[] {
+    if (reviewFilter === "all") return posts;
+    return posts.filter((p: any) => (p.reviewStatus || "none") === reviewFilter);
   }
 
   const { data: readyPosts } = useQuery({
@@ -72,9 +92,13 @@ export default function QueuePage() {
     },
   });
 
-  const readyCount = readyPosts?.length || 0;
-  const scheduledCount = scheduledPosts?.length || 0;
-  const publishedCount = publishedPosts?.length || 0;
+  const filteredReady = filterByReview(readyPosts || []);
+  const filteredScheduled = filterByReview(scheduledPosts || []);
+  const filteredPublished = filterByReview(publishedPosts || []);
+
+  const readyCount = filteredReady.length;
+  const scheduledCount = filteredScheduled.length;
+  const publishedCount = filteredPublished.length;
 
   const todayStr = new Date().toISOString().slice(0, 10);
   const overdue = (scheduledPosts || []).filter((p: any) => p.scheduledDate && p.scheduledDate < todayStr).length;
@@ -101,6 +125,20 @@ export default function QueuePage() {
         </div>
       </div>
 
+      <div className="flex items-center gap-2" style={{ marginBottom: 12 }}>
+        <span className="text-xs text-dim">Фильтр по согласованию:</span>
+        {["all", "none", "internal_review", "client_review", "approved"].map((key) => (
+          <button
+            key={key}
+            className={`btn btn-sm ${reviewFilter === key ? "btn-primary" : "btn-ghost"}`}
+            onClick={() => setReviewFilter(key)}
+            style={{ fontSize: 11 }}
+          >
+            {key === "all" ? "Все" : REVIEW_LABELS[key]}
+          </button>
+        ))}
+      </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
         {/* Колонка: К публикации */}
         <div className="card" style={{ minHeight: 400 }}>
@@ -109,7 +147,7 @@ export default function QueuePage() {
             <span className="text-dim text-sm">{readyCount}</span>
           </div>
           <div className="flex flex-col gap-2">
-            {(readyPosts || []).map((post: any) => (
+            {filteredReady.map((post: any) => (
               <QueueCard key={post.id} post={post} platform={platformsById.get(post.platformId)}>
                 <div className="flex items-center gap-2">
                   <span className={`tag ${statusColors[post.status]}`}>{statusLabels[post.status]}</span>
@@ -156,7 +194,7 @@ export default function QueuePage() {
             <span className="text-dim text-sm">{scheduledCount}</span>
           </div>
           <div className="flex flex-col gap-2">
-            {(scheduledPosts || []).map((post: any) => {
+            {filteredScheduled.map((post: any) => {
               const rd = relativeDate(post.scheduledDate);
               return (
                 <QueueCard key={post.id} post={post} platform={platformsById.get(post.platformId)}>
@@ -210,7 +248,7 @@ export default function QueuePage() {
             <span className="text-dim text-sm">{publishedCount}</span>
           </div>
           <div className="flex flex-col gap-2">
-            {(publishedPosts || []).map((post: any) => (
+            {filteredPublished.map((post: any) => (
               <QueueCard key={post.id} post={post} platform={platformsById.get(post.platformId)}>
                 <div className="flex items-center gap-2">
                   <span className={`tag ${statusColors[post.status]}`}>{statusLabels[post.status]}</span>
@@ -256,6 +294,14 @@ function QueueCard({ post, platform, children }: {
         {post.contentTypeName || "—"}
         {post.scheduledDate && (
           <><span>·</span>{post.scheduledDate}</>
+        )}
+        {post.reviewStatus && post.reviewStatus !== "none" && (
+          <>
+            <span>·</span>
+            <span style={{ color: REVIEW_COLORS[post.reviewStatus] || "var(--dim)" }}>
+              {REVIEW_LABELS[post.reviewStatus] || post.reviewStatus}
+            </span>
+          </>
         )}
       </div>
     </div>

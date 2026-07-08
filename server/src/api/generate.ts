@@ -1,10 +1,12 @@
 import { Router } from "express";
 import { generate, getModelForTask, getTemplates, getTemplate, fillTemplate, extractJSON, type GenerateOptions } from "../services/aiGateway.js";
 import { db } from "../db.js";
-import { draftVersions, postItems, rubrics, topics, contentTypes, strategyBlocks, funnels } from "../schema.js";
+import { projects, draftVersions, postItems, rubrics, topics, contentTypes, strategyBlocks, funnels } from "../schema.js";
 import { sql, eq, and, gte } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import { buildProjectContext } from "../services/projectContext.js";
+import { selectRelevantFacts } from "../services/factSelector.js";
+import { checkCompliance } from "../services/compliance.js";
 
 export const generateRouter = Router();
 
@@ -17,6 +19,8 @@ const TEMPLATE_STAGE_TASK: Record<string, string> = {
   image: "image",
   slides: "content",
 };
+
+const EXPLAINABLE_TEMPLATES = new Set(["caption-post", "caption-carousel", "caption-reel", "brief"]);
 
 // List available templates
 generateRouter.get("/templates", (_req, res) => {
@@ -61,6 +65,21 @@ generateRouter.post("/", async (req, res) => {
       if (context) {
         systemPrompt = systemPrompt + context;
       }
+
+      // Inject relevant brand facts
+      const useFacts = templateId ? EXPLAINABLE_TEMPLATES.has(templateId) : false;
+      if (useFacts) {
+        const { hantStage } = req.body;
+        const selected = await selectRelevantFacts(ctxProjectId, {
+          hantStage,
+          limit: 10,
+          topicTitle: variables?.title,
+        });
+        if (selected.facts.length > 0) {
+          const factsBlock = selected.facts.map((f) => `[${f.id}] ${f.factText}`).join("\n");
+          systemPrompt = systemPrompt + `\n\nФАКТЫ О БРЕНДЕ (используй только то, что применимо к этой теме):\n${factsBlock}`;
+        }
+      }
     }
 
     // Determine model: if request includes one, use it; otherwise resolve from template stage
@@ -70,6 +89,10 @@ generateRouter.post("/", async (req, res) => {
       if (t) genModel = getModelForTask(TEMPLATE_STAGE_TASK[t.stage] || "content");
     }
     if (!genModel) genModel = getModelForTask("content");
+
+    const isExplainable = templateId ? EXPLAINABLE_TEMPLATES.has(templateId) : false;
+    const effectiveFormat = isExplainable ? "json" : (responseFormat || "text");
+
     const result = await generate({
       provider: provider || (genModel.startsWith("vsellm/") ? "vsellm" : genModel.includes("/") ? "zveno" : "openai"),
       model: genModel,
@@ -77,8 +100,36 @@ generateRouter.post("/", async (req, res) => {
       systemPrompt,
       temperature: temperature ?? 0.7,
       maxTokens: maxTokens ?? 2000,
-      responseFormat: responseFormat || "text",
+      responseFormat: effectiveFormat,
     });
+
+    // Parse JSON for explainable templates
+    let contentText = result.content;
+    let usedFacts: string[] | null = null;
+    let riskScore: number | null = null;
+    let riskTags: string[] | null = null;
+    let explanation: string | null = null;
+
+    if (isExplainable) {
+      try {
+        const parsed = JSON.parse(extractJSON(result.content));
+        contentText = parsed.content || result.content;
+        usedFacts = parsed.usedFacts || null;
+        riskScore = parsed.risk ?? null;
+        riskTags = parsed.riskTags || null;
+        explanation = parsed.explanation || null;
+      } catch {
+        contentText = result.content;
+      }
+    }
+
+    // Compliance check (regex layer on top of LLM risk)
+    const compliance = checkCompliance(contentText, ctxProjectId || undefined);
+    const finalRiskScore = riskScore != null ? Math.max(riskScore, compliance.riskScore) : compliance.riskScore || null;
+    const finalRiskTags = [...new Set([...(riskTags || []), ...compliance.riskTags])];
+    if (compliance.violatedRules.length > 0 && !explanation) {
+      explanation = `Нарушены правила: ${compliance.violatedRules.join(", ")}`;
+    }
 
     // Save as draft version if postItemId provided
     let draftId: string | null = null;
@@ -91,13 +142,17 @@ generateRouter.post("/", async (req, res) => {
         modelProvider: result.provider,
         modelName: result.model,
         promptSnapshot: JSON.stringify({ templateId, variables }),
-        contentMarkdown: result.content,
+        contentMarkdown: contentText,
         isManualEdit: 0,
+        usedBrandFacts: usedFacts ? JSON.stringify(usedFacts) : null,
+        riskScore: finalRiskScore,
+        riskTags: finalRiskTags.length > 0 ? JSON.stringify(finalRiskTags) : null,
+        explanation,
       }).run();
     }
 
     res.json({
-      content: result.content,
+      content: contentText,
       model: result.model,
       provider: result.provider,
       tokens: result.tokens,
@@ -136,6 +191,7 @@ function buildWeekPlanPrompt(opts: {
   platformName: string;
   topics: any[]; ideas: string[];
   funnel?: any;
+  projectTone?: string;
 }) {
   const funnelText = opts.funnel 
     ? `ВОРОНКА ПРОДАЖ (следуй этой структуре): ${opts.funnel.name}\nОписание: ${opts.funnel.description}\nСтадии/Шаги:\n${opts.funnel.stages}\nПравила: ${opts.funnel.rules || "нет"}`
@@ -165,6 +221,8 @@ function buildWeekPlanPrompt(opts: {
     ? opts.plannedPosts.map(p => `  • ${p.scheduledDate} — ${p.title}`).join("\n")
     : "  (нет)";
 
+  const toneText = opts.projectTone ? `- Тон: ${opts.projectTone}` : "";
+
   return `Составь контент-план для Instagram-канала "${opts.platformName}" строго на неделю ${opts.weekStart} (понедельник) — ${opts.weekEnd} (воскресенье).
 
 ${funnelText}
@@ -193,7 +251,7 @@ ${plannedText}
 - Для каждого поста выбери рубрику и тип контента из списка выше.
 - Заголовки должны быть уникальными, не повторять уже запланированные.
 - Учитывай стратегию бренда.
-- Тон: бережный, без агрессивной мотивации.
+${toneText}
 - Для каждого поста придумай цель (goal), хук (hook), ключевое сообщение (keyMessage) и CTA.
 
 Формат ответа — строгий JSON:
@@ -223,6 +281,8 @@ generateRouter.post("/week-plan", async (req, res) => {
     }
 
     const funnel = funnelId ? db.select().from(funnels).where(eq(funnels.id, funnelId)).get() : null;
+
+    const project = db.select().from(projects).where(eq(projects.id, projectId)).get();
 
     // 1. Find last planned post date for this platform
     const lastPost = db
@@ -312,6 +372,7 @@ generateRouter.post("/week-plan", async (req, res) => {
       topics: existingTopics,
       ideas,
       funnel,
+      projectTone: project?.tone || undefined,
     });
 
     // 8. Call AI

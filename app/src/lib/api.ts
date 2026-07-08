@@ -229,6 +229,57 @@ export const api = {
     get: (id: string) => request<any>(`/funnels/${id}`),
   },
 
+  reviewEvents: {
+    reviewStatus: (id: string, reviewStatus: string, actorName?: string) =>
+      request<any>(`/review-events/posts/${id}/review-status`, {
+        method: "PATCH",
+        body: JSON.stringify({ reviewStatus, actorName }),
+      }),
+    listByPost: (id: string) => request<any[]>(`/review-events/posts/${id}/review-events`),
+  },
+
+  analytics: {
+    recomputeInsights: (projectId: string) =>
+      request<{ recomputed: number }>(`/analytics/${projectId}/recompute-insights`, { method: "POST" }),
+    listInsights: (projectId: string) => request<any[]>(`/analytics/${projectId}/insights`),
+    deleteInsights: (projectId: string) => request<void>(`/analytics/${projectId}/insights`, { method: "DELETE" }),
+  },
+
+  compliance: {
+    check: (text: string, projectId?: string) =>
+      request<{ riskScore: number; riskTags: string[]; violatedRules: string[] }>("/compliance/check", {
+        method: "POST",
+        body: JSON.stringify({ text, projectId }),
+      }),
+    checkDraft: (draftId: string) => request<any>(`/compliance/draft/${draftId}/check`, { method: "POST" }),
+    listPolicyRules: () => request<any[]>("/compliance/policy-rules"),
+    createPolicyRule: (data: { code: string; description: string; pattern?: string; severity?: string }) =>
+      request<any>("/compliance/policy-rules", { method: "POST", body: JSON.stringify(data) }),
+    updatePolicyRule: (id: string, data: any) =>
+      request<any>(`/compliance/policy-rules/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deletePolicyRule: (id: string) => request<void>(`/compliance/policy-rules/${id}`, { method: "DELETE" }),
+  },
+
+  brandFacts: {
+    byProject: (projectId: string, params?: { category?: string; validated?: number; sourceType?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.category) qs.set("category", params.category);
+      if (params?.validated !== undefined) qs.set("validated", String(params.validated));
+      if (params?.sourceType) qs.set("sourceType", params.sourceType);
+      const queryStr = qs.toString() ? `?${qs.toString()}` : "";
+      return request<any[]>(`/brand-facts/by-project/${projectId}${queryStr}`);
+    },
+    create: (data: { projectId: string; category: string; factText: string; sourceType?: string; confidence?: number }) =>
+      request<any>("/brand-facts", { method: "POST", body: JSON.stringify(data) }),
+    update: (id: string, data: any) =>
+      request<any>(`/brand-facts/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    delete: (id: string) => request<void>(`/brand-facts/${id}`, { method: "DELETE" }),
+    extract: (projectId: string) =>
+      request<{ extracted: number }>(`/brand-facts/${projectId}/extract`, { method: "POST" }),
+    deriveFromOnboarding: (projectId: string) =>
+      request<{ derived: number }>(`/brand-facts/${projectId}/derive-from-onboarding`, { method: "POST" }),
+  },
+
   metrics: {
     check: (platform: string, identifier: string) =>
       request<{ valid: boolean; error?: string; name?: string; subscribers?: number | null }>(

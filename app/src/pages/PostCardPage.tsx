@@ -1,44 +1,44 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { useParams, useNavigate } from "react-router-dom";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import CarouselTab from "../components/content-tabs/CarouselTab";
 import PostTab, { type ContentTabHandle } from "../components/content-tabs/PostTab";
 import ReelTab from "../components/content-tabs/ReelTab";
 import StoriesTab from "../components/content-tabs/StoriesTab";
 import PublicationTab from "../components/PublicationTab";
 
-type Step = "meta" | "content" | "drafts" | "publication";
+type Step = "meta" | "content" | "drafts" | "review" | "publication";
 
 const GEN_PROMPTS: Record<string, (post: any) => string> = {
-  goal: (p) => `Придумай цель для Instagram-поста.
+  goal: (p) => `Придумай цель для поста в соцсетях.
 Название: ${p.title}
 Рубрика: ${p.rubricName || "без рубрики"}
 Тип контента: ${p.contentTypeName || "пост"}
-Тон: бережный, без агрессивной мотивации
+Тон: естественный, без агрессивной мотивации
 
 Ответ — одной строкой, конкретная цель (что хотим получить от поста).`,
 
-  hook: (p) => `Придумай хук (цепляющую первую фразу) для Instagram-поста.
+  hook: (p) => `Придумай хук (цепляющую первую фразу) для поста в соцсетях.
 Название: ${p.title}
 Рубрика: ${p.rubricName || "без рубрики"}
 Тип контента: ${p.contentTypeName || "пост"}
 Цель: ${p.goal || "не указана"}
-Тон: бережный, без агрессивной мотивации
+Тон: естественный, без агрессивной мотивации
 
 Ответ — одной строкой, без кавычек.`,
 
-  keyMessage: (p) => `Сформулируй ключевое сообщение для Instagram-поста.
+  keyMessage: (p) => `Сформулируй ключевое сообщение для поста в соцсетях.
 Название: ${p.title}
 Рубрика: ${p.rubricName || "без рубрики"}
 Тип контента: ${p.contentTypeName || "пост"}
 Цель: ${p.goal || "не указана"}
 Хук: ${p.hook || "не указан"}
-Тон: бережный, без агрессивной мотивации
+Тон: естественный, без агрессивной мотивации
 
 Ответ — одной строкой, главная мысль, которую должен вынести читатель.`,
 
-  cta: (p) => `Придумай CTA (призыв к действию) для Instagram-поста.
+  cta: (p) => `Придумай CTA (призыв к действию) для поста в соцсетях.
 Название: ${p.title}
 Рубрика: ${p.rubricName || "без рубрики"}
 Тип контента: ${p.contentTypeName || "пост"}
@@ -164,6 +164,14 @@ function DraftsSection({ id, drafts, queryClient, post, updatePost }: {
                         <span className="tag" style={{ background: "var(--accent)", color: "#fff" }}>{label}</span>
                         <span className="text-xs" style={{ color: "var(--accent)", fontWeight: 600 }}>✓ Активно</span>
                         <span className="text-xs text-dim">{info}</span>
+                        {d.riskScore != null && (
+                          <span className="tag" style={{
+                            background: d.riskScore > 0.6 ? "var(--red)" : d.riskScore > 0.3 ? "var(--orange, #e68a2e)" : "var(--green, #2e7d32)",
+                            color: "#fff", fontSize: 10
+                          }}>
+                            {d.riskScore > 0.6 ? "⚠ Высокий риск" : d.riskScore > 0.3 ? "⚡ Средний риск" : "✓ Низкий риск"}
+                          </span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <button className="btn btn-ghost" style={{ fontSize: 12, padding: "2px 8px", color: "var(--red)" }}
@@ -184,6 +192,17 @@ function DraftsSection({ id, drafts, queryClient, post, updatePost }: {
                         ) : (
                           <span className="text-dim">Пустой черновик — нажмите чтобы редактировать</span>
                         )}
+                      </div>
+                    )}
+                    {d.usedBrandFacts && d.usedBrandFacts.length > 0 && (
+                      <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-dim)" }}>
+                        <span style={{ fontWeight: 600 }}>🧠 Факты бренда:</span>{' '}
+                        {d.usedBrandFacts.join(", ")}
+                      </div>
+                    )}
+                    {d.explanation && !isCaption && (
+                      <div style={{ marginTop: 4, fontSize: 11, color: "var(--text-dim)", fontStyle: "italic" }}>
+                        {d.explanation}
                       </div>
                     )}
                   </div>
@@ -209,6 +228,14 @@ function DraftsSection({ id, drafts, queryClient, post, updatePost }: {
                 <div className="flex items-center gap-2">
                   <span className="tag" style={{ background: isActive ? "var(--accent)" : undefined, color: isActive ? "#fff" : undefined }}>{d.stage}</span>
                   {isActive && <span className="text-xs" style={{ color: "var(--accent)", fontWeight: 600 }}>✓ Основной</span>}
+                  {d.riskScore != null && (
+                    <span className="tag" style={{
+                      background: d.riskScore > 0.6 ? "var(--red)" : d.riskScore > 0.3 ? "var(--orange, #e68a2e)" : "var(--green, #2e7d32)",
+                      color: "#fff", fontSize: 10
+                    }}>
+                      {d.riskScore > 0.6 ? "⚠ Высокий риск" : d.riskScore > 0.3 ? "⚡ Средний риск" : "✓ Низкий риск"}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   {d.modelName && <span className="text-xs text-dim">{d.modelName}</span>}
@@ -259,11 +286,234 @@ function DraftsSection({ id, drafts, queryClient, post, updatePost }: {
                   {d.contentMarkdown || <span className="text-dim">Пустой черновик — нажмите чтобы редактировать</span>}
                 </div>
               )}
+              {d.usedBrandFacts && d.usedBrandFacts.length > 0 && (
+                <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-dim)" }}>
+                  <span style={{ fontWeight: 600 }}>🧠 Факты бренда:</span>{' '}
+                  {d.usedBrandFacts.join(", ")}
+                </div>
+              )}
+              {d.explanation && (
+                <div style={{ marginTop: 4, fontSize: 11, color: "var(--text-dim)", fontStyle: "italic" }}>
+                  {d.explanation}
+                </div>
+              )}
             </div>
           );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+const REVIEW_LABELS: Record<string, string> = {
+  none: "Не начато",
+  internal_review: "Внутреннее согласование",
+  client_review: "Согласование с клиентом",
+  approved: "Утверждено",
+};
+
+const REVIEW_COLORS: Record<string, string> = {
+  none: "var(--dim)",
+  internal_review: "var(--orange, #e68a2e)",
+  client_review: "var(--accent)",
+  approved: "var(--green)",
+};
+
+const RISK_LABELS: Record<string, string> = {
+  "high": "Высокий",
+  "medium": "Средний",
+  "low": "Низкий",
+};
+
+function ComplianceBlock({ draftId }: { draftId: string | null }) {
+  const [checking, setChecking] = useState(false);
+  const [result, setResult] = useState<{ riskScore: number; riskTags: string[]; violatedRules: string[] } | null>(null);
+
+  const runCheck = useCallback(async () => {
+    if (!draftId) return;
+    setChecking(true);
+    try {
+      const res = await api.compliance.checkDraft(draftId);
+      setResult(res);
+    } finally {
+      setChecking(false);
+    }
+  }, [draftId]);
+
+  useEffect(() => { if (draftId) runCheck(); }, [draftId, runCheck]);
+
+  if (!draftId) return null;
+
+  return (
+    <div className="card">
+      <div className="card-header">
+        <span className="card-title">Риски публикации</span>
+        <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={runCheck} disabled={checking}>
+          {checking ? "Проверка..." : "🔄 Проверить"}
+        </button>
+      </div>
+      {result ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-dim">Уровень риска:</span>
+            <span className="tag" style={{
+              background: result.riskScore > 0.6 ? "var(--red)" : result.riskScore > 0.3 ? "var(--orange, #e68a2e)" : "var(--green, #2e7d32)",
+              color: "#fff",
+            }}>
+              {result.riskScore > 0.6 ? "⚠ Высокий" : result.riskScore > 0.3 ? "⚡ Средний" : "✓ Низкий"}
+            </span>
+            <span className="text-xs text-dim">({(result.riskScore * 100).toFixed(0)}%)</span>
+          </div>
+          {result.violatedRules.length > 0 && (
+            <div>
+              <span className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Нарушенные правила:</span>
+              <div className="flex flex-col gap-1">
+                {result.violatedRules.map((r, i) => (
+                  <div key={i} className="text-sm" style={{ color: "var(--red)", padding: "4px 8px", background: "var(--bg-hover)", borderRadius: 6 }}>
+                    {r}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {result.riskTags.length > 0 && (
+            <div className="flex gap-1 flex-wrap">
+              {result.riskTags.map((t) => (
+                <span key={t} className="tag tag-draft" style={{ fontSize: 10 }}>{t}</span>
+              ))}
+            </div>
+          )}
+          {result.riskScore === 0 && (
+            <div className="text-sm" style={{ color: "var(--green)" }}>Нарушений не найдено</div>
+          )}
+        </div>
+      ) : (
+        <div className="text-dim text-sm">Проверьте черновик на риски</div>
+      )}
+    </div>
+  );
+}
+
+function ReviewStep({ id, post, queryClient, lockAndNext }: {
+  id: string; post: any; queryClient: any; lockAndNext: () => void;
+}) {
+  const [actorName, setActorName] = useState("");
+  const [savingStatus, setSavingStatus] = useState(false);
+
+  const { data: events, refetch: refetchEvents } = useQuery({
+    queryKey: ["review-events", id],
+    queryFn: () => api.reviewEvents.listByPost(id),
+    enabled: !!id,
+  });
+
+  const { data: drafts } = useQuery({
+    queryKey: ["drafts", id],
+    queryFn: () => api.drafts.listByPost(id),
+    enabled: !!id,
+  });
+
+  const activeDraftId = post?.versionCurrentId || (drafts && drafts.length > 0 ? drafts[0]?.id : null);
+
+  const changeStatus = async (newStatus: string) => {
+    setSavingStatus(true);
+    try {
+      await api.reviewEvents.reviewStatus(id, newStatus, actorName || undefined);
+      queryClient.invalidateQueries({ queryKey: ["post", id] });
+      await refetchEvents();
+    } finally {
+      setSavingStatus(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">Согласование</span>
+        </div>
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Статус согласования</label>
+            <div className="flex gap-2" style={{ flexWrap: "wrap" }}>
+              {Object.entries(REVIEW_LABELS).map(([key, label]) => (
+                <button
+                  key={key}
+                  className="btn btn-sm"
+                  disabled={savingStatus}
+                  onClick={() => changeStatus(key)}
+                  style={{
+                    background: post.reviewStatus === key ? REVIEW_COLORS[key] : undefined,
+                    color: post.reviewStatus === key ? "#fff" : undefined,
+                    borderColor: REVIEW_COLORS[key],
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Кто согласует</label>
+            <input
+              className="input"
+              placeholder="Имя или роль"
+              value={actorName}
+              onChange={(e) => setActorName(e.target.value)}
+              style={{ maxWidth: 300 }}
+            />
+          </div>
+        </div>
+        <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
+          <button className="btn btn-primary" onClick={lockAndNext}>
+            Зафиксировать и далее →
+          </button>
+        </div>
+      </div>
+
+      <ComplianceBlock draftId={activeDraftId} />
+
+      <div className="card">
+        <div className="card-header">
+          <span className="card-title">История изменений</span>
+          <span className="text-xs text-dim">{events?.length || 0} событий</span>
+        </div>
+        {(events && events.length > 0) ? (
+          <div className="flex flex-col gap-3">
+            {events.map((e: any) => {
+              const isStatusChange = e.eventType === "status_change";
+              const isFieldChange = e.eventType === "field_change";
+              let desc = "";
+              if (isStatusChange && e.payload) {
+                const from = e.payload.from ? (REVIEW_LABELS[e.payload.from] || e.payload.from) : "—";
+                const to = REVIEW_LABELS[e.payload.to] || e.payload.to;
+                desc = `Статус изменён: ${from} → ${to}`;
+              } else if (isFieldChange && e.payload) {
+                desc = `Поле «${e.payload.field}» изменено`;
+              } else {
+                desc = e.eventType;
+              }
+              return (
+                <div key={e.id} className="flex items-start gap-3 text-sm" style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
+                  <div style={{
+                    width: 8, height: 8, borderRadius: "50%", marginTop: 5, flexShrink: 0,
+                    background: isStatusChange ? "var(--accent)" : "var(--dim)",
+                  }} />
+                  <div style={{ flex: 1 }}>
+                    <div>{desc}</div>
+                    <div className="text-xs text-dim" style={{ marginTop: 2 }}>
+                      {new Date(e.createdAt).toLocaleString("ru-RU")}
+                      {e.actorName && ` · ${e.actorName}`}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-dim text-sm">История пока пуста</div>
+        )}
+      </div>
     </div>
   );
 }
@@ -378,7 +628,7 @@ const contentTabRef = useRef<ContentTabHandle>(null);
         updatePost.mutate({ versionCurrentId: savedDraftId });
       }
     }
-    const steps: Step[] = ["meta", "content", "drafts", "publication"];
+    const steps: Step[] = ["meta", "content", "drafts", "review", "publication"];
     const idx = steps.indexOf(currentStep);
     if (idx < steps.length - 1) {
       setLocked((prev) => new Set(prev).add(currentStep));
@@ -390,6 +640,7 @@ const contentTabRef = useRef<ContentTabHandle>(null);
         meta: "draft",
         content: "generated",
         drafts: "editing",
+        review: "ready",
         publication: "ready",
       };
       const currentStatusIdx = statusOrder.indexOf(post.status);
@@ -406,6 +657,7 @@ const contentTabRef = useRef<ContentTabHandle>(null);
     if (key === "meta") return !!(post.goal || post.hook || post.keyMessage || post.cta);
     if (key === "content") return drafts && drafts.length > 0;
     if (key === "drafts") return true;
+    if (key === "review") return post.reviewStatus === "approved";
     if (key === "publication") return !!(post.scheduledDate || post.status === "published" || post.status === "scheduled" || post.status === "ready");
     return false;
   };
@@ -425,6 +677,7 @@ const contentTabRef = useRef<ContentTabHandle>(null);
     { key: "meta", label: "Метаданные" },
     { key: "content", label: "Контент" },
     { key: "drafts", label: "Черновики" },
+    { key: "review", label: "Согласование" },
     { key: "publication", label: "Публикация" },
   ];
 
@@ -589,6 +842,11 @@ const contentTabRef = useRef<ContentTabHandle>(null);
             </button>
           </div>
         </div>
+      )}
+
+      {/* Review step */}
+      {currentStep === "review" && (
+        <ReviewStep id={id!} post={post} queryClient={queryClient} lockAndNext={lockAndNext} />
       )}
 
       {/* Publication step */}

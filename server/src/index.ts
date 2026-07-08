@@ -24,11 +24,16 @@ import { texturesRouter } from "./api/textures.js";
 import { productsRouter } from "./api/products.js";
 import { audiencesRouter } from "./api/audiences.js";
 import { keywordsRouter } from "./api/keywords.js";
+import { brandFactsRouter } from "./api/brandFacts.js";
+import { reviewEventsRouter } from "./api/reviewEvents.js";
+import { complianceRouter } from "./api/compliance.js";
+import { analyticsRouter } from "./api/analytics.js";
 import { competitorsRouter } from "./api/competitors.js";
 import { licenseRouter } from "./api/license.js";
 import { metricsRouter } from "./api/metrics.js";
 import { seedContentTextures } from "./seeds/contentTextures.js";
 import { seedFunnels } from "./seeds/funnels.js";
+import { seedPolicyRules } from "./seeds/policyRules.js";
 import { db, runMigrations } from "./db.js";
 import { postItems, draftVersions, pipelineRuns, rubrics, contentTypes } from "./schema.js";
 import { requireLicense, checkLicenseOnline } from "./services/licenseService.js";
@@ -116,6 +121,7 @@ app.get("/api/dashboard/stats", (req, res) => {
       id: postItems.id,
       title: postItems.title,
       status: postItems.status,
+      reviewStatus: postItems.reviewStatus,
       scheduledDate: postItems.scheduledDate,
       scheduledTime: postItems.scheduledTime,
       contentTypeName: contentTypes.name,
@@ -209,10 +215,15 @@ app.use("/api/textures", texturesRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/audiences", audiencesRouter);
 app.use("/api/keywords", keywordsRouter);
+app.use("/api/review-events", reviewEventsRouter);
+app.use("/api/compliance", complianceRouter);
+app.use("/api/analytics", analyticsRouter);
 app.use("/api/competitors", competitorsRouter);
+app.use("/api/brand-facts", brandFactsRouter);
 
 seedContentTextures();
 seedFunnels();
+seedPolicyRules();
 
 // Версия и проверка обновлений
 app.get("/api/version", async (_req, res) => {
