@@ -45,6 +45,72 @@ export function runMigrations(): void {
     // column already exists
   }
 
+  // Migration 0002 tables (fallback if drizzle migrate didn't run)
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS policy_rules (
+      id text PRIMARY KEY NOT NULL,
+      project_id text,
+      code text NOT NULL,
+      description text NOT NULL,
+      pattern text,
+      severity text DEFAULT 'warning',
+      enabled integer DEFAULT 1,
+      created_at text DEFAULT (current_timestamp)
+    )
+  `);
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS brand_facts (
+      id text PRIMARY KEY NOT NULL,
+      project_id text NOT NULL,
+      category text NOT NULL,
+      source_type text NOT NULL,
+      source_ref text,
+      fact_text text NOT NULL,
+      confidence real DEFAULT 1,
+      validated integer DEFAULT 0,
+      language text DEFAULT 'ru',
+      canonical_fact_id text,
+      created_at text DEFAULT (current_timestamp),
+      updated_at text DEFAULT (current_timestamp)
+    )
+  `);
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS analytics_insights (
+      id text PRIMARY KEY NOT NULL,
+      project_id text NOT NULL,
+      insight_type text NOT NULL,
+      payload text NOT NULL,
+      generated_at text DEFAULT (current_timestamp)
+    )
+  `);
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS review_events (
+      id text PRIMARY KEY NOT NULL,
+      post_item_id text NOT NULL,
+      actor_id text,
+      actor_name text,
+      event_type text NOT NULL,
+      payload text,
+      created_at text DEFAULT (current_timestamp)
+    )
+  `);
+
+  // ALTER TABLE from migration 0002 (wrapped for idempotency)
+  for (const stmt of [
+    "ALTER TABLE draft_versions ADD COLUMN used_brand_facts text",
+    "ALTER TABLE draft_versions ADD COLUMN risk_score real",
+    "ALTER TABLE draft_versions ADD COLUMN risk_tags text",
+    "ALTER TABLE draft_versions ADD COLUMN explanation text",
+    "ALTER TABLE draft_versions ADD COLUMN language text DEFAULT 'ru'",
+    "ALTER TABLE post_items ADD COLUMN review_status text DEFAULT 'none'",
+    "ALTER TABLE post_items ADD COLUMN last_reviewed_by text",
+    "ALTER TABLE post_items ADD COLUMN last_reviewed_at text",
+    "ALTER TABLE projects ADD COLUMN primary_language text DEFAULT 'ru'",
+    "ALTER TABLE projects ADD COLUMN supported_languages text",
+  ]) {
+    try { sqlite.exec(stmt); } catch {}
+  }
+
   const existingVkKey = sqlite.prepare("SELECT value FROM settings WHERE key = ?").get("vk_service_key") as any;
   if (!existingVkKey) {
     sqlite.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)").run("vk_service_key", "196b7984196b7984196b7984ab1a2969bf1196b196b7984732f9ecac093a3543146dc74");

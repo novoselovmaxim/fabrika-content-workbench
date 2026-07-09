@@ -223,7 +223,7 @@ app.use("/api/brand-facts", brandFactsRouter);
 
 seedContentTextures();
 seedFunnels();
-seedPolicyRules();
+try { seedPolicyRules(); } catch (err) { console.warn("⚠ seedPolicyRules failed:", String(err)); }
 
 // Версия и проверка обновлений
 app.get("/api/version", async (_req, res) => {
