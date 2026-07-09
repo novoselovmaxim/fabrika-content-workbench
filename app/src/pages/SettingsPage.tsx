@@ -519,15 +519,20 @@ export default function SettingsPage() {
                 <p className="text-xs text-dim">
                   Текущая версия: {updateData.current}
                 </p>
-                <a
-                  href={updateData.releaseUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                <button
+                  onClick={() => {
+                    const url = updateData.downloadUrl || updateData.releaseUrl;
+                    if (window.electronAPI?.openExternal) {
+                      window.electronAPI.openExternal(url);
+                    } else {
+                      window.open(url, "_blank");
+                    }
+                  }}
                   className="btn btn-primary"
-                  style={{ alignSelf: "flex-start", textDecoration: "none" }}
+                  style={{ alignSelf: "flex-start", textDecoration: "none", border: "none", cursor: "pointer" }}
                 >
                   📥 Скачать {updateData.latest}
-                </a>
+                </button>
               </div>
             ) : (
               <div className="flex flex-col gap-4">

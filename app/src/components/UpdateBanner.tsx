@@ -1,5 +1,13 @@
 import { useUpdater } from "../lib/useUpdater";
 
+function handleDownload(downloadUrl: string) {
+  if (window.electronAPI?.openExternal) {
+    window.electronAPI.openExternal(downloadUrl);
+  } else {
+    window.open(downloadUrl, "_blank");
+  }
+}
+
 export function UpdateBanner() {
   const { data } = useUpdater();
   if (!data?.hasUpdate) return null;
@@ -11,10 +19,10 @@ export function UpdateBanner() {
       fontSize: 14,
     }}>
       <span>Доступна новая версия {data.latest}</span>
-      <a href={data.releaseUrl} target="_blank" rel="noreferrer"
-        style={{ color: "white", fontWeight: 600 }}>
+      <button onClick={() => handleDownload(data.downloadUrl)}
+        style={{ color: "white", fontWeight: 600, background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>
         Скачать →
-      </a>
+      </button>
     </div>
   );
 }

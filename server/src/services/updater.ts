@@ -12,11 +12,28 @@ export function getCurrentVersion(): string {
   }
 }
 
+function getPlatformDownloadUrl(tag: string, assets: any[]): string {
+  const base = `https://github.com/${GITHUB_REPO}/releases/download/${tag}`;
+  const plat = process.platform;  // win32 | darwin
+  const arch = process.arch;      // x64 | arm64
+  if (plat === "win32") {
+    const asset = assets.find((a: any) => a.name.endsWith(".exe") && a.name.includes("Setup"));
+    return asset?.browser_download_url || `${base}/Fabrika.Content.Setup.${tag.replace(/^v/, "")}.exe`;
+  }
+  if (arch === "arm64") {
+    const asset = assets.find((a: any) => a.name.endsWith("-arm64.dmg"));
+    return asset?.browser_download_url || `${base}/Fabrika.Content-${tag.replace(/^v/, "")}-arm64.dmg`;
+  }
+  const asset = assets.find((a: any) => a.name.endsWith("-x64.dmg"));
+  return asset?.browser_download_url || `${base}/Fabrika.Content-${tag.replace(/^v/, "")}-x64.dmg`;
+}
+
 export async function checkForUpdates(): Promise<{
   hasUpdate: boolean;
   latest: string;
   current: string;
   releaseUrl: string;
+  downloadUrl: string;
 }> {
   const current = getCurrentVersion();
   try {
@@ -25,16 +42,17 @@ export async function checkForUpdates(): Promise<{
       { headers: { "User-Agent": "FabrikaContent" } },
     );
     if (!resp.ok)
-      return { hasUpdate: false, latest: current, current, releaseUrl: "" };
+      return { hasUpdate: false, latest: current, current, releaseUrl: "", downloadUrl: "" };
     const data = await resp.json();
     const latest = (data.tag_name || "").replace(/^v/, "");
     const hasUpdate = compareVersions(latest, current) > 0;
     const releaseUrl =
       data.html_url ||
       `https://github.com/${GITHUB_REPO}/releases/latest`;
-    return { hasUpdate, latest, current, releaseUrl };
+    const downloadUrl = getPlatformDownloadUrl(data.tag_name || latest, data.assets || []);
+    return { hasUpdate, latest, current, releaseUrl, downloadUrl };
   } catch {
-    return { hasUpdate: false, latest: current, current, releaseUrl: "" };
+    return { hasUpdate: false, latest: current, current, releaseUrl: "", downloadUrl: "" };
   }
 }
 

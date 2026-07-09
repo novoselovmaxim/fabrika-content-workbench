@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, shell } from "electron";
 import path from "path";
 import http from "http";
 import fs from "fs";
@@ -92,6 +92,22 @@ function createWindow(port: number) {
 
   mainWindow.webContents.on("did-fail-load", (_e, code, desc) => {
     logError(`Page load failed: ${code} ${desc}`);
+  });
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      shell.openExternal(url);
+    }
+    return { action: "deny" };
+  });
+
+  mainWindow.webContents.on("will-navigate", (event, url) => {
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      if (!url.includes("localhost")) {
+        event.preventDefault();
+        shell.openExternal(url);
+      }
+    }
   });
 
   mainWindow.on("closed", () => {
