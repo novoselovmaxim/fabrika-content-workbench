@@ -1141,29 +1141,24 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
         }
       } else {
         try {
-          const fetchResult = await runInstagramScript(["fetch", identifier.replace(/^@/, ""), "20"]);
-          if (fetchResult.error) {
-            return res.status(502).json({ error: fetchResult.error });
+          const { fetchInstagramProfile, isApifyConfigured } = await import("../services/apify.js");
+          if (isApifyConfigured()) {
+            const profile = await fetchInstagramProfile(identifier.replace(/^@/, ""));
+            if (profile) {
+              fetchData = {
+                posts: [],
+                channel: {
+                  title: profile.fullName || profile.username || identifier,
+                  name: profile.username || identifier,
+                  subscriberCount: profile.followerCount,
+                },
+              };
+            } else {
+              fetchData = { posts: [], channel: { title: identifier, name: identifier, subscriberCount: 0 } };
+            }
+          } else {
+            fetchData = { posts: [], channel: { title: identifier, name: identifier, subscriberCount: 0 } };
           }
-          const profile = fetchResult.profile || {};
-          const posts = (fetchResult.posts || []).map((p: any) => ({
-            title: (p.caption || "Пост Instagram").slice(0, 200),
-            text: p.caption || "",
-            date: p.taken_at || new Date().toISOString(),
-            url: p.permalink || "",
-            views: 0,
-            likes: p.like_count || 0,
-            comments: p.comment_count || 0,
-            media_type: p.media_type || "image",
-          }));
-          fetchData = {
-            posts,
-            channel: {
-              title: profile.full_name || profile.username || identifier,
-              name: profile.username || identifier,
-              subscriberCount: profile.follower_count || 0,
-            },
-          };
         } catch (e: any) {
           return res.status(502).json({ error: `Instagram: ${e.message}` });
         }
@@ -1340,36 +1335,4 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
   }
 });
 
-import { execFile } from "child_process";
 
-function findInstagramBinary() {
-  const scriptDir = path.resolve(__dirname, "../../../scripts");
-  const binaryName = "ig-fetcher" + (process.platform === "win32" ? ".exe" : "");
-  const binary = path.join(scriptDir, "dist", binaryName);
-  if (fs.existsSync(binary)) return { cmd: binary, args: [] };
-  const script = path.join(scriptDir, "instagram.py");
-  const venvPython = path.join(process.cwd(), ".venv", "bin", "python3");
-  if (fs.existsSync(venvPython)) return { cmd: venvPython, args: [script] };
-  return { cmd: "python3", args: [script] };
-}
-
-const IG_BIN = findInstagramBinary();
-
-function runInstagramScript(args: string[]): Promise<any> {
-  return new Promise((resolve, reject) => {
-    execFile(IG_BIN.cmd, [...IG_BIN.args, ...args], {
-      timeout: 60_000,
-      env: { ...process.env },
-    }, (err, stdout, stderr) => {
-      if (err) {
-        reject(new Error(`Instagram script: ${err.message}`));
-        return;
-      }
-      try {
-        resolve(JSON.parse(stdout));
-      } catch {
-        reject(new Error(`Instagram script: invalid JSON output`));
-      }
-    });
-  });
-}

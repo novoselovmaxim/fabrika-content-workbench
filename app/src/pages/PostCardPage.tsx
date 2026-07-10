@@ -7,6 +7,15 @@ import PostTab, { type ContentTabHandle } from "../components/content-tabs/PostT
 import ReelTab from "../components/content-tabs/ReelTab";
 import StoriesTab from "../components/content-tabs/StoriesTab";
 import PublicationTab from "../components/PublicationTab";
+import { BarChart3, RefreshCw, Pencil } from "lucide-react";
+
+const SUPPORTED_OWN_METRICS: Record<string, string[]> = {
+  instagram: ["engagement_rate", "likes", "comments", "reach", "impressions", "saves"],
+  vk: ["engagement_rate", "reach", "likes", "comments", "shares"],
+  telegram: ["engagement_rate", "impressions"],
+  youtube: ["engagement_rate", "likes", "comments"],
+  zen: [],
+};
 
 type Step = "meta" | "content" | "drafts" | "review" | "publication";
 
@@ -550,6 +559,38 @@ export default function PostCardPage() {
     enabled: !!id,
   });
 
+  const { data: postAnalytics, refetch: refetchPostAnalytics } = useQuery({
+    queryKey: ["postAnalytics", id],
+    queryFn: () => api.analytics.getPostAnalytics(id!),
+    enabled: !!id,
+  });
+
+  const recomputePostAnalytics = useMutation({
+    mutationFn: () => api.analytics.recomputePost(id!),
+    onSuccess: () => refetchPostAnalytics(),
+  });
+
+  const [showManualMetrics, setShowManualMetrics] = useState(false);
+  const [manualMetrics, setManualMetrics] = useState({ likes: "", comments: "", reach: "", impressions: "", saves: "" });
+  const submitManualMetrics = useMutation({
+    mutationFn: (data: Record<string, string>) => {
+      const body: Record<string, number | null> = {};
+      for (const [k, v] of Object.entries(data)) {
+        body[k] = v ? Number(v) : null;
+      }
+      return fetch(`/api/analytics/post/${id}/manual-metrics`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      }).then(r => r.json());
+    },
+    onSuccess: () => { refetchPostAnalytics(); setShowManualMetrics(false); },
+  });
+
+  const [suggestData, setSuggestData] = useState<any>(null);
+  const suggestMutation = useMutation({
+    mutationFn: () => api.analytics.postSuggest(id!),
+    onSuccess: (data) => setSuggestData(data),
+  });
+
   const updatePost = useMutation({
     mutationFn: (data: any) => api.posts.update(id!, data),
     onSuccess: () => {
@@ -758,6 +799,116 @@ const contentTabRef = useRef<ContentTabHandle>(null);
           </div>
         );
       })()}
+
+      {/* Post Insight Panel — always visible */}
+      <div className="flex items-center gap-3" style={{ marginBottom: 12, padding: "10px 16px", background: "var(--bg-hover)", borderRadius: 8 }}>
+        <BarChart3 size={16} style={{ color: "var(--accent)" }} />
+        <span className="text-sm" style={{ fontWeight: 600 }}>Метрики поста</span>
+        {(() => {
+          const platformType = postAnalytics?.platformType;
+          const allowedMetrics = platformType ? SUPPORTED_OWN_METRICS[platformType] : null;
+          const showMetric = (name: string) => !allowedMetrics || allowedMetrics.includes(name);
+
+          if (!postAnalytics) {
+            return <span className="text-sm text-dim" style={{ flex: 1 }}>Нет данных. Нажмите "Обновить", чтобы рассчитать.</span>;
+          }
+
+          return (
+            <div className="flex gap-4 text-sm" style={{ flex: 1, flexWrap: "wrap" }}>
+              {showMetric("engagement_rate") && postAnalytics.engagementRate != null && (
+                <span>
+                  ER: <strong>{(postAnalytics.engagementRate * 100).toFixed(1)}%</strong>
+                  <span className="tag" style={{
+                    marginLeft: 4, fontSize: 10,
+                    background: postAnalytics.classification === "hit" ? "var(--green)" : postAnalytics.classification === "underperforming" ? "var(--red)" : "var(--accent)",
+                    color: "#fff",
+                  }}>
+                    {postAnalytics.classification === "hit" ? "↑ Выше" : postAnalytics.classification === "underperforming" ? "↓ Ниже" : "→ Средний"}
+                  </span>
+                </span>
+              )}
+              {showMetric("reach") && postAnalytics.reach != null && <span>Охват: <strong>{postAnalytics.reach.toLocaleString("ru-RU", { maximumFractionDigits: 0 })}</strong></span>}
+              {showMetric("impressions") && postAnalytics.impressions != null && <span>Показы: <strong>{postAnalytics.impressions.toLocaleString("ru-RU", { maximumFractionDigits: 0 })}</strong></span>}
+              {showMetric("comments") && postAnalytics.comments != null && <span>Комм.: <strong>{postAnalytics.comments}</strong></span>}
+              {showMetric("saves") && postAnalytics.saves != null && <span>Сохр.: <strong>{postAnalytics.saves}</strong></span>}
+              {postAnalytics.rubricMedianEngagementRate != null && (
+                <span className="text-xs text-dim">Медиана рубрики: {(postAnalytics.rubricMedianEngagementRate * 100).toFixed(1)}%</span>
+              )}
+              {postAnalytics.platformMedianEngagementRate != null && (
+                <span className="text-xs text-dim">Медиана площадки: {(postAnalytics.platformMedianEngagementRate * 100).toFixed(1)}%</span>
+              )}
+            </div>
+          );
+        })()}
+        <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px", flexShrink: 0 }}
+          onClick={() => recomputePostAnalytics.mutate()} disabled={recomputePostAnalytics.isPending}>
+          <RefreshCw size={14} /> {recomputePostAnalytics.isPending ? "..." : "Обновить"}
+        </button>
+        <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px", flexShrink: 0 }}
+          onClick={() => suggestMutation.mutate()} disabled={suggestMutation.isPending}>
+          💡 {suggestMutation.isPending ? "..." : "Идеи"}
+        </button>
+        <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 10px", flexShrink: 0 }}
+          onClick={() => setShowManualMetrics(!showManualMetrics)}>
+          <Pencil size={14} /> Ручной ввод
+        </button>
+      </div>
+
+      {showManualMetrics && (() => {
+        const platformType = postAnalytics?.platformType;
+        const allowedMetrics = platformType ? SUPPORTED_OWN_METRICS[platformType] : ["likes","comments","reach","impressions","saves"];
+        const manualFields = ["likes","comments","reach","impressions","saves"].filter(f => allowedMetrics.includes(f));
+
+        return (
+          <div className="card mb-4">
+            <div className="card-header">
+              <span className="card-title">Ручной ввод метрик</span>
+              <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setShowManualMetrics(false)}>Отмена</button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(manualFields.length, 5)}, 1fr)`, gap: 12 }}>
+              {manualFields.map(f => (
+                <div key={f}>
+                  <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>
+                    {f === "likes" ? "Лайки" : f === "comments" ? "Комментарии" : f === "reach" ? "Охват" : f === "impressions" ? "Показы" : "Сохранения"}
+                  </label>
+                  <input className="input" type="number" min="0" placeholder="0"
+                    value={manualMetrics[f as keyof typeof manualMetrics]}
+                    onChange={(e) => setManualMetrics(prev => ({ ...prev, [f]: e.target.value }))} />
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-end" }}>
+              <button className="btn btn-primary" style={{ fontSize: 13 }}
+                onClick={() => submitManualMetrics.mutate(manualMetrics)} disabled={submitManualMetrics.isPending}>
+                {submitManualMetrics.isPending ? "..." : "Сохранить метрики"}
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
+      {suggestData && (
+        <div className="card mb-6">
+          <div className="card-header">
+            <span className="card-title flex items-center gap-2">💡 Рекомендации по посту</span>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setSuggestData(null)}>Закрыть</button>
+          </div>
+          <div className="flex flex-col gap-3">
+            {suggestData.suggestions.map((s: any, i: number) => (
+              <div key={i} style={{ padding: "10px 14px", background: "var(--bg-hover)", borderRadius: 8 }}>
+                <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
+                  <span className="tag" style={{
+                    background: s.type === "hook" ? "var(--cyan, #0891b2)" : s.type === "cta" ? "var(--accent)" : s.type === "format" ? "var(--green, #2e7d32)" : "var(--orange, #e68a2e)",
+                    color: "#fff", fontSize: 10,
+                  }}>{s.type || "content"}</span>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{s.title}</span>
+                </div>
+                <div className="text-sm text-dim">{s.description}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Meta step */}
       {currentStep === "meta" && (

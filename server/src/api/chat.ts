@@ -310,10 +310,13 @@ ${data.projectContext || ""}
 ${data.projectContext || ""}
 Площадка: ${data.platformName || "не указана"}
 
-Список доступных воронок:
-${(data.funnels || []).map((f: any) => `- ID: ${f.id}, Название: ${f.name}, Описание: ${f.description}`).join("\n")}
+Список доступных воронок с этапами:
+${(data.funnels || []).map((f: any) => {
+  const stages = f.stages ? (() => { try { const s = JSON.parse(f.stages); return Array.isArray(s) ? s.map((x: any) => typeof x === "string" ? x : x.name || String(x)).join(" → ") : ""; } catch { return ""; } })() : "";
+  return `- ID: ${f.id}, Название: ${f.name}${stages ? `\n  Этапы: ${stages}` : ""}\n  Описание: ${f.description}`;
+}).join("\n")}
 
-Проанализируй стратегию и выбери 1-2 воронки, которые лучше всего подходят для этой площадки и ЦА.
+Учитывай этап проекта по Лестнице Ханта (поле "Путь клиента" в контексте) — подбирай воронку, которая соответствует текущему этапу взаимодействия с аудиторией. Выбери 1-2 воронки.
 
 Формат ответа:
 {

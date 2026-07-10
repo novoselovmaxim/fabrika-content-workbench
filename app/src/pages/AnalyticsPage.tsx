@@ -4,7 +4,7 @@ import { useState } from "react";
 import { getStoredProjectId } from "../lib/project";
 import PlatformMetrics from "../components/PlatformMetrics";
 import { PLATFORM_COLORS } from "../lib/constants";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, Target, Funnel, Plus, Trash2, RefreshCw, BarChart3, FileText } from "lucide-react";
 
 const statusLabels: Record<string, string> = {
   idea: "Идея", planned: "Запланирован", draft: "Черновик",
@@ -16,6 +16,30 @@ const PLATFORM_LABELS: Record<string, string> = {
   telegram: "Telegram",
   youtube: "YouTube",
   vk: "ВКонтакте",
+};
+
+const CLASSIFICATION_LABELS: Record<string, string> = {
+  hit: "Хит",
+  normal: "Средний",
+  underperforming: "Низкий",
+};
+
+const CLASSIFICATION_COLORS: Record<string, string> = {
+  hit: "var(--green, #2e7d32)",
+  normal: "var(--accent)",
+  underperforming: "var(--red)",
+};
+
+const GOAL_STATUS_LABELS: Record<string, string> = {
+  ahead: "Опережает",
+  on_track: "В норме",
+  behind: "Отстаёт",
+};
+
+const GOAL_STATUS_COLORS: Record<string, string> = {
+  ahead: "var(--green, #2e7d32)",
+  on_track: "var(--accent)",
+  behind: "var(--red)",
 };
 
 export default function AnalyticsPage() {
@@ -35,27 +59,10 @@ export default function AnalyticsPage() {
     enabled: !!projectId,
   });
 
-  const { data: igStatus } = useQuery({
-    queryKey: ["instagram", "status"],
-    queryFn: () => fetch("/api/instagram/status").then((r) => r.json()),
-  });
-
-  const { data: igAccount } = useQuery({
-    queryKey: ["instagram", "account"],
-    queryFn: () => fetch("/api/instagram/account-insights").then((r) => r.json()),
-    enabled: !!(igStatus as any)?.configured,
-    refetchInterval: 60000,
-  });
-
-  const { data: igMedia } = useQuery({
-    queryKey: ["instagram", "media"],
-    queryFn: () => fetch("/api/instagram/media?limit=12").then((r) => r.json()),
-    enabled: !!(igStatus as any)?.configured,
-  });
-
-  const { data: connectedPlatforms } = useQuery({
-    queryKey: ["metrics", "platforms"],
-    queryFn: () => api.metrics.listPlatforms(),
+  const { data: projectPlatforms } = useQuery({
+    queryKey: ["platforms", "project", projectId],
+    queryFn: () => api.platforms.listByProject(projectId!),
+    enabled: !!projectId,
   });
 
   const { data: insights, refetch: refetchInsights } = useQuery({
@@ -64,9 +71,43 @@ export default function AnalyticsPage() {
     enabled: !!projectId,
   });
 
+  const { data: funnels } = useQuery({
+    queryKey: ["funnelsUsed", projectId],
+    queryFn: () => api.funnels.listUsed(projectId!),
+    enabled: !!projectId,
+  });
+
+  const { data: goals, refetch: refetchGoals } = useQuery({
+    queryKey: ["goals", projectId],
+    queryFn: () => api.analytics.getGoals(projectId!),
+    enabled: !!projectId,
+  });
+
+  const { data: projectAnalytics, refetch: refetchProjectAnalytics } = useQuery({
+    queryKey: ["projectAnalytics", projectId],
+    queryFn: () => api.analytics.getProjectAnalytics(projectId!),
+    enabled: !!projectId,
+  });
+
+  const { data: savedCompetitors } = useQuery({
+    queryKey: ["saved-competitors", projectId],
+    queryFn: () => api.competitors.getSaved(projectId!),
+    enabled: !!projectId,
+  });
+
   const recomputeInsights = useMutation({
     mutationFn: () => api.analytics.recomputeInsights(projectId!),
     onSuccess: () => refetchInsights(),
+  });
+
+  const evaluateGoalsMutation = useMutation({
+    mutationFn: () => api.analytics.evaluateGoals(projectId!),
+    onSuccess: () => refetchGoals(),
+  });
+
+  const deleteGoalMutation = useMutation({
+    mutationFn: (id: string) => api.analytics.deleteGoal(id),
+    onSuccess: () => refetchGoals(),
   });
 
   const rubricStats = new Map<string, { count: number; name: string; color: string }>();
@@ -86,19 +127,20 @@ export default function AnalyticsPage() {
   const maxRubric = Math.max(...Array.from(rubricStats.values()).map((r) => r.count), 1);
   const maxType = Math.max(...Array.from(typeStats.values()), 1);
 
-  const platforms = (connectedPlatforms || []) as { platform: string; identifier: string; id: string }[];
-  const hasIG = !!(igStatus as any)?.configured;
+  const platforms = (projectPlatforms || []) as { type: string; name: string; id: string }[];
 
   const tabs: { key: string; label: string; color?: string }[] = [
     { key: "content", label: "Контент" },
     { key: "insights", label: "Insights" },
+    { key: "goals", label: "Цели" },
+    { key: "funnels", label: "Воронки" },
+    { key: "competitors", label: "Конкуренты" },
   ];
-  if (hasIG) tabs.push({ key: "instagram", label: "Instagram" });
   for (const p of platforms) {
-    tabs.push({ key: p.platform, label: PLATFORM_LABELS[p.platform] || p.platform, color: PLATFORM_COLORS[p.platform] });
+    tabs.push({ key: p.type, label: p.name || PLATFORM_LABELS[p.type] || p.type, color: PLATFORM_COLORS[p.type] });
   }
 
-  if (activeTab !== "content" && activeTab !== "instagram" && !platforms.find(p => p.platform === activeTab)) {
+  if (activeTab !== "content" && activeTab !== "insights" && activeTab !== "goals" && activeTab !== "funnels" && activeTab !== "competitors" && !platforms.find(p => p.type === activeTab)) {
     setActiveTab("content");
   }
 
@@ -222,102 +264,54 @@ export default function AnalyticsPage() {
                   <th>Рубрика</th>
                   <th>Тип</th>
                   <th>Статус</th>
+                  <th>ER</th>
                 </tr>
               </thead>
               <tbody>
                 {(allPosts || [])
                   .sort((a: any, b: any) => (a.scheduledDate || "").localeCompare(b.scheduledDate || ""))
-                  .map((post: any) => (
-                    <tr key={post.id}>
-                      <td className="font-mono text-dim">{post.scheduledDate || "—"}</td>
-                      <td>{post.title}</td>
-                      <td>
-                        <span className="flex items-center gap-2">
-                          <span className="rubric-dot" style={{ background: post.rubricColor }} />
-                          {post.rubricName || "—"}
-                        </span>
-                      </td>
-                      <td className="text-dim">{post.contentTypeName || "—"}</td>
-                      <td><span className={`tag tag-${post.status}`}>{statusLabels[post.status]}</span></td>
-                    </tr>
-                  ))}
+                  .map((post: any) => {
+                    const pa = (projectAnalytics || []).find((a: any) => a.post_analytics?.postItemId === post.id);
+                    const er = pa?.post_analytics?.engagementRate;
+                    const cls = pa?.post_analytics?.classification;
+                    return (
+                      <tr key={post.id}>
+                        <td className="font-mono text-dim">{post.scheduledDate || "—"}</td>
+                        <td>{post.title}</td>
+                        <td>
+                          <span className="flex items-center gap-2">
+                            <span className="rubric-dot" style={{ background: post.rubricColor }} />
+                            {post.rubricName || "—"}
+                          </span>
+                        </td>
+                        <td className="text-dim">{post.contentTypeName || "—"}</td>
+                        <td><span className={`tag tag-${post.status}`}>{statusLabels[post.status]}</span></td>
+                        <td>
+                          {er != null ? (
+                            <span className="tag" style={{
+                              background: cls === "hit" ? "var(--green, #2e7d32)" : cls === "underperforming" ? "var(--red)" : "var(--accent)",
+                              color: "#fff", fontSize: 10,
+                            }}>
+                              {(er * 100).toFixed(1)}% {cls === "hit" ? "↑" : cls === "underperforming" ? "↓" : ""}
+                            </span>
+                          ) : (
+                            <span className="text-dim">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </div>
         </>
       )}
 
-      {activeTab === "instagram" && (
-        <>
-          {hasIG ? (
-            <>
-              {igAccount && (
-                <div className="stats-grid">
-                  <div className="stat-card">
-                    <div className="stat-label">Охват (reach)</div>
-                    <div className="stat-value">{(igAccount as any).reach?.toLocaleString() || "—"}</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-label">Показы (impressions)</div>
-                    <div className="stat-value">{(igAccount as any).impressions?.toLocaleString() || "—"}</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-label">Просмотры профиля</div>
-                    <div className="stat-value">{(igAccount as any).profileViews?.toLocaleString() || "—"}</div>
-                  </div>
-                  <div className="stat-card">
-                    <div className="stat-label">Подписчики</div>
-                    <div className="stat-value">{(igAccount as any).followerCount?.toLocaleString() || "—"}</div>
-                  </div>
-                </div>
-              )}
+      {activeTab === "goals" && <GoalsSection projectId={projectId!} goals={goals || []} onEvaluate={evaluateGoalsMutation} onDelete={(id) => deleteGoalMutation.mutate(id)} onCreated={() => refetchGoals()} />}
 
-              <div className="card">
-                <div className="card-header">
-                  <span className="card-title">Недавние публикации ({(igMedia as any)?.length || 0})</span>
-                </div>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Тип</th>
-                      <th>Описание</th>
-                      <th>Дата</th>
-                      <th>Лайки</th>
-                      <th>Комментарии</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(igMedia as any[])?.map((m: any) => (
-                      <tr key={m.id}>
-                        <td>
-                          <span className={`tag ${m.mediaType === "VIDEO" ? "tag-generated" : m.mediaType === "CAROUSEL_ALBUM" ? "tag-planned" : "tag-draft"}`}>
-                            {m.mediaType}
-                          </span>
-                        </td>
-                        <td className="text-dim" style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {m.caption?.slice(0, 100) || "—"}
-                        </td>
-                        <td className="font-mono text-xs">{new Date(m.timestamp).toLocaleDateString()}</td>
-                        <td>{m.likeCount ?? "—"}</td>
-                        <td>{m.commentsCount ?? "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : (
-            <div className="card" style={{ textAlign: "center", padding: 40 }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>📊</div>
-              <h3 style={{ marginBottom: 8 }}>Instagram не подключен</h3>
-              <p className="text-dim text-sm" style={{ maxWidth: 400, margin: "0 auto", lineHeight: 1.6 }}>
-                Для просмотра Instagram-аналитики настройте подключение в разделе Settings.
-                Вам понадобятся Instagram Account ID и Access Token профессионального аккаунта.
-              </p>
-            </div>
-          )}
-        </>
-      )}
+      {activeTab === "funnels" && <FunnelsSection funnels={funnels || []} />}
+
+      {activeTab === "competitors" && <CompetitorsSection projectId={projectId!} competitors={savedCompetitors || []} />}
 
       {activeTab === "insights" && (
         <div>
@@ -386,11 +380,392 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {activeTab !== "content" && activeTab !== "instagram" && activeTab !== "insights" && (
+      {activeTab !== "content" && activeTab !== "insights" && activeTab !== "goals" && activeTab !== "funnels" && activeTab !== "competitors" && (
         (() => {
-          const p = platforms.find(p => p.platform === activeTab);
-          return p ? <PlatformMetrics platform={p.platform} identifier={p.identifier} /> : null;
+          const p = platforms.find(p => p.type === activeTab);
+          return p ? <PlatformMetrics platform={p.type} identifier={p.name} /> : null;
         })()
+      )}
+    </div>
+  );
+}
+
+function GoalsSection({ projectId, goals, onEvaluate, onDelete, onCreated }: {
+  projectId: string; goals: any[]; onEvaluate: any; onDelete: (id: string) => void; onCreated: () => void;
+}) {
+  const [showForm, setShowForm] = useState(false);
+  const [metricName, setMetricName] = useState("engagement_rate");
+  const [targetValue, setTargetValue] = useState("");
+  const [period, setPeriod] = useState("30d");
+  const [deadlineDate, setDeadlineDate] = useState("");
+  const [reportPeriod, setReportPeriod] = useState("30d");
+  const [reportData, setReportData] = useState<any>(null);
+
+  const createMutation = useMutation({
+    mutationFn: () => api.analytics.createGoal({
+      projectId,
+      metricName,
+      targetValue: parseFloat(targetValue),
+      period,
+      deadlineDate: deadlineDate || undefined,
+    }),
+    onSuccess: () => {
+      setShowForm(false);
+      setTargetValue("");
+      setDeadlineDate("");
+      onCreated();
+    },
+  });
+
+  const generateReport = useMutation({
+    mutationFn: () => api.analytics.periodReport(projectId, reportPeriod),
+    onSuccess: (data) => setReportData(data),
+  });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
+        <h3 className="flex items-center gap-2"><Target size={18} /> Цели проекта</h3>
+        <div className="flex gap-2" style={{ flexWrap: "wrap" }}>
+          <div className="flex items-center gap-1" style={{ fontSize: 12 }}>
+            <select className="input" style={{ width: 90, fontSize: 11, padding: "4px 8px" }} value={reportPeriod} onChange={(e) => setReportPeriod(e.target.value)}>
+              <option value="7d">7 дней</option>
+              <option value="30d">30 дней</option>
+              <option value="lifetime">Всё время</option>
+            </select>
+            <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={() => generateReport.mutate()} disabled={generateReport.isPending}>
+              <FileText size={14} /> {generateReport.isPending ? "Генерация..." : "Отчёт"}
+            </button>
+          </div>
+          <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={() => onEvaluate.mutate()} disabled={onEvaluate.isPending}>
+            <RefreshCw size={14} /> {onEvaluate.isPending ? "Оценка..." : "Оценить статусы"}
+          </button>
+          <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={() => setShowForm(!showForm)}>
+            <Plus size={14} /> {showForm ? "Отмена" : "Новая цель"}
+          </button>
+        </div>
+      </div>
+
+      {reportData && (
+        <div className="card mb-6">
+          <div className="card-header">
+            <span className="card-title flex items-center gap-2"><FileText size={16} /> Отчёт по аналитике</span>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setReportData(null)}>Закрыть</button>
+          </div>
+          <div style={{ fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{reportData.fullReport}</div>
+        </div>
+      )}
+
+      {showForm && (
+        <div className="card mb-6">
+          <div className="card-header">
+            <span className="card-title">Новая цель</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+            <div>
+              <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Метрика</label>
+              <select className="input" value={metricName} onChange={(e) => setMetricName(e.target.value)}>
+                <option value="engagement_rate">Engagement Rate</option>
+                <option value="reach">Reach</option>
+                <option value="impressions">Impressions</option>
+                <option value="likes">Likes</option>
+                <option value="comments">Comments</option>
+                <option value="saves">Saves</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Целевое значение</label>
+              <input className="input" type="number" step="0.01" value={targetValue} onChange={(e) => setTargetValue(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Период</label>
+              <select className="input" value={period} onChange={(e) => setPeriod(e.target.value)}>
+                <option value="day">День</option>
+                <option value="7d">7 дней</option>
+                <option value="30d">30 дней</option>
+                <option value="lifetime">Всё время</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Дедлайн (опц.)</label>
+              <input className="input" type="date" value={deadlineDate} onChange={(e) => setDeadlineDate(e.target.value)} />
+            </div>
+          </div>
+          <div style={{ marginTop: 12 }}>
+            <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={() => createMutation.mutate()} disabled={!targetValue || createMutation.isPending}>
+              {createMutation.isPending ? "Создание..." : "Создать цель"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {goals.length === 0 ? (
+        <div className="card" style={{ textAlign: "center", padding: 40 }}>
+          <Target size={32} style={{ color: "var(--text-dim)", marginBottom: 12, opacity: 0.5 }} />
+          <p className="text-dim text-sm">Цели не заданы. Создайте первую цель для отслеживания метрик.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {goals.map((g: any) => (
+            <div key={g.id} className="card">
+              <div className="card-header">
+                <div className="flex items-center gap-3">
+                  <span className="card-title">{g.metricName}</span>
+                  <span className="tag" style={{
+                    background: GOAL_STATUS_COLORS[g.status] || "var(--accent)",
+                    color: "#fff", fontSize: 10,
+                  }}>
+                    {GOAL_STATUS_LABELS[g.status] || g.status}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {g.lastEvaluatedAt && (
+                    <span className="text-xs text-dim">Оценено: {new Date(g.lastEvaluatedAt).toLocaleString("ru-RU")}</span>
+                  )}
+                  <button className="btn btn-ghost" style={{ fontSize: 12, padding: "4px 8px", color: "var(--red)" }}
+                    onClick={() => { if (confirm("Удалить цель?")) onDelete(g.id); }}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-6 text-sm">
+                <div>
+                  <span className="text-dim">Цель: </span>
+                  <strong>{g.targetValue}</strong>
+                </div>
+                <div>
+                  <span className="text-dim">Период: </span>
+                  {g.period}
+                </div>
+                {g.deadlineDate && (
+                  <div>
+                    <span className="text-dim">Дедлайн: </span>
+                    {new Date(g.deadlineDate).toLocaleDateString("ru-RU")}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FunnelsSection({ funnels }: { funnels: any[] }) {
+  const [selectedFunnelId, setSelectedFunnelId] = useState<string | null>(null);
+
+  const { data: funnelAnalytics, refetch } = useQuery({
+    queryKey: ["funnelAnalytics", selectedFunnelId],
+    queryFn: () => api.analytics.getFunnelAnalytics(selectedFunnelId!),
+    enabled: !!selectedFunnelId,
+  });
+
+  const recomputeFunnel = useMutation({
+    mutationFn: (funnelId: string) => api.analytics.recomputeFunnel(funnelId),
+    onSuccess: () => refetch(),
+  });
+
+  const selectedFunnel = funnels.find((f: any) => f.id === selectedFunnelId);
+  let stages: string[] = [];
+  if (selectedFunnel?.stages) {
+    try { stages = JSON.parse(selectedFunnel.stages); } catch { stages = []; }
+  }
+
+  const stageMap = new Map((funnelAnalytics || []).map((fa: any) => [fa.stageName, fa]));
+
+  return (
+    <div>
+      <h3 className="flex items-center gap-2" style={{ marginBottom: 16 }}><Funnel size={18} /> Аналитика воронок</h3>
+
+      <div className="flex gap-2" style={{ marginBottom: 16, flexWrap: "wrap" }}>
+        {funnels.map((f: any) => (
+          <button
+            key={f.id}
+            className={`btn btn-sm ${selectedFunnelId === f.id ? "btn-primary" : "btn-ghost"}`}
+            onClick={() => setSelectedFunnelId(f.id)}
+          >
+            {f.name}
+          </button>
+        ))}
+      </div>
+
+      {!selectedFunnelId && (
+        <div className="card" style={{ textAlign: "center", padding: 40 }}>
+          <Funnel size={32} style={{ color: "var(--text-dim)", marginBottom: 12, opacity: 0.5 }} />
+          <p className="text-dim text-sm">Выберите воронку для просмотра аналитики по этапам.</p>
+        </div>
+      )}
+
+      {selectedFunnelId && selectedFunnel && (
+        <div>
+          <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+            <h4>{selectedFunnel.name}</h4>
+            <button className="btn btn-primary" style={{ fontSize: 12 }} onClick={() => recomputeFunnel.mutate(selectedFunnelId)} disabled={recomputeFunnel.isPending}>
+              <BarChart3 size={14} /> {recomputeFunnel.isPending ? "Расчёт..." : "Пересчитать"}
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            {stages.map((stage, i) => {
+              const sa = stageMap.get(stage);
+              return (
+                <div key={stage} className="card">
+                  <div className="card-header">
+                    <span className="card-title flex items-center gap-2">
+                      <span style={{
+                        width: 24, height: 24, borderRadius: "50%",
+                        background: "var(--accent)", color: "#fff",
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 12, fontWeight: 700,
+                      }}>{i + 1}</span>
+                      {stage}
+                    </span>
+                    <span className="tag" style={{ background: sa ? "var(--accent)" : "var(--bg-hover)", color: sa ? "#fff" : "var(--text-dim)", fontSize: 10 }}>
+                      {sa ? `${sa.postsCount} постов` : "Нет данных"}
+                    </span>
+                  </div>
+                  {sa ? (
+                    <div className="flex gap-4 text-sm" style={{ flexWrap: "wrap" }}>
+                      {sa.avgReach != null && (
+                        <div><span className="text-dim">Ср. охват: </span>{(sa.avgReach as number).toLocaleString("ru-RU", { maximumFractionDigits: 0 })}</div>
+                      )}
+                      {sa.avgEngagementRate != null && (
+                        <div><span className="text-dim">Ср. ER: </span>{(sa.avgEngagementRate * 100).toFixed(1)}%</div>
+                      )}
+                      {sa.conversionToNextStage != null && i < stages.length - 1 && (
+                        <div><span className="text-dim">Плотность → след. этап: </span>{(sa.conversionToNextStage * 100).toFixed(0)}%</div>
+                      )}
+                      {sa.computedAt && (
+                        <div className="text-xs text-dim">Расчёт: {new Date(sa.computedAt).toLocaleString("ru-RU")}</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-dim">Нет постов на этом этапе</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CompetitorsSection({ projectId, competitors }: { projectId: string; competitors: any[] }) {
+  const [selectedCompId, setSelectedCompId] = useState<string | null>(null);
+  const [analysis, setAnalysis] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const { data: compAnalytics, refetch: refetchComp } = useQuery({
+    queryKey: ["compAnalytics", selectedCompId],
+    queryFn: () => api.analytics.getCompetitorAnalytics(selectedCompId!),
+    enabled: !!selectedCompId,
+  });
+
+  const ingestMutation = useMutation({
+    mutationFn: (id: string) => api.analytics.ingestCompetitor(id),
+    onSuccess: () => refetchComp(),
+  });
+
+  const benchmarkMutation = useMutation({
+    mutationFn: () => api.analytics.competitorBenchmark(projectId, selectedIds.length > 0 ? selectedIds : competitors.map((c: any) => c.id)),
+    onSuccess: (data) => setAnalysis(data.analysis),
+  });
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between" style={{ marginBottom: 16 }}>
+        <h3 className="flex items-center gap-2">🔄 Конкуренты</h3>
+        <div className="flex gap-2">
+          <button className="btn btn-primary" style={{ fontSize: 12 }}
+            onClick={() => benchmarkMutation.mutate()} disabled={benchmarkMutation.isPending || competitors.length === 0}>
+            {benchmarkMutation.isPending ? "Анализ..." : "📊 Сравнить выбранных"}
+          </button>
+        </div>
+      </div>
+
+      <p className="text-xs text-dim" style={{ marginBottom: 16, lineHeight: 1.5 }}>
+        Для аккаунтов конкурентов доступны только публичные метрики (лайки, комментарии, частота публикаций).
+        Reach и охват недоступны ни для одного инструмента, включая официальный API Instagram, для аккаунтов, которыми вы не владеете.
+      </p>
+
+      {analysis && (
+        <div className="card mb-6">
+          <div className="card-header">
+            <span className="card-title">📊 Сравнительный анализ</span>
+            <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setAnalysis(null)}>Закрыть</button>
+          </div>
+          <div style={{ fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{analysis}</div>
+        </div>
+      )}
+
+      {competitors.length === 0 ? (
+        <div className="card" style={{ textAlign: "center", padding: 40 }}>
+          <p className="text-dim text-sm">Нет сохранённых конкурентов. Добавьте их в разделе стратегии.</p>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {competitors.map((comp: any) => (
+            <div key={comp.id} className="card">
+              <div className="card-header">
+                <div className="flex items-center gap-3">
+                  <input type="checkbox" checked={selectedIds.includes(comp.id)}
+                    onChange={() => toggleSelect(comp.id)} style={{ accentColor: "var(--accent)" }} />
+                  <span className="card-title">{comp.name}</span>
+                  <a href={comp.url} target="_blank" rel="noopener noreferrer" className="text-xs text-dim">{comp.url}</a>
+                </div>
+                <div className="flex gap-2">
+                  <button className="btn btn-ghost" style={{ fontSize: 11 }}
+                    onClick={() => setSelectedCompId(selectedCompId === comp.id ? null : comp.id)}>
+                    {selectedCompId === comp.id ? "Скрыть" : "Посты"}
+                  </button>
+                  <button className="btn btn-ghost" style={{ fontSize: 11 }}
+                    onClick={() => ingestMutation.mutate(comp.id)} disabled={ingestMutation.isPending}>
+                    {ingestMutation.isPending ? "..." : "🔄 Обновить метрики"}
+                  </button>
+                </div>
+              </div>
+              {selectedCompId === comp.id && (
+                <div>
+                  {compAnalytics && compAnalytics.length > 0 ? (
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Дата</th>
+                          <th>Описание</th>
+                          <th>Лайки</th>
+                          <th>Комм.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {compAnalytics.map((ca: any) => (
+                          <tr key={ca.id}>
+                            <td className="font-mono text-xs">{ca.postedAt ? new Date(ca.postedAt).toLocaleDateString("ru-RU") : "—"}</td>
+                            <td className="text-dim" style={{ maxWidth: 250, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {ca.caption?.slice(0, 80) || "—"}
+                            </td>
+                            <td>{ca.likes ?? "—"}</td>
+                            <td>{ca.comments ?? "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <div className="text-sm text-dim">Нет данных. Нажмите «Обновить метрики» для загрузки.</div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

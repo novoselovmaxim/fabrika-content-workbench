@@ -126,13 +126,6 @@ const TASK_MODELS = [
   { key: "model_image", label: "Генерация изображений", desc: "Создание визуалов" },
 ];
 
-const PLATFORM_META: Record<string, { label: string; placeholder: string; color: string }> = {
-  telegram: { label: "Telegram", placeholder: "@channel_username", color: "#0088CC" },
-  youtube: { label: "YouTube", placeholder: "@channel_handle", color: "#FF0000" },
-  vk: { label: "ВКонтакте", placeholder: "club1 или @public", color: "#0077FF" },
-  instagram: { label: "Instagram", placeholder: "@username", color: "#E4405F" },
-};
-
 function ThemeSelector() {
   const { theme, setTheme } = useTheme();
   const options: { value: typeof theme; label: string; icon: typeof Sun }[] = [
@@ -295,11 +288,6 @@ export default function SettingsPage() {
     refetchOnMount: true,
   });
 
-  const { data: igStatus, refetch: refetchIg } = useQuery({
-    queryKey: ["instagram", "status"],
-    queryFn: () => fetch("/api/instagram/status").then((r) => r.json()),
-  });
-
   const { data: savedSettings } = useQuery({
     queryKey: ["settings"],
     queryFn: () => fetch("/api/settings").then((r) => r.json()),
@@ -311,21 +299,10 @@ export default function SettingsPage() {
   const [vsellmKey, setVsellmKey] = useState("");
   const [tavilyKey, setTavilyKey] = useState("");
   const [braveKey, setBraveKey] = useState("");
-  const [igAccessToken, setIgAccessToken] = useState("");
-  const [igAccountId, setIgAccountId] = useState("");
+  const [apifyApiKey, setApifyApiKey] = useState("");
 
   const [taskModels, setTaskModels] = useState<Record<string, string>>({});
   const [providerFilter, setProviderFilter] = useState("all");
-
-  // Connected platforms state
-  const { data: connectedPlatforms, refetch: refetchPlatforms } = useQuery({
-    queryKey: ["metrics", "platforms"],
-    queryFn: () => api.metrics.listPlatforms(),
-  });
-
-  const [platformInputs, setPlatformInputs] = useState<Record<string, string>>({});
-  const [platformResults, setPlatformResults] = useState<Record<string, { valid: boolean; error?: string; name?: string } | null>>({});
-  const [platformLoading, setPlatformLoading] = useState<Record<string, boolean>>({});
 
   const availableTextModels: string[] = modelsData?.textModels || FALLBACK_MODELS;
   const availableImageModels: string[] = modelsData?.imageModels ||
@@ -366,8 +343,7 @@ export default function SettingsPage() {
       if (savedSettings.vsellm_key) setVsellmKey(savedSettings.vsellm_key);
       if (savedSettings.tavily_api_key) setTavilyKey(savedSettings.tavily_api_key);
       if (savedSettings.brave_api_key) setBraveKey(savedSettings.brave_api_key);
-      if (savedSettings.ig_access_token) setIgAccessToken(savedSettings.ig_access_token);
-      if (savedSettings.ig_account_id) setIgAccountId(savedSettings.ig_account_id);
+      if (savedSettings.apify_api_key) setApifyApiKey(savedSettings.apify_api_key);
       const loaded: Record<string, string> = {};
       const textModels = modelsData?.textModels || FALLBACK_MODELS;
       for (const t of TASK_MODELS) {
@@ -376,17 +352,6 @@ export default function SettingsPage() {
       setTaskModels(loaded);
     }
   }, [savedSettings]);
-
-  // Pre-fill platform inputs from saved connections
-  useEffect(() => {
-    if (connectedPlatforms && Array.isArray(connectedPlatforms)) {
-      const inputs: Record<string, string> = {};
-      for (const p of connectedPlatforms) {
-        inputs[p.platform] = p.identifier;
-      }
-      setPlatformInputs((prev) => ({ ...prev, ...inputs }));
-    }
-  }, [connectedPlatforms]);
 
   const saveAiSettings = useMutation({
     mutationFn: () =>
@@ -400,6 +365,7 @@ export default function SettingsPage() {
           vsellm_key: vsellmKey,
           tavily_api_key: tavilyKey,
           brave_api_key: braveKey,
+          apify_api_key: apifyApiKey,
         }),
       }).then((r) => r.json()),
   });
@@ -413,62 +379,7 @@ export default function SettingsPage() {
       }).then((r) => r.json()),
   });
 
-  const saveIgSettings = useMutation({
-    mutationFn: () =>
-      fetch("/api/settings/bulk", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ig_access_token: igAccessToken,
-          ig_account_id: igAccountId,
-        }),
-      }).then((r) => r.json()),
-  });
-
-  const configureIg = useMutation({
-    mutationFn: () =>
-      fetch("/api/instagram/configure", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accessToken: igAccessToken, instagramAccountId: igAccountId }),
-      }).then((r) => r.json()),
-    onSuccess: () => refetchIg(),
-  });
-
-  const checkIg = useQuery({
-    queryKey: ["instagram", "check"],
-    queryFn: () => fetch("/api/instagram/check").then((r) => r.json()),
-    enabled: !!(igStatus as any)?.configured,
-  });
-
   const { data: updateData } = useUpdater();
-
-  async function handleCheckPlatform(platform: string) {
-    const identifier = platformInputs[platform];
-    if (!identifier) return;
-    setPlatformLoading((prev) => ({ ...prev, [platform]: true }));
-    setPlatformResults((prev) => ({ ...prev, [platform]: null }));
-    try {
-      const result = await api.metrics.check(platform, identifier);
-      setPlatformResults((prev) => ({ ...prev, [platform]: result }));
-    } catch (e: any) {
-      setPlatformResults((prev) => ({ ...prev, [platform]: { valid: false, error: e.message } }));
-    } finally {
-      setPlatformLoading((prev) => ({ ...prev, [platform]: false }));
-    }
-  }
-
-  async function handleSavePlatform(platform: string) {
-    const identifier = platformInputs[platform];
-    if (!identifier) return;
-    await api.metrics.savePlatform(platform, identifier, PLATFORM_META[platform]?.label || platform);
-    await refetchPlatforms();
-  }
-
-  async function handleDeletePlatform(id: string) {
-    await api.metrics.deletePlatform(id);
-    await refetchPlatforms();
-  }
 
   return (
     <div>
@@ -590,6 +501,10 @@ export default function SettingsPage() {
               <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Brave Search API Key (поиск конкурентов)</label>
               <input className="input" type="password" placeholder="BSA..." value={braveKey} onChange={(e) => setBraveKey(e.target.value)} />
             </div>
+            <div>
+              <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Apify API Key (сбор метрик Instagram)</label>
+              <input className="input" type="password" placeholder="apify_api_..." value={apifyApiKey} onChange={(e) => setApifyApiKey(e.target.value)} />
+            </div>
             <button className="btn btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => saveAiSettings.mutate()} disabled={saveAiSettings.isPending}>
               {saveAiSettings.isPending ? "Сохранение..." : "💾 Сохранить ключи"}
             </button>
@@ -651,122 +566,6 @@ export default function SettingsPage() {
             <button className="btn btn-primary" style={{ alignSelf: "flex-start" }} onClick={() => saveTaskModels.mutate()} disabled={saveTaskModels.isPending}>
               {saveTaskModels.isPending ? "Сохранение..." : "💾 Сохранить распределение"}
             </button>
-          </div>
-        </div>
-
-        {/* Подключенные площадки */}
-        <div className="card" style={{ gridColumn: "span 2" }}>
-          <div className="card-header">
-            <span className="card-title">Подключенные площадки</span>
-            <span className="text-xs text-dim">
-              Введите @username или ID площадки для сбора метрик
-            </span>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            {Object.entries(PLATFORM_META).map(([platform, meta]) => {
-              const result = platformResults[platform];
-              const loading = platformLoading[platform];
-              const saved = Array.isArray(connectedPlatforms)
-                ? connectedPlatforms.find((p: any) => p.platform === platform)
-                : null;
-              return (
-                <div key={platform} className="flex flex-col gap-2" style={{ padding: 12, background: "var(--bg-hover)", borderRadius: 10 }}>
-                  <div className="flex items-center gap-2">
-                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: meta.color, flexShrink: 0 }} />
-                    <span className="text-sm" style={{ fontWeight: 600 }}>{meta.label}</span>
-                    {saved && <span className="tag tag-ready" style={{ fontSize: 10 }}>Сохранено</span>}
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      className="input"
-                      placeholder={meta.placeholder}
-                      value={platformInputs[platform] || ""}
-                      onChange={(e) => setPlatformInputs((prev) => ({ ...prev, [platform]: e.target.value }))}
-                      style={{ flex: 1, fontSize: 12 }}
-                    />
-                    <button
-                      className="btn btn-sm btn-primary"
-                      disabled={!platformInputs[platform] || loading}
-                      onClick={() => handleCheckPlatform(platform)}
-                    >
-                      {loading ? "..." : "Проверить"}
-                    </button>
-                  </div>
-                  {result && (
-                    <div className="flex items-center gap-2" style={{ fontSize: 12 }}>
-                      {result.valid ? (
-                        <>
-                          <span style={{ color: "var(--green)" }}>Подключено</span>
-                          {result.name && <span className="text-dim">— {result.name}</span>}
-                        </>
-                      ) : (
-                        <span style={{ color: "var(--red)" }}>{result.error || "Ошибка подключения"}</span>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex gap-2">
-                    <button
-                      className="btn btn-xs btn-ghost"
-                      disabled={!platformInputs[platform]}
-                      onClick={() => handleSavePlatform(platform)}
-                    >
-                      Сохранить
-                    </button>
-                    {saved && (
-                      <button
-                        className="btn btn-xs btn-ghost"
-                        style={{ color: "var(--red)" }}
-                        onClick={() => handleDeletePlatform(saved.id)}
-                      >
-                        Удалить
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Meta / Instagram */}
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title">Meta / Instagram</span>
-            <div className="flex gap-2">
-              {(igStatus as any)?.configured && <span className="tag tag-ready">Подключено</span>}
-              {saveIgSettings.isSuccess && <span className="tag tag-ready">Сохранено</span>}
-            </div>
-          </div>
-          <div className="flex flex-col gap-4">
-            <div>
-              <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Instagram Account ID</label>
-              <input className="input" placeholder="178414..." value={igAccountId} onChange={(e) => setIgAccountId(e.target.value)} />
-            </div>
-            <div>
-              <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Access Token</label>
-              <input className="input" type="password" placeholder="EAA..." value={igAccessToken} onChange={(e) => setIgAccessToken(e.target.value)} />
-            </div>
-            <div className="flex gap-2">
-              <button className="btn btn-primary" onClick={() => saveIgSettings.mutate()} disabled={saveIgSettings.isPending}>
-                {saveIgSettings.isPending ? "Сохранение..." : "💾 Сохранить"}
-              </button>
-              <button className="btn btn-primary" onClick={() => configureIg.mutate()} disabled={!igAccessToken || !igAccountId || configureIg.isPending}>
-                {configureIg.isPending ? "Проверка..." : (igStatus as any)?.configured ? "Переподключить" : "Подключить"}
-              </button>
-            </div>
-
-            {(checkIg as any)?.valid && (
-              <div className="flex items-center gap-2 text-xs">
-                <span className="tag tag-ready">✓</span>
-                <span>Instagram аккаунт подтвержден (ID: {(checkIg as any).userId})</span>
-              </div>
-            )}
-            {(checkIg as any)?.error && (
-              <div className="flex items-center gap-2 text-xs" style={{ color: "var(--red)" }}>
-                <span>✗</span>
-                <span>{(checkIg as any).error}</span>
-              </div>
-            )}
           </div>
         </div>
 

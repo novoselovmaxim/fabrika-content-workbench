@@ -1,14 +1,23 @@
 import { Router } from "express";
 import { db } from "../db.js";
-import { funnels } from "../schema.js";
-import { sql, eq } from "drizzle-orm";
+import { funnels, postItems } from "../schema.js";
+import { sql, eq, and } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 
 export const funnelsRouter = Router();
 
-funnelsRouter.get("/", (_req, res) => {
-  const all = db.select().from(funnels).orderBy(funnels.ordering).all();
-  res.json(all);
+funnelsRouter.get("/", (req, res) => {
+  const projectId = req.query.projectId as string | undefined;
+  if (projectId) {
+    const all = db.select().from(funnels).where(and(
+      eq(funnels.active, 1),
+      sql`${funnels.id} IN (SELECT DISTINCT ${postItems.funnelId} FROM ${postItems} WHERE ${postItems.projectId} = ${projectId})`,
+    )).orderBy(funnels.ordering).all();
+    res.json(all);
+  } else {
+    const all = db.select().from(funnels).orderBy(funnels.ordering).all();
+    res.json(all);
+  }
 });
 
 funnelsRouter.get("/:id", (req, res) => {

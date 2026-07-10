@@ -1,5 +1,39 @@
 const VK_API_VERSION = "5.131";
 
+export async function fetchVKPostById(
+  ownerId: string,
+  postId: string,
+  accessToken: string
+): Promise<VKPost | null> {
+  const params = new URLSearchParams();
+  params.set("posts", `${ownerId}_${postId}`);
+  params.set("access_token", accessToken);
+  params.set("v", VK_API_VERSION);
+
+  try {
+    const res = await fetch(
+      `https://api.vk.com/method/wall.getById?${params.toString()}`,
+      { signal: AbortSignal.timeout(8000) }
+    );
+    const data: any = await res.json();
+    if (data.error) throw new Error(`VK API error: ${data.error.error_msg || JSON.stringify(data.error)}`);
+    const item = data?.response?.items?.[0];
+    if (!item) return null;
+    return {
+      id: item.id,
+      date: new Date((item.date || 0) * 1000).toISOString(),
+      text: item.text,
+      views: item.views?.count || 0,
+      likes: item.likes?.count || 0,
+      comments: item.comments?.count || 0,
+      reposts: item.reposts?.count || 0,
+      url: `https://vk.com/wall${ownerId}_${item.id}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export interface VKPost {
   id: number;
   date: string;

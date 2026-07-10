@@ -252,13 +252,14 @@ ${plannedText}
 - Заголовки должны быть уникальными, не повторять уже запланированные.
 - Учитывай стратегию бренда.
 ${toneText}
+- Если выбрана воронка — для каждого поста укажи stage (название стадии/шага воронки, к которому относится пост). Используй одну из стадий воронки из списка выше.
 - Для каждого поста придумай цель (goal), хук (hook), ключевое сообщение (keyMessage) и CTA.
 
 Формат ответа — строгий JSON:
 {
   "plan": [
     { "date": "${opts.weekStart}", "posts": [
-      { "title": "Заголовок поста", "format": "carousel", "rubric": "Название рубрики", "goal": "цель поста", "hook": "цепляющая первая фраза", "keyMessage": "главная мысль", "cta": "призыв к действию" }
+      { "title": "Заголовок поста", "format": "carousel", "rubric": "Название рубрики", "goal": "цель поста", "hook": "цепляющая первая фраза", "keyMessage": "главная мысль", "cta": "призыв к действию", "stage": "название стадии из воронки" }
     ]},
     { "date": "${addDays(opts.weekStart, 1)}", "posts": [...] },
     { "date": "${addDays(opts.weekStart, 2)}", "posts": [...] },
@@ -425,6 +426,7 @@ generateRouter.post("/week-plan", async (req, res) => {
           projectId,
           platformId,
           funnelId: funnelId || null,
+          funnelStage: post.stage || null,
           title: post.title || "Новый пост",
           scheduledDate: day.date,
           status: "planned",
@@ -443,6 +445,7 @@ generateRouter.post("/week-plan", async (req, res) => {
           date: day.date,
           format: post.format,
           rubric: post.rubric,
+          stage: post.stage,
         });
       }
     }

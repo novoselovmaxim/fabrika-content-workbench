@@ -227,6 +227,7 @@ export const api = {
   funnels: {
     list: () => request<any[]>("/funnels"),
     get: (id: string) => request<any>(`/funnels/${id}`),
+    listUsed: (projectId: string) => request<any[]>(`/funnels?projectId=${projectId}`),
   },
 
   reviewEvents: {
@@ -243,6 +244,40 @@ export const api = {
       request<{ recomputed: number }>(`/analytics/${projectId}/recompute-insights`, { method: "POST" }),
     listInsights: (projectId: string) => request<any[]>(`/analytics/${projectId}/insights`),
     deleteInsights: (projectId: string) => request<void>(`/analytics/${projectId}/insights`, { method: "DELETE" }),
+    recomputePost: (postItemId: string) =>
+      request<any>(`/analytics/post/${postItemId}/recompute`, { method: "POST" }),
+    getPostAnalytics: (postItemId: string) =>
+      request<any>(`/analytics/post/${postItemId}`),
+    recomputeAll: (projectId: string) =>
+      request<{ recomputed: number }>(`/analytics/project/${projectId}/recompute-all`, { method: "POST" }),
+    getProjectAnalytics: (projectId: string) =>
+      request<any[]>(`/analytics/project/${projectId}`),
+    recomputeFunnel: (funnelId: string) =>
+      request<any>(`/analytics/funnel/${funnelId}/recompute`, { method: "POST" }),
+    getFunnelAnalytics: (funnelId: string) =>
+      request<any[]>(`/analytics/funnel/${funnelId}`),
+    createGoal: (data: { projectId: string; metricName: string; targetValue: number; period: string; deadlineDate?: string }) =>
+      request<{ id: string }>("/analytics/goals", { method: "POST", body: JSON.stringify(data) }),
+    getGoals: (projectId: string) =>
+      request<any[]>(`/analytics/goals/${projectId}`),
+    evaluateGoals: (projectId: string) =>
+      request<{ evaluated: number; goals: any[] }>(`/analytics/goals/${projectId}/evaluate`, { method: "POST" }),
+    deleteGoal: (id: string) =>
+      request<void>(`/analytics/goals/${id}`, { method: "DELETE" }),
+    periodReport: (projectId: string, period?: string) =>
+      request<{ insightId: string; knowledgeId: string; summary: string; fullReport: string }>(
+        `/analytics/${projectId}/period-report`, { method: "POST", body: JSON.stringify({ period }) }
+      ),
+    postSuggest: (postItemId: string) =>
+      request<{ suggestions: any[] }>(`/analytics/post/${postItemId}/suggest`, { method: "POST" }),
+    ingestCompetitor: (savedCompetitorId: string) =>
+      request<{ ingested: number }>(`/analytics/competitor/${savedCompetitorId}/ingest`, { method: "POST" }),
+    getCompetitorAnalytics: (savedCompetitorId: string) =>
+      request<any[]>(`/analytics/competitor/${savedCompetitorId}`),
+    competitorBenchmark: (projectId: string, competitorIds: string[]) =>
+      request<{ insightId: string; analysis: string }>(
+        `/analytics/${projectId}/competitor-benchmark`, { method: "POST", body: JSON.stringify({ competitorIds }) }
+      ),
   },
 
   compliance: {
@@ -287,12 +322,5 @@ export const api = {
       ),
     fetch: (platform: string, identifier: string) =>
       request<any>("/metrics/fetch", { method: "POST", body: JSON.stringify({ platform, identifier }) }),
-    savePlatform: (platform: string, identifier: string, label?: string) =>
-      request<{ success: boolean }>("/metrics/platforms", {
-        method: "POST", body: JSON.stringify({ platform, identifier, label })
-      }),
-    listPlatforms: () => request<any[]>("/metrics/platforms"),
-    deletePlatform: (id: string) =>
-      request<void>(`/metrics/platforms/${id}`, { method: "DELETE" }),
   },
 };

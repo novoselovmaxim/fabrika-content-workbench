@@ -7,28 +7,31 @@ export function recomputeInsights(projectId: string): number {
   const now = new Date().toISOString();
   let count = 0;
 
-  // 1. Best formats — which contentTypeId / rubric gives best avg metricValue
+  // 1. Best formats — which contentTypeId gives best avg engagement_rate
   const bestFormats = db
     .select({
-      contentTypeId: analyticsSnapshots.postItemId,
+      contentTypeId: postItems.contentTypeId,
       avgMetric: sql<number>`avg(${analyticsSnapshots.metricValue})`,
+      postsCount: sql<number>`count(distinct ${postItems.id})`,
     })
     .from(analyticsSnapshots)
     .innerJoin(postItems, eq(analyticsSnapshots.postItemId, postItems.id))
     .where(and(
       eq(postItems.projectId, projectId),
+      eq(analyticsSnapshots.metricName, "engagement_rate"),
       sql`${analyticsSnapshots.metricValue} IS NOT NULL`,
     ))
-    .groupBy(analyticsSnapshots.postItemId)
+    .groupBy(postItems.contentTypeId)
+    .having(sql`count(distinct ${postItems.id}) >= 2`)
     .orderBy(sql`avg(${analyticsSnapshots.metricValue}) desc`)
     .limit(5)
     .all();
 
   if (bestFormats.length > 0) {
     const payload = {
-      title: "Лучшие форматы",
-      description: "Посты с наибольшей вовлечённостью (по метрикам)",
-      items: bestFormats.map((f: any) => ({ contentTypeId: f.contentTypeId, avgMetric: f.avgMetric })),
+      title: "Лучшие типы контента",
+      description: "Типы контента с наибольшей вовлечённостью",
+      items: bestFormats.map((f: any) => ({ contentTypeId: f.contentTypeId, avgMetric: f.avgMetric, postsCount: f.postsCount })),
       count: bestFormats.length,
     };
     db.delete(analyticsInsights).where(and(
@@ -39,6 +42,47 @@ export function recomputeInsights(projectId: string): number {
       id: uuid(),
       projectId,
       insightType: "best_formats",
+      payload: JSON.stringify(payload),
+      generatedAt: now,
+    }).run();
+    count++;
+  }
+
+  // 1b. Best rubrics — which rubricId gives best avg engagement_rate
+  const bestRubrics = db
+    .select({
+      rubricId: postItems.rubricId,
+      avgMetric: sql<number>`avg(${analyticsSnapshots.metricValue})`,
+      postsCount: sql<number>`count(distinct ${postItems.id})`,
+    })
+    .from(analyticsSnapshots)
+    .innerJoin(postItems, eq(analyticsSnapshots.postItemId, postItems.id))
+    .where(and(
+      eq(postItems.projectId, projectId),
+      eq(analyticsSnapshots.metricName, "engagement_rate"),
+      sql`${analyticsSnapshots.metricValue} IS NOT NULL`,
+    ))
+    .groupBy(postItems.rubricId)
+    .having(sql`count(distinct ${postItems.id}) >= 2`)
+    .orderBy(sql`avg(${analyticsSnapshots.metricValue}) desc`)
+    .limit(5)
+    .all();
+
+  if (bestRubrics.length > 0) {
+    const payload = {
+      title: "Лучшие рубрики",
+      description: "Рубрики с наибольшей вовлечённостью",
+      items: bestRubrics.map((f: any) => ({ rubricId: f.rubricId, avgMetric: f.avgMetric, postsCount: f.postsCount })),
+      count: bestRubrics.length,
+    };
+    db.delete(analyticsInsights).where(and(
+      eq(analyticsInsights.projectId, projectId),
+      eq(analyticsInsights.insightType, "best_rubrics"),
+    )).run();
+    db.insert(analyticsInsights).values({
+      id: uuid(),
+      projectId,
+      insightType: "best_rubrics",
       payload: JSON.stringify(payload),
       generatedAt: now,
     }).run();
@@ -88,19 +132,22 @@ export function recomputeInsights(projectId: string): number {
     }
   }
 
-  // 3. Journey coverage — which funnel stages have posts
+  // 3. Journey coverage — which funnel stages have posts (only funnels used in this project)
   const activeFunnels = db.select({
     id: funnels.id,
     name: funnels.name,
     stages: funnels.stages,
-  }).from(funnels).where(eq(funnels.active, 1)).all();
+  }).from(funnels).where(and(
+    eq(funnels.active, 1),
+    sql`${funnels.id} IN (SELECT DISTINCT ${postItems.funnelId} FROM ${postItems} WHERE ${postItems.projectId} = ${projectId})`,
+  )).all();
 
   for (const funnel of activeFunnels) {
-    const stages: string[] = (() => { try { return funnel.stages ? JSON.parse(funnel.stages) : []; } catch { return []; } })();
+    const stages: string[] = (() => { try { if (!funnel.stages) return []; const parsed = JSON.parse(funnel.stages); return Array.isArray(parsed) ? parsed.map((s: any) => typeof s === "string" ? s : s.name || String(s)) : []; } catch { return []; } })();
     if (stages.length === 0) continue;
 
     const funnelPosts = db
-      .select({ funnelId: postItems.funnelId })
+      .select({ funnelStage: postItems.funnelStage })
       .from(postItems)
       .where(and(
         eq(postItems.projectId, projectId),
@@ -108,7 +155,7 @@ export function recomputeInsights(projectId: string): number {
       ))
       .all();
 
-    const coveredStages = new Set(funnelPosts.map((p: any) => p.funnelId));
+    const coveredStages = new Set(funnelPosts.map((p: any) => p.funnelStage).filter(Boolean));
     const missingStages = stages.filter((s: string) => !coveredStages.has(s));
 
     if (missingStages.length > 0) {

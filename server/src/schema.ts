@@ -282,6 +282,7 @@ export const postItems = sqliteTable("post_items", {
   contentTypeId: text("content_type_id").references(() => contentTypes.id),
   campaignId: text("campaign_id"),
   funnelId: text("funnel_id").references(() => funnels.id, { onDelete: "set null" }),
+  funnelStage: text("funnel_stage"),
   scheduledDate: text("scheduled_date"),
   scheduledTime: text("scheduled_time"),
   sortOrder: integer("sort_order").default(0),
@@ -387,15 +388,6 @@ export const projectKnowledge = sqliteTable("project_knowledge", {
   updatedAt: text("updated_at").default(sql`(current_timestamp)`),
 });
 
-// ── Connected Platforms (metrics) ──────────────────────────
-export const connectedPlatforms = sqliteTable("connected_platforms", {
-  id: text("id").primaryKey(),
-  platform: text("platform").notNull(),
-  identifier: text("identifier").notNull(),
-  label: text("label"),
-  createdAt: text("created_at").default(sql`(current_timestamp)`),
-});
-
 // ── License ────────────────────────────────────────────────
 export const license = sqliteTable("license", {
   id:           text("id").primaryKey().default("singleton"),
@@ -450,6 +442,58 @@ export const policyRules = sqliteTable("policy_rules", {
   severity: text("severity").default("warning"),
   enabled: integer("enabled").default(1),
   createdAt: text("created_at").default(sql`(current_timestamp)`),
+});
+
+// ── Post Analytics (aggregated per post) ────────────────────
+export const postAnalytics = sqliteTable("post_analytics", {
+  postItemId: text("post_item_id").primaryKey().references(() => postItems.id, { onDelete: "cascade" }),
+  reach: real("reach"),
+  impressions: real("impressions"),
+  engagementRate: real("engagement_rate"),
+  saves: real("saves"),
+  comments: real("comments"),
+  period: text("period").default("lifetime"),
+  classification: text("classification"),
+  rubricMedianEngagementRate: real("rubric_median_engagement_rate"),
+  platformMedianEngagementRate: real("platform_median_engagement_rate"),
+  computedAt: text("computed_at").default(sql`(current_timestamp)`),
+});
+
+// ── Funnel Analytics (per stage) ───────────────────────────
+export const funnelAnalytics = sqliteTable("funnel_analytics", {
+  id: text("id").primaryKey(),
+  funnelId: text("funnel_id").notNull().references(() => funnels.id, { onDelete: "cascade" }),
+  stageName: text("stage_name").notNull(),
+  postsCount: integer("posts_count").default(0),
+  avgReach: real("avg_reach"),
+  avgEngagementRate: real("avg_engagement_rate"),
+  conversionToNextStage: real("conversion_to_next_stage"),
+  computedAt: text("computed_at").default(sql`(current_timestamp)`),
+});
+
+// ── Campaign Goals ─────────────────────────────────────────
+export const campaignGoals = sqliteTable("campaign_goals", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().references(() => projects.id, { onDelete: "cascade" }),
+  metricName: text("metric_name").notNull(),
+  targetValue: real("target_value").notNull(),
+  period: text("period").notNull(),
+  deadlineDate: text("deadline_date"),
+  status: text("status").default("on_track"),
+  lastEvaluatedAt: text("last_evaluated_at"),
+  createdAt: text("created_at").default(sql`(current_timestamp)`),
+});
+
+// ── Competitor Analytics ───────────────────────────────────
+export const competitorAnalytics = sqliteTable("competitor_analytics", {
+  id: text("id").primaryKey(),
+  savedCompetitorId: text("saved_competitor_id").notNull().references(() => savedCompetitors.id, { onDelete: "cascade" }),
+  mediaExternalId: text("media_external_id"),
+  caption: text("caption"),
+  likes: integer("likes"),
+  comments: integer("comments"),
+  postedAt: text("posted_at"),
+  fetchedAt: text("fetched_at").default(sql`(current_timestamp)`),
 });
 
 // ── Analytics Insights ─────────────────────────────────────
