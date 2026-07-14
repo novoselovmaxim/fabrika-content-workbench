@@ -106,35 +106,63 @@ export default function UnpackPage() {
     if (idx >= 0 && idx < STEPS.length) setStepIdx(idx);
   };
 
-  // ── Materials state ──
-  const [unpackTab, setUnpackTab] = useState("files");
+  // ── Materials state (persisted to sessionStorage) ──
+  function ss<T>(key: string, fallback: T): T {
+    try { const v = sessionStorage.getItem(`${SAVE_KEY}_${key}`); return v !== null ? JSON.parse(v) : fallback; } catch { return fallback; }
+  }
+  const [unpackTab, setUnpackTab] = useState(() => ss("unpackTab", "files"));
   const [unpackLoading, setUnpackLoading] = useState(false);
-  const [unpackKnowledgeCount, setUnpackKnowledgeCount] = useState(0);
+  const [unpackKnowledgeCount, setUnpackKnowledgeCount] = useState(() => ss("unpackKnowledgeCount", 0));
   const [dragOver, setDragOver] = useState(false);
   const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
   const [linkTitle, setLinkTitle] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
+  const [linkSaved, setLinkSaved] = useState(false);
+  const [noteSaved, setNoteSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [generatedKeywords, setGeneratedKeywords] = useState<any[]>([]);
+  const [generatedKeywords, setGeneratedKeywords] = useState<any[]>(() => ss("generatedKeywords", []));
   const [keywordsLoading, setKeywordsLoading] = useState(false);
-  const [keywordsEditMode, setKeywordsEditMode] = useState(false);
-  const [keywordsEdits, setKeywordsEdits] = useState<Record<string, string>>({});
+  const [keywordsEditMode, setKeywordsEditMode] = useState(() => ss("keywordsEditMode", false));
+  const [keywordsEdits, setKeywordsEdits] = useState<Record<string, string>>(() => ss("keywordsEdits", {}));
   const [keywordsSaving, setKeywordsSaving] = useState(false);
 
-  const [importPlatform, setImportPlatform] = useState("telegram");
-  const [importIdentifier, setImportIdentifier] = useState("");
-  const [importDescription, setImportDescription] = useState("");
+  const [importPlatform, setImportPlatform] = useState(() => ss("importPlatform", "telegram"));
+  const [importIdentifier, setImportIdentifier] = useState(() => ss("importIdentifier", ""));
+  const [importDescription, setImportDescription] = useState(() => ss("importDescription", ""));
   const [importLoading, setImportLoading] = useState(false);
-  const [importResult, setImportResult] = useState<any>(null);
-  const [importError, setImportError] = useState<string | null>(null);
+  const [importResult, setImportResult] = useState<any>(() => ss("importResult", null));
+  const [importError, setImportError] = useState<string | null>(() => ss("importError", null));
+
+  // Persist materials state to sessionStorage
+  const persist = (key: string, value: any) => { try { sessionStorage.setItem(`${SAVE_KEY}_${key}`, JSON.stringify(value)); } catch {} };
+  useEffect(() => { persist("unpackTab", unpackTab); }, [unpackTab]);
+  useEffect(() => { persist("unpackKnowledgeCount", unpackKnowledgeCount); }, [unpackKnowledgeCount]);
+  useEffect(() => { persist("generatedKeywords", generatedKeywords); }, [generatedKeywords]);
+  useEffect(() => { persist("keywordsEditMode", keywordsEditMode); }, [keywordsEditMode]);
+  useEffect(() => { persist("keywordsEdits", keywordsEdits); }, [keywordsEdits]);
+  useEffect(() => { persist("importPlatform", importPlatform); }, [importPlatform]);
+  useEffect(() => { persist("importIdentifier", importIdentifier); }, [importIdentifier]);
+  useEffect(() => { persist("importDescription", importDescription); }, [importDescription]);
+  useEffect(() => { persist("importResult", importResult); }, [importResult]);
+  useEffect(() => { persist("importError", importError); }, [importError]);
 
   const createKnowledge = useMutation({
     mutationFn: async (data: any) => {
       const pid = await ensureProject();
       return api.knowledge.create({ ...data, projectId: pid });
     },
-    onSuccess: () => setUnpackKnowledgeCount((c) => c + 1),
+    onSuccess: (_, variables) => {
+      setUnpackKnowledgeCount((c) => c + 1);
+      queryClient.invalidateQueries({ queryKey: ["knowledge-stats", projectId] });
+      if (variables.type === "link") {
+        setLinkSaved(true);
+        setTimeout(() => setLinkSaved(false), 3000);
+      } else if (variables.type === "note") {
+        setNoteSaved(true);
+        setTimeout(() => setNoteSaved(false), 3000);
+      }
+    },
   });
 
   const uploadFile = useMutation({
@@ -175,12 +203,18 @@ export default function UnpackPage() {
         }
       }
       await api.keywords.createBulk(pid, items, true);
-      setGeneratedKeywords(items.map((item) => ({
+      const structured = items.map((item) => ({
         keyword: item.keyword,
         group: item.source.replace("manual:", ""),
         source: item.source,
-      })));
+      }));
+      setGeneratedKeywords(structured);
       setKeywordsEditMode(false);
+      await fetch(`/api/onboarding/${pid}/step/materials`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "done", aiOutput: JSON.stringify(structured) }),
+      });
       queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
     } catch (err: any) {
       setError(err?.message || "Ошибка сохранения ключевых слов");
@@ -502,6 +536,7 @@ export default function UnpackPage() {
   const [productsResult, setProductsResult] = useState<any[]>([]);
   const [productsDeletedIds, setProductsDeletedIds] = useState<string[]>([]);
   const [productsSaving, setProductsSaving] = useState(false);
+  const [productsSaved, setProductsSaved] = useState(false);
   const [productsEditing, setProductsEditing] = useState<{ i: number; field: string } | null>(null);
   const [productsEditBuffer, setProductsEditBuffer] = useState("");
 
@@ -594,6 +629,13 @@ export default function UnpackPage() {
         setProductsResult((prev) => prev.map((p, i) => (newIds[i] ? { ...p, id: newIds[i] } : p)));
       }
       setProductsDeletedIds([]);
+      await fetch(`/api/onboarding/${pid}/step/products`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "done", aiOutput: JSON.stringify(productsResult) }),
+      });
+      setProductsSaved(true);
+      setTimeout(() => setProductsSaved(false), 3000);
       queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
       queryClient.invalidateQueries({ queryKey: ["products", projectId] });
     } catch (err: any) {
@@ -607,6 +649,7 @@ export default function UnpackPage() {
   const [platformsResult, setPlatformsResult] = useState<any[]>([]);
   const [platformsDeletedIds, setPlatformsDeletedIds] = useState<string[]>([]);
   const [platformsSaving, setPlatformsSaving] = useState(false);
+  const [platformsSaved, setPlatformsSaved] = useState(false);
   const [platformsEditing, setPlatformsEditing] = useState<{ i: number; field: string } | null>(null);
   const [platformsEditBuffer, setPlatformsEditBuffer] = useState("");
   const [showAddPlatformForProduct, setShowAddPlatformForProduct] = useState<string | null>(null);
@@ -688,11 +731,15 @@ export default function UnpackPage() {
         const pl = platformsResult[idx];
         const body: any = {
           projectId: pid,
-          productId: pl.productId || null,
           type: pl.type,
           name: pl.name,
           suggested: pl.suggested || 0,
         };
+        if (pl.productId && pl.id) {
+          // existing platform — productId уже в БД, не шлём (может быть устаревшим)
+        } else if (pl.productId) {
+          body.productId = pl.productId;
+        }
         if (pl.description) body.config = JSON.stringify({ description: pl.description, priority: pl.priority || 99 });
         if (pl.id) {
           try {
@@ -715,6 +762,8 @@ export default function UnpackPage() {
         setPlatformsResult((prev) => prev.map((p, i) => (newIds[i] ? { ...p, id: newIds[i] } : p)));
       }
       setPlatformsDeletedIds([]);
+      setPlatformsSaved(true);
+      setTimeout(() => setPlatformsSaved(false), 3000);
       queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
       queryClient.invalidateQueries({ queryKey: ["platforms", projectId] });
     } catch (err: any) {
@@ -806,6 +855,30 @@ export default function UnpackPage() {
       if (p.customerJourney) try { setHantData(normalizeHantData(JSON.parse(p.customerJourney))); } catch {}
     }).catch(() => {});
   }, [onboardingStatus, projectId]);
+
+  // Load products from API when entering the products step
+  useEffect(() => {
+    if (step !== "products" || !projectId) return;
+    api.products.listByProject(projectId).then((data) => {
+      if (data?.length > 0) {
+        setProductsResult((prev) => {
+          if (prev.length > 0) return prev;
+          return data.map((p: any) => {
+            let parsedValues: any = {};
+            try { if (p.values) parsedValues = JSON.parse(p.values); } catch {}
+            return {
+              id: p.id,
+              name: p.name,
+              description: p.description || "",
+              audienceDescription: parsedValues.audienceDescription || "",
+              pains: parsedValues.pains || [],
+              gains: parsedValues.gains || [],
+            };
+          });
+        });
+      }
+    }).catch(() => {});
+  }, [step, projectId]);
 
   // Load products & platforms from API when entering the platforms step
   useEffect(() => {
@@ -1069,8 +1142,9 @@ export default function UnpackPage() {
                     <textarea className="input" rows={4} placeholder="Текст заметки (или описание проекта своими словами)" value={noteContent} onChange={(e) => setNoteContent(e.target.value)} />
                     <button className="btn btn-primary" onClick={() => { if (!noteTitle.trim()) return; createKnowledge.mutate({ type: "note", title: noteTitle, content: noteContent }); setNoteTitle(""); setNoteContent(""); }}
                       disabled={createKnowledge.isPending || !noteTitle.trim()} style={{ alignSelf: "flex-start" }}>
-                      ✏️ Добавить заметку
+                      {createKnowledge.isPending ? "⏳ Сохранение..." : "✏️ Добавить заметку"}
                     </button>
+                    {noteSaved && <span style={{ color: "var(--green)", fontSize: 13 }}>✅ Заметка сохранена</span>}
                   </div>
                 </div>
                 <div className="card">
@@ -1079,8 +1153,9 @@ export default function UnpackPage() {
                     <input className="input" placeholder="URL" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} />
                       <button className="btn btn-primary" onClick={() => { if (!linkTitle.trim() || !linkUrl.trim()) return; createKnowledge.mutate({ type: "link", title: linkTitle, content: linkUrl, sourceUrl: linkUrl }); setLinkTitle(""); setLinkUrl(""); }}
                       disabled={createKnowledge.isPending || !linkTitle.trim() || !linkUrl.trim()} style={{ alignSelf: "flex-start" }}>
-                      🔗 Добавить ссылку
+                      {createKnowledge.isPending ? "⏳ Сохранение..." : "🔗 Добавить ссылку"}
                     </button>
+                    {linkSaved && <span style={{ color: "var(--green)", fontSize: 13 }}>✅ Ссылка сохранена</span>}
                   </div>
                 </div>
               </div>
@@ -1135,7 +1210,7 @@ export default function UnpackPage() {
                           importPlatform === "youtube" ? "@channel_username или https://youtube.com/@channel" :
                           importPlatform === "vk" ? "@public_page или https://vk.com/public_page" :
                           importPlatform === "zen" ? "https://dzen.ru/media/... или https://dzen.ru/a/..." :
-                          "https://www.instagram.com/p/XXXXX/"
+                          "@username или https://www.instagram.com/username/"
                         }
                         value={importIdentifier}
                         onChange={(e) => setImportIdentifier(e.target.value)}
@@ -1159,9 +1234,13 @@ export default function UnpackPage() {
                           setImportResult(null);
                           try {
                             const pid = await ensureProject();
-                            const urlMap: Record<string, string> = { "telegram": "t.me", "youtube": "youtube.com", "vk": "vk.com", "m.vk": "m.vk.com" };
                             let cleaned = importIdentifier.trim();
-                            if (importPlatform === "telegram" || importPlatform === "youtube" || importPlatform === "vk") {
+                            if (importPlatform === "instagram") {
+                              cleaned = cleaned.replace(/^@/, "");
+                              if (!/^https?:\/\//i.test(cleaned)) {
+                                cleaned = `https://www.instagram.com/${cleaned}/`;
+                              }
+                            } else if (importPlatform === "telegram" || importPlatform === "youtube" || importPlatform === "vk") {
                               cleaned = cleaned.replace(/^https:\/\/(t\.me|youtube\.com|vk\.com|m\.vk\.com)\//, "");
                             }
                             const body: any = {
@@ -1192,7 +1271,7 @@ export default function UnpackPage() {
                       )}
                       {importPlatform === "instagram" && (
                         <p className="text-xs text-dim" style={{ marginTop: 6 }}>
-                          Вставьте ссылку на пост Instagram. caption загрузится автоматически, для рилсов и каруселей добавьте описание визуала.
+                          Введите @username аккаунта или ссылку на пост Instagram. Для аккаунта загрузится профиль, для поста — caption. Для рилсов и каруселей добавьте описание визуала.
                         </p>
                       )}
                     </div>
@@ -1293,8 +1372,13 @@ export default function UnpackPage() {
               </div>
             )}
 
-            {unpackTab !== "interview" && unpackTab !== "import" && (
-              <div style={{ marginTop: 20, display: "flex", gap: 12, justifyContent: "center" }}>
+            {unpackTab !== "interview" && (
+              <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 12, alignItems: "center" }}>
+                {importResult && unpackTab === "import" && (
+                  <p className="text-xs text-dim">
+                    ✅ Посты импортированы. Нажмите «Извлечь ключевые слова», чтобы проанализировать все загруженные материалы, и переходите к следующему шагу.
+                  </p>
+                )}
                 <button className="btn btn-primary" onClick={handleGenerateKeywords} disabled={keywordsLoading || (unpackKnowledgeCount === 0 && realKnowledgeCount === 0)}>
                   {keywordsLoading ? "⏳ AI извлекает..." : "Извлечь ключевые слова"}
                 </button>
@@ -1910,8 +1994,11 @@ export default function UnpackPage() {
                               </div>
                             ) : (
                               <div style={{ fontSize: 13, lineHeight: 1.5 }}>
-                                {Array.isArray(value) ? value.map((item: string, j: number) => <div key={j}>• {item}</div>)
-                                : <span>{displayValue || "—"}</span>}
+                                {Array.isArray(value)
+                                  ? value.length > 0
+                                    ? value.map((item: string, j: number) => <div key={j}>• {item}</div>)
+                                    : <span style={{ color: "var(--text-dim)", fontStyle: "italic" }}>—</span>
+                                  : <span>{displayValue || "—"}</span>}
                               </div>
                             )}
                           </div>
@@ -1959,6 +2046,7 @@ export default function UnpackPage() {
                   >
                     {productsSaving ? "⏳ Сохранение..." : "Сохранить"}
                   </button>
+                  {productsSaved && <div style={{ marginTop: 8, color: "var(--green)", fontSize: 13 }}>✅ Продукты сохранены</div>}
                 </div>
               </div>
             )}
@@ -2111,6 +2199,7 @@ export default function UnpackPage() {
                   >
                     {platformsSaving ? "⏳ Сохранение..." : "Сохранить"}
                   </button>
+                  {platformsSaved && <div style={{ marginTop: 8, color: "var(--green)", fontSize: 13 }}>✅ Площадки сохранены</div>}
                 </div>
               </div>
             )}

@@ -1151,7 +1151,8 @@ export default function StrategyPage() {
       {/* Chat panel */}
       {showChat && projectId && (
         <ChatPanel projectId={projectId} contextStep={chatContext} forceOpen={true}
-          onClose={() => setShowChat(false)} />
+          onClose={() => setShowChat(false)}
+          pageContext={`Стратегия, шаг «${chatContext}»`} />
       )}
     </div>
   );

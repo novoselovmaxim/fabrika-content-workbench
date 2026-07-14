@@ -30,7 +30,7 @@ chatRouter.get("/project/:projectId", (req, res) => {
 // POST / — send a message, get AI response
 chatRouter.post("/", async (req, res) => {
   try {
-    const { projectId, platformId, sessionId, content, contextStep } = req.body;
+    const { projectId, platformId, sessionId, content, contextStep, pageContext } = req.body;
 
     if (!projectId || !sessionId || !content) {
       return res.status(400).json({ error: "projectId, sessionId, and content are required" });
@@ -77,10 +77,12 @@ chatRouter.post("/", async (req, res) => {
       }
     } catch {}
 
+    const pageContextHint = pageContext ? `\n\nПользователь сейчас на экране: ${pageContext}. Учитывай этот контекст в ответе.` : "";
     const SYSTEM_PROMPT_CHAT =
       "Ты — ассистент контент-стратега. Помогаешь разрабатывать стратегию контента для социальных сетей. " +
       "Отвечай на русском языке. Будь конкретным, практичным и полезным. " +
-      "Если нужно предложить контент, формулируй готовые варианты.";
+      "Если нужно предложить контент, формулируй готовые варианты." +
+      pageContextHint;
 
     const PROMPT_TEMPLATES: Record<string, { system: string; user: (data: any) => string }> = {
       generate_strategy: {
@@ -327,16 +329,18 @@ ${(data.funnels || []).map((f: any) => {
       },
     };
 
-    // Load full project context for all strategy-related wizard actions
+    // Load full project context for all messages (not just wizard actions)
+    const projectCtx = projectId ? await buildProjectContext(projectId, { snippetChars: 4000 }) : "";
+
     if (wizardAction && projectId) {
-      wizardData.projectContext = await buildProjectContext(projectId, { snippetChars: 4000 });
+      wizardData.projectContext = projectCtx;
     }
 
     const useTemplate = wizardAction ? PROMPT_TEMPLATES[wizardAction] : null;
     const systemPrompt = useTemplate?.system || SYSTEM_PROMPT_CHAT;
     const promptText = useTemplate
       ? useTemplate.user(wizardData)
-      : `Вот история диалога с пользователем:\n\n${conversationText}\n\nАссистент:`;
+      : `Вот история диалога с пользователем:\n\n${conversationText}${projectCtx}\n\nАссистент:`;
 
     // 4. Pick model based on context step
     const taskMap: Record<string, string> = {

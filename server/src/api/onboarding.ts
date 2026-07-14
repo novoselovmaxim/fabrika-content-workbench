@@ -1141,12 +1141,28 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
         }
       } else {
         try {
-          const { fetchInstagramProfile, isApifyConfigured } = await import("../services/apify.js");
+          const { fetchInstagramProfile, fetchInstagramPosts, isApifyConfigured } = await import("../services/apify.js");
           if (isApifyConfigured()) {
-            const profile = await fetchInstagramProfile(identifier.replace(/^@/, ""));
+            let username = identifier.replace(/^@/, "");
+            const urlMatch = username.match(/instagram\.com\/([^/?]+)/);
+            if (urlMatch) username = urlMatch[1];
+            username = username.replace(/\/+$/, "");
+            const rawPosts = await fetchInstagramPosts(username, 20);
+            if (!rawPosts) {
+              console.error(`[onboarding] fetchInstagramPosts returned null for "${username}"`);
+            }
+            const profile = await fetchInstagramProfile(username);
+            const posts = (rawPosts || []).map((p) => ({
+              text: p.caption || "",
+              title: p.caption?.slice(0, 100) || `Instagram ${p.code || ""}`,
+              url: p.url || "",
+              date: p.createdAt || "",
+              likes: p.likeCount || 0,
+              comments: p.commentCount || 0,
+            }));
             if (profile) {
               fetchData = {
-                posts: [],
+                posts,
                 channel: {
                   title: profile.fullName || profile.username || identifier,
                   name: profile.username || identifier,
@@ -1154,10 +1170,10 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
                 },
               };
             } else {
-              fetchData = { posts: [], channel: { title: identifier, name: identifier, subscriberCount: 0 } };
+              fetchData = { posts, channel: { title: identifier, name: identifier, subscriberCount: 0 } };
             }
           } else {
-            fetchData = { posts: [], channel: { title: identifier, name: identifier, subscriberCount: 0 } };
+            fetchData = { posts: [], channel: { title: identifier, name: identifier, subscriberCount: 0 }, _noApify: true };
           }
         } catch (e: any) {
           return res.status(502).json({ error: `Instagram: ${e.message}` });
@@ -1187,19 +1203,28 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
     // 2. Save each post as knowledge entry
     const posts: any[] = fetchData.posts || [];
     if (posts.length === 0) {
+      let message = "Канал найден, но посты не получены";
+      if (fetchData._noApify) {
+        message = "Apify не настроен. Добавьте APIFY_API_KEY в настройках, чтобы импортировать посты.";
+      }
       return res.status(200).json({
         imported: 0,
-        message: "Канал найден, но посты не получены",
+        message,
         channel: fetchData.channel || null,
         analysis: null,
       });
     }
 
+    const savedPosts: { text: string; title: string; url?: string; date?: string; likes?: number; comments?: number }[] = [];
     const knowledgeIds: string[] = [];
     for (const post of posts) {
-      const id = uuid();
       const text = post.text || "";
       const title = post.title || text.slice(0, 100);
+      if (!text && !post.url) {
+        console.error(`[onboarding] Skipping empty post (${platform}/${identifier}): no text, no url`);
+        continue;
+      }
+      const id = uuid();
       const tags = JSON.stringify({
         source: platform,
         identifier,
@@ -1214,17 +1239,26 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
         id,
         projectId,
         type: "channel_post",
-        title,
+        title: title || `${platform} пост`,
         content: text,
         sourceUrl: post.url || post.link || null,
         tags,
         createdAt: new Date().toISOString(),
       }).run();
       knowledgeIds.push(id);
+      savedPosts.push({ text, title, url: post.url, date: post.date, likes: post.likes, comments: post.comments });
     }
 
-    // 3. Run AI analysis on imported posts
-    const combinedTexts = posts.map((p, i) => `[Пост ${i + 1}] ${p.text || ""}`).join("\n\n---\n\n");
+    // 3. Run AI analysis on saved posts
+    if (savedPosts.length === 0) {
+      return res.status(200).json({
+        imported: 0,
+        message: "Посты не содержат текста для анализа",
+        channel: fetchData.channel || null,
+        analysis: null,
+      });
+    }
+    const combinedTexts = savedPosts.map((p, i) => `[Пост ${i + 1}] ${p.text || ""}`).join("\n\n---\n\n");
     const channelInfo = fetchData.channel || {};
     const model = getModelForTask("strategy");
     const result = await generate({
@@ -1236,11 +1270,11 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
         identifier,
         channelName: channelInfo.title || channelInfo.name || identifier,
         subscriberCount: channelInfo.subscriberCount || channelInfo.subscribers || 0,
-        postCount: posts.length,
-        posts: posts.map((p) => ({
+        postCount: savedPosts.length,
+        posts: savedPosts.map((p) => ({
           text: (p.text || "").slice(0, 1500),
-          date: p.date || p.publishedAt || "",
-          views: p.views || p.viewCount || 0,
+          date: p.date || "",
+          views: 0,
         })),
       }),
       systemPrompt: `Ты — контент-стратег. Проанализируй посты канала и верни ТОЛЬКО JSON.
@@ -1321,7 +1355,7 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
     )).run();
 
     res.json({
-      imported: posts.length,
+      imported: savedPosts.length,
       channel: {
         name: channelInfo.title || channelInfo.name || identifier,
         subscribers: channelInfo.subscriberCount || channelInfo.subscribers || 0,

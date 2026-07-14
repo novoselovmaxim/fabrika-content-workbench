@@ -18,3 +18,5 @@ ig-fetcher.spec
 __pycache__/
 scripts/dist/
 .venv/
+graphify-out/
+PENDING_CHANGES.md

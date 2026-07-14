@@ -8,9 +8,10 @@ interface ChatPanelProps {
   sessionId?: string;
   forceOpen?: boolean;
   onClose?: () => void;
+  pageContext?: string;
 }
 
-export default function ChatPanel({ projectId, platformId, contextStep, forceOpen, onClose }: ChatPanelProps) {
+export default function ChatPanel({ projectId, platformId, contextStep, forceOpen, onClose, pageContext }: ChatPanelProps) {
   const [open, setOpen] = useState(forceOpen ?? false);
   const [input, setInput] = useState("");
   const [localSessionId] = useState(() => crypto.randomUUID());
@@ -37,6 +38,7 @@ export default function ChatPanel({ projectId, platformId, contextStep, forceOpe
           sessionId: localSessionId,
           content: text,
           contextStep: contextStep || null,
+          pageContext: pageContext || null,
         }),
       }).then((r) => r.json()),
     onSuccess: () => {
@@ -93,7 +95,7 @@ export default function ChatPanel({ projectId, platformId, contextStep, forceOpe
         <div>
           <span style={{ fontWeight: 600, fontSize: 14 }}>🤖 AI Ассистент</span>
           <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
-            {contextStep ? `Шаг: ${contextStep}` : "Общий чат"}
+            {pageContext ? pageContext : contextStep ? `Шаг: ${contextStep}` : "Общий чат"}
           </div>
         </div>
         <button className="btn btn-ghost" onClick={() => { setOpen(false); onClose?.(); }} style={{ fontSize: 18 }}>

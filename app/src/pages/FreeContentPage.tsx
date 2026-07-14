@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { getStoredProjectId, getStoredPlatformId } from "../lib/project";
 import { useNavigate } from "react-router-dom";
+import ChatPanel from "../components/ChatPanel";
 
 const STEPS = [
   { key: "rubric", label: "Рубрика" },
@@ -25,6 +26,7 @@ export default function FreeContentPage() {
   const [manualTopicDesc, setManualTopicDesc] = useState("");
   const [scheduledDate, setScheduledDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [error, setError] = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(false);
 
   const { data: rubrics } = useQuery({
     queryKey: ["rubrics", projectId, platformId],
@@ -361,9 +363,14 @@ export default function FreeContentPage() {
 
       {/* Navigation */}
       <div className="flex items-center justify-between" style={{ marginTop: 16 }}>
-        <button className="btn btn-ghost" onClick={prevStep} disabled={step === 0}>
-          ← Назад
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="btn btn-ghost" onClick={prevStep} disabled={step === 0}>
+            ← Назад
+          </button>
+          <button className="btn btn-ghost" onClick={() => setShowChat(!showChat)}>
+            {showChat ? "✕ Закрыть чат" : "💬 Открыть чат с AI"}
+          </button>
+        </div>
         <div className="text-xs text-dim">
           Шаг {step + 1} из {STEPS.length}
         </div>
@@ -373,6 +380,15 @@ export default function FreeContentPage() {
           </button>
         ) : null}
       </div>
+
+      {showChat && (
+        <ChatPanel
+          projectId={projectId}
+          forceOpen={true}
+          onClose={() => setShowChat(false)}
+          pageContext={`Свободный контент, шаг «${STEPS[step].label}»`}
+        />
+      )}
     </div>
   );
 }

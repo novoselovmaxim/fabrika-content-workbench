@@ -50,6 +50,7 @@ function ProjectSelector() {
       if (getStoredProjectId() === deletedId) {
         clearStoredProjectId();
         clearStoredPlatformId();
+        clearStoredProductId();
       }
     },
   });
