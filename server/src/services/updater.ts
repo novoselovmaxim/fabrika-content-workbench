@@ -3,6 +3,7 @@ import fs from "fs";
 import { INSTALL_DIR } from "../paths.js";
 
 const GITHUB_REPO = "novoselovmaxim/fabrika-content-workbench";
+const VPS_BASE = "https://fabric.maxnov.ru/downloads";
 
 export function getCurrentVersion(): string {
   try {
@@ -12,20 +13,14 @@ export function getCurrentVersion(): string {
   }
 }
 
-function getPlatformDownloadUrl(tag: string, assets: any[]): string {
-  const base = `https://github.com/${GITHUB_REPO}/releases/download/${tag}`;
+function getPlatformDownloadUrl(version: string): string {
   const plat = process.platform;  // win32 | darwin
   const arch = process.arch;      // x64 | arm64
-  if (plat === "win32") {
-    const asset = assets.find((a: any) => a.name.endsWith(".exe") && a.name.includes("Setup"));
-    return asset?.browser_download_url || `${base}/Fabrika.Content.Setup.${tag.replace(/^v/, "")}.exe`;
-  }
-  if (arch === "arm64") {
-    const asset = assets.find((a: any) => a.name.endsWith("-arm64.dmg"));
-    return asset?.browser_download_url || `${base}/Fabrika.Content-${tag.replace(/^v/, "")}-arm64.dmg`;
-  }
-  const asset = assets.find((a: any) => a.name.endsWith("-x64.dmg"));
-  return asset?.browser_download_url || `${base}/Fabrika.Content-${tag.replace(/^v/, "")}-x64.dmg`;
+  if (plat === "win32")
+    return `${VPS_BASE}/Fabrika.Content.Setup.${version}.exe`;
+  if (arch === "arm64")
+    return `${VPS_BASE}/Fabrika.Content-${version}-arm64.dmg`;
+  return `${VPS_BASE}/Fabrika.Content-${version}-x64.dmg`;
 }
 
 export async function checkForUpdates(): Promise<{
@@ -46,11 +41,14 @@ export async function checkForUpdates(): Promise<{
     const data = await resp.json();
     const latest = (data.tag_name || "").replace(/^v/, "");
     const hasUpdate = compareVersions(latest, current) > 0;
-    const releaseUrl =
-      data.html_url ||
-      `https://github.com/${GITHUB_REPO}/releases/latest`;
-    const downloadUrl = getPlatformDownloadUrl(data.tag_name || latest, data.assets || []);
-    return { hasUpdate, latest, current, releaseUrl, downloadUrl };
+    const downloadUrl = getPlatformDownloadUrl(latest);
+    return {
+      hasUpdate,
+      latest,
+      current,
+      releaseUrl: `https://fabric.maxnov.ru`,
+      downloadUrl,
+    };
   } catch {
     return { hasUpdate: false, latest: current, current, releaseUrl: "", downloadUrl: "" };
   }

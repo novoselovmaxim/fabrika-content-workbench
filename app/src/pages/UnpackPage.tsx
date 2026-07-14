@@ -120,6 +120,7 @@ export default function UnpackPage() {
   const [linkUrl, setLinkUrl] = useState("");
   const [linkSaved, setLinkSaved] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
+  const [fileSaved, setFileSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [generatedKeywords, setGeneratedKeywords] = useState<any[]>(() => ss("generatedKeywords", []));
   const [keywordsLoading, setKeywordsLoading] = useState(false);
@@ -165,6 +166,15 @@ export default function UnpackPage() {
     },
   });
 
+  function formatFileSize(bytes: number): string {
+    if (!bytes) return "0 Б";
+    const units = ["Б", "КБ", "МБ", "ГБ"];
+    let i = 0;
+    let size = bytes;
+    while (size >= 1024 && i < units.length - 1) { size /= 1024; i++; }
+    return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+  }
+
   const uploadFile = useMutation({
     mutationFn: async (file: File) => {
       const pid = await ensureProject();
@@ -173,7 +183,21 @@ export default function UnpackPage() {
       fd.append("projectId", pid);
       return api.knowledge.upload(fd);
     },
-    onSuccess: () => setUnpackKnowledgeCount((c) => c + 1),
+    onSuccess: () => {
+      setUnpackKnowledgeCount((c) => c + 1);
+      queryClient.invalidateQueries({ queryKey: ["knowledge-stats", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["knowledge", projectId] });
+      setFileSaved(true);
+      setTimeout(() => setFileSaved(false), 3000);
+    },
+  });
+
+  const deleteKnowledgeFile = useMutation({
+    mutationFn: (id: string) => api.knowledge.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["knowledge-stats", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["knowledge", projectId] });
+    },
   });
 
   const handleGenerateKeywords = async () => {
@@ -781,6 +805,24 @@ export default function UnpackPage() {
   });
   const realKnowledgeCount = knowledgeStats?.total ?? 0;
 
+  const { data: uploadedFiles = [] } = useQuery({
+    queryKey: ["knowledge", projectId, "file"],
+    queryFn: () => api.knowledge.list(projectId!, { type: "file" }),
+    enabled: !!projectId,
+  });
+
+  const { data: uploadedNotes = [] } = useQuery({
+    queryKey: ["knowledge", projectId, "note"],
+    queryFn: () => api.knowledge.list(projectId!, { type: "note" }),
+    enabled: !!projectId,
+  });
+
+  const { data: uploadedLinks = [] } = useQuery({
+    queryKey: ["knowledge", projectId, "link"],
+    queryFn: () => api.knowledge.list(projectId!, { type: "link" }),
+    enabled: !!projectId,
+  });
+
   // ── Saved competitors (for complete tab) ──
   const { data: savedCompetitorsList } = useQuery({
     queryKey: ["saved-competitors", projectId],
@@ -1131,6 +1173,26 @@ export default function UnpackPage() {
                 <input ref={fileInputRef} type="file" style={{ display: "none" }} multiple accept=".docx,.pptx,.xlsx,.pdf,.html,.htm,.txt,.md,.csv,.json"
                   onChange={(e) => { const files = Array.from(e.target.files || []); for (const f of files) uploadFile.mutate(f); }}
                 />
+                {fileSaved && <p className="text-sm" style={{ color: "var(--green)", marginTop: 8 }}>✅ Файл загружен</p>}
+                {uploadedFiles.length > 0 && (
+                  <div className="flex flex-col gap-2" style={{ marginTop: 16 }}>
+                    <p className="text-xs text-dim" style={{ fontWeight: 600 }}>Загруженные файлы ({uploadedFiles.length})</p>
+                    {uploadedFiles.map((f: any) => (
+                      <div key={f.id} className="card" style={{ padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <div className="flex items-center gap-2" style={{ minWidth: 0, flex: 1 }}>
+                          <span>📄</span>
+                          <span className="text-sm" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.title}</span>
+                          {f.wordCount > 0 && <span className="text-xs text-dim">· {f.wordCount} слов</span>}
+                          {f.fileSize > 0 && <span className="text-xs text-dim">· {formatFileSize(f.fileSize)}</span>}
+                        </div>
+                        <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px", color: "var(--red)", flexShrink: 0 }}
+                          onClick={() => { if (confirm(`Удалить "${f.title}"?`)) deleteKnowledgeFile.mutate(f.id); }}>
+                          🗑
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1158,6 +1220,53 @@ export default function UnpackPage() {
                     {linkSaved && <span style={{ color: "var(--green)", fontSize: 13 }}>✅ Ссылка сохранена</span>}
                   </div>
                 </div>
+                {uploadedNotes.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs text-dim" style={{ fontWeight: 600 }}>Сохранённые заметки ({uploadedNotes.length})</p>
+                    {uploadedNotes.map((n: any) => (
+                      <div key={n.id} className="card" style={{ padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
+                          <div className="flex items-center gap-2">
+                            <span>✏️</span>
+                            <span className="text-sm" style={{ fontWeight: 600 }}>{n.title}</span>
+                            {n.wordCount > 0 && <span className="text-xs text-dim">· {n.wordCount} слов</span>}
+                          </div>
+                          {(n.content || "").length > 0 && (
+                            <div className="text-xs text-dim" style={{ marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {(n.content || "").slice(0, 200)}
+                            </div>
+                          )}
+                        </div>
+                        <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px", color: "var(--red)", flexShrink: 0 }}
+                          onClick={() => { if (confirm(`Удалить "${n.title}"?`)) deleteKnowledgeFile.mutate(n.id); }}>
+                          🗑
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {uploadedLinks.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs text-dim" style={{ fontWeight: 600 }}>Сохранённые ссылки ({uploadedLinks.length})</p>
+                    {uploadedLinks.map((l: any) => (
+                      <div key={l.id} className="card" style={{ padding: "8px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <div style={{ minWidth: 0, flex: 1, overflow: "hidden" }}>
+                          <div className="flex items-center gap-2">
+                            <span>🔗</span>
+                            <span className="text-sm" style={{ fontWeight: 600 }}>{l.title}</span>
+                          </div>
+                          <div className="text-xs" style={{ marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--accent)" }}>
+                            {l.content}
+                          </div>
+                        </div>
+                        <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px", color: "var(--red)", flexShrink: 0 }}
+                          onClick={() => { if (confirm(`Удалить "${l.title}"?`)) deleteKnowledgeFile.mutate(l.id); }}>
+                          🗑
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 

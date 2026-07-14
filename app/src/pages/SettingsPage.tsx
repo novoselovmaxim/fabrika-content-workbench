@@ -381,6 +381,23 @@ export default function SettingsPage() {
 
   const { data: updateData } = useUpdater();
 
+  function ContactLink({ label, href, children }: { label: string; href: string; children: React.ReactNode }) {
+    return (
+      <div>
+        <span className="text-dim">{label}: </span>
+        <a
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            const fn = window.electronAPI?.openExternal || ((u: string) => window.open(u, "_blank"));
+            fn(href);
+          }}
+          style={{ color: "var(--accent)", textDecoration: "none", cursor: "pointer" }}
+        >{children}</a>
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="page-header">
@@ -422,37 +439,37 @@ export default function SettingsPage() {
             <div className="card-header">
               <span className="card-title">Обновления</span>
             </div>
-            {updateData?.hasUpdate ? (
-              <div className="flex flex-col gap-4">
-                <p className="text-sm" style={{ color: "var(--accent)", fontWeight: 600 }}>
-                  Доступна новая версия {updateData.latest}
-                </p>
-                <p className="text-xs text-dim">
-                  Текущая версия: {updateData.current}
-                </p>
-                <button
-                  onClick={() => {
-                    const url = updateData.downloadUrl || updateData.releaseUrl;
-                    if (window.electronAPI?.openExternal) {
-                      window.electronAPI.openExternal(url);
-                    } else {
-                      window.open(url, "_blank");
-                    }
-                  }}
-                  className="btn btn-primary"
-                  style={{ alignSelf: "flex-start", textDecoration: "none", border: "none", cursor: "pointer" }}
-                >
-                  📥 Скачать {updateData.latest}
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-4">
-                <p className="text-sm text-dim">✓ У вас актуальная версия</p>
-                <p className="text-xs text-dim">
-                  Проверка обновлений происходит автоматически. При появлении новой версии здесь появится уведомление.
-                </p>
-              </div>
-            )}
+            <div className="flex flex-col gap-4">
+              <p className="text-xs text-dim">Текущая версия: {updateData?.current || "..."}</p>
+              {updateData?.hasUpdate ? (
+                <>
+                  <p className="text-sm" style={{ color: "var(--accent)", fontWeight: 600 }}>
+                    Доступна новая версия {updateData.latest}
+                  </p>
+                  <button
+                    onClick={() => {
+                      const url = updateData.downloadUrl || updateData.releaseUrl;
+                      if (window.electronAPI?.openExternal) {
+                        window.electronAPI.openExternal(url);
+                      } else {
+                        window.open(url, "_blank");
+                      }
+                    }}
+                    className="btn btn-primary"
+                    style={{ alignSelf: "flex-start", textDecoration: "none", border: "none", cursor: "pointer" }}
+                  >
+                    📥 Скачать {updateData.latest}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-dim">✓ У вас актуальная версия</p>
+                  <p className="text-xs text-dim">
+                    Проверка обновлений происходит автоматически. При появлении новой версии здесь появится уведомление.
+                  </p>
+                </>
+              )}
+            </div>
           </div>
         </div>
         </div>
@@ -573,17 +590,31 @@ export default function SettingsPage() {
 
         <ComplianceSection />
 
-        {/* Export */}
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title">Экспорт данных</span>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          {/* Export */}
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Экспорт данных</span>
+            </div>
+            <div className="flex flex-col gap-4">
+              <p className="text-sm text-dim">
+                Экспорт контент-плана, постов и ассетов в файловую систему.
+              </p>
+              <button className="btn btn-ghost" style={{ alignSelf: "flex-start" }}>📦 Экспорт в JSON</button>
+              <button className="btn btn-ghost" style={{ alignSelf: "flex-start" }}>📁 Экспорт папки публикации</button>
+            </div>
           </div>
-          <div className="flex flex-col gap-4">
-            <p className="text-sm text-dim">
-              Экспорт контент-плана, постов и ассетов в файловую систему.
-            </p>
-            <button className="btn btn-ghost" style={{ alignSelf: "flex-start" }}>📦 Экспорт в JSON</button>
-            <button className="btn btn-ghost" style={{ alignSelf: "flex-start" }}>📁 Экспорт папки публикации</button>
+
+          {/* Contacts */}
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Контакты</span>
+            </div>
+            <div className="flex flex-col gap-4 text-sm">
+              <ContactLink label="Сайт" href="https://fabric.maxnov.ru">fabric.maxnov.ru</ContactLink>
+              <ContactLink label="Telegram" href="https://t.me/novoselovmaxim">@novoselovmaxim</ContactLink>
+              <ContactLink label="Email" href="mailto:maxim.novoselov@gmail.com">maxim.novoselov@gmail.com</ContactLink>
+            </div>
           </div>
         </div>
 

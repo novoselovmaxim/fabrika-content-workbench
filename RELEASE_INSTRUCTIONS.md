@@ -4,27 +4,37 @@
 
 - **GitHub repo:** `novoselovmaxim/fabrika-content-workbench`
 - **Website:** `https://fabric.maxnov.ru`
-- **VPS:** `root@80.87.111.142` (key: `~/.ssh/novel_server_key`)
+- **VPS:** `root@80.87.111.142` (password auth)
 - **VPS web root:** `/var/www/fabric/`
 - **VPS downloads dir:** `/var/www/fabric/downloads/`
+
+All download links (in-app updater, landing page, version.json) point to **VPS**, not GitHub. GitHub is used only for CI builds and release assets.
+
+**File naming convention on VPS:**
+
+| File | Format |
+|------|--------|
+| Intel DMG | `Fabrika.Content-{version}-x64.dmg` |
+| Intel ZIP | `Fabrika.Content-{version}-x64.zip` |
+| ARM DMG | `Fabrika.Content-{version}-arm64.dmg` |
+| Windows EXE | `Fabrika.Content.Setup.{version}.exe` |
 
 ## Version locations to bump
 
 | File | How |
 |---|---|
 | `package.json` (root) | `"version": "X.Y.Z"` |
+| `package-lock.json` (root, 3 places) | `"version": "0.1.0"` → `"X.Y.Z"` |
 | `app/package.json` | `"version": "X.Y.Z"` |
 | `server/package.json` | `"version": "X.Y.Z"` |
 | `version.txt` | `X.Y.Z` (plain text) |
-| `index-fabric.html` (landing page) | `var tag = 'vX.Y.Z'` in fallback (line ~2162) |
-| `manual.html` | visible version numbers in copy |
 
 ## Step-by-step
 
 ### 1. Bump version
 
 ```bash
-# Edit all 5 files above
+# Edit all 5 local files above
 # Then commit & tag
 git add -A
 git commit -m "v1.2.0"
@@ -40,93 +50,82 @@ CI (`release.yml`) builds:
 
 Both are attached to the GitHub release automatically by `softprops/action-gh-release`.
 
+```bash
+# Monitor CI
+gh run list --repo novoselovmaxim/fabrika-content-workbench --limit 5
+
+# Wait for success, then download artifacts
+gh release download vX.Y.Z --repo novoselovmaxim/fabrika-content-workbench --dir /tmp/vX.Y.Z
+```
+
 ### 3. Build macOS Intel locally
 
 ```bash
 npm run dist:mac
 ```
 
-This produces `release/electron/Fabrika.Content-X.Y.Z-x64.dmg` and a `.zip`.
+With `artifactName: "Fabrika.Content-${version}-${arch}.${ext}"` in `package.json`, this produces:
+- `release/electron/Fabrika.Content-X.Y.Z-x64.dmg`
+- `release/electron/Fabrika.Content-X.Y.Z-x64.zip`
 
-### 4. Upload Intel build to GitHub release
-
-```bash
-gh release upload vX.Y.Z release/electron/Fabrika.Content-X.Y.Z-x64.dmg
-gh release upload vX.Y.Z release/electron/Fabrika.Content-X.Y.Z-x64.dmg.blockmap
-gh release upload vX.Y.Z "release/electron/Fabrika.Content-X.Y.Z-mac-x64.zip"
-```
-
-### 5. Upload everything to VPS
+Copy Intel files to download dir:
 
 ```bash
-# version.json
-scp -i ~/.ssh/novel_server_key version.json root@80.87.111.142:/var/www/fabric/version.json
-
-# macOS Intel dmg + zip
-scp -i ~/.ssh/novel_server_key "release/electron/Fabrika.Content-X.Y.Z-x64.dmg" root@80.87.111.142:/var/www/fabric/downloads/
-scp -i ~/.ssh/novel_server_key "release/electron/Fabrika.Content-X.Y.Z-mac-x64.zip" root@80.87.111.142:/var/www/fabric/downloads/
-
-# Windows exe (download from GitHub first)
-gh release download vX.Y.Z -p "*.exe" -D /tmp/vXYZ
-scp -i ~/.ssh/novel_server_key /tmp/vXYZ/Fabrika.Content.Setup.X.Y.Z.exe root@80.87.111.142:/var/www/fabric/downloads/
+cp "release/electron/Fabrika.Content-X.Y.Z-x64.dmg" /tmp/vX.Y.Z/
+cp "release/electron/Fabrika.Content-X.Y.Z-x64.zip" /tmp/vX.Y.Z/
 ```
 
-**`version.json` format** on VPS:
+### 4. Upload everything to VPS
 
-```json
+```bash
+# Upload all 4 files
+sshpass -p 'password' scp /tmp/vX.Y.Z/Fabrika.Content-*-x64.dmg root@80.87.111.142:/var/www/fabric/downloads/
+sshpass -p 'password' scp /tmp/vX.Y.Z/Fabrika.Content-*-x64.zip root@80.87.111.142:/var/www/fabric/downloads/
+sshpass -p 'password' scp /tmp/vX.Y.Z/Fabrika.Content-*-arm64.dmg root@80.87.111.142:/var/www/fabric/downloads/
+sshpass -p 'password' scp /tmp/vX.Y.Z/Fabrika.Content.Setup.*.exe root@80.87.111.142:/var/www/fabric/downloads/
+
+# Clean old versions (remove all files from previous version)
+sshpass -p 'password' ssh root@80.87.111.142 \
+  "rm -f /var/www/fabric/downloads/Fabrika.*.PREV_X.Y.Z.* /var/www/fabric/downloads/Fabrika*PREV_X.Y.Z*"
+
+# Update version.json
+sshpass -p 'password' ssh root@80.87.111.142 'cat > /var/www/fabric/version.json << '\''EOF'\''
 {
   "latest": "X.Y.Z",
-  "releaseUrl": "https://github.com/novoselovmaxim/fabrika-content-workbench/releases/tag/vX.Y.Z",
+  "releaseUrl": "https://fabric.maxnov.ru",
   "downloads": {
-    "win": "https://github.com/novoselovmaxim/fabrika-content-workbench/releases/download/vX.Y.Z/Fabrika.Content.Setup.X.Y.Z.exe",
+    "win": "https://fabric.maxnov.ru/downloads/Fabrika.Content.Setup.X.Y.Z.exe",
     "mac": {
-      "x64": "https://github.com/novoselovmaxim/fabrika-content-workbench/releases/download/vX.Y.Z/Fabrika.Content-X.Y.Z-x64.dmg",
-      "arm64": "https://github.com/novoselovmaxim/fabrika-content-workbench/releases/download/vX.Y.Z/Fabrika.Content-X.Y.Z-arm64.dmg"
+      "x64": "https://fabric.maxnov.ru/downloads/Fabrika.Content-X.Y.Z-x64.dmg",
+      "arm64": "https://fabric.maxnov.ru/downloads/Fabrika.Content-X.Y.Z-arm64.dmg"
     }
   }
 }
+EOF'
+
+# Update landing page fallback tag
+sshpass -p 'password' ssh root@80.87.111.142 \
+  "sed -i 's|var tag = '\''v[0-9.]*'\'';|var tag = '\''vX.Y.Z'\'';|' /var/www/fabric/index.html"
+
+# Update manual.html versions
+sshpass -p 'password' ssh root@80.87.111.142 \
+  "sed -i 's|v[0-9.]*<br>|vX.Y.Z<br>|; s|Версия: <strong>v[0-9.]*</strong>|Версия: <strong>vX.Y.Z</strong>|' /var/www/fabric/manual.html"
 ```
-
-### 6. Update website & manual
-
-```bash
-# Landing page
-scp -i ~/.ssh/novel_server_key index-fabric.html root@80.87.111.142:/var/www/fabric/index.html
-
-# Manual
-scp -i ~/.ssh/novel_server_key manual.html root@80.87.111.142:/var/www/fabric/manual.html
-```
-
-### 7. Build and deploy local changes
-
-After any code changes (new features, fixes), rebuild:
-
-```bash
-npm run build
-# Rebuild Electron if needed
-npm run rebuild
-```
-
-No tag push needed for non-release changes.
 
 ## How the update mechanism works
 
-1. **Server** (`server/src/services/updater.ts`) polls GitHub API for latest release.
-2. Returns `{ hasUpdate, latest, current, releaseUrl, downloadUrl }`.
+1. **Server** (`server/src/services/updater.ts`) polls GitHub API for latest release tag name.
+2. Generates download URL pointing to **VPS**: `https://fabric.maxnov.ru/downloads/...`
 3. **Frontend** (`UpdateBanner.tsx`, `SettingsPage.tsx`) shows "Download" button.
-4. Click calls `window.electronAPI.openExternal(url)` — opens system browser for direct download URL.
+4. Click calls `window.electronAPI.openExternal(url)` — opens system browser to download from VPS.
 5. **Landing page** fetches `/version.json` from VPS and sets download buttons.
-6. If `/version.json` fetch fails, **fallback** constructs GitHub URLs from hardcoded version.
+6. If `/version.json` fetch fails, **fallback** constructs VPS URLs from hardcoded version tag.
 
 ## electron-builder config
 
 Root `package.json` → `"build"` key:
-- macOS: `.dmg`, `public.app-category.productivity`
+- macOS: `.dmg` + `.zip`, `public.app-category.productivity`
+  - `artifactName: "Fabrika.Content-${version}-${arch}.${ext}"`
 - Windows: `.exe` (NSIS installer, one-click off, allow custom dir)
+  - `artifactName: "Fabrika.Content.Setup.${version}.${ext}"`
 - Output: `release/electron/`
-
-## SSH key
-
-```bash
-ssh -i ~/.ssh/novel_server_key root@80.87.111.142
-```

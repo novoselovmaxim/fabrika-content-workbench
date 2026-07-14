@@ -46,10 +46,13 @@
       "node_modules/better-sqlite3/**"
     ],
     "win": {
+      "artifactName": "Fabrika.Content.Setup.${version}.${ext}",
       "target": "nsis"
     },
     "mac": {
-      "category": "public.app-category.productivity"
+      "artifactName": "Fabrika.Content-${version}-${arch}.${ext}",
+      "category": "public.app-category.productivity",
+      "target": ["dmg", "zip"]
     },
     "nsis": {
       "oneClick": false,
