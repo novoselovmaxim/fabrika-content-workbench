@@ -26,8 +26,22 @@ strategyRouter.get("/project/:projectId", (req, res) => {
     .all();
 
   // If platformId filter is provided, filter further
+  // If the platform has its own blocks, return only those (no legacy)
+  // Otherwise fall back to legacy blocks (no platform_id)
+  // Deduplicate by title, keep the first block by ordering
   if (platformId && typeof platformId === "string") {
-    query = query.filter((b) => b.platformId === platformId);
+    let filtered = query.filter((b) => b.platformId === platformId);
+    if (filtered.length === 0) {
+      filtered = query.filter((b) => b.platformId === null);
+    }
+    const seen = new Set();
+    query = [];
+    for (const b of filtered) {
+      if (!seen.has(b.title)) {
+        seen.add(b.title);
+        query.push(b);
+      }
+    }
   }
 
   res.json(query);
@@ -124,6 +138,17 @@ strategyRouter.post("/import", upload.single("file"), async (req, res) => {
     // Create strategy blocks in DB
     const now = new Date().toISOString();
     const { platformId } = req.body;
+
+    // Delete existing blocks for this project+platform to avoid duplicates
+    const existing = db
+      .select()
+      .from(strategyBlocks)
+      .where(sql`project_id = ${projectId}${platformId ? sql` AND platform_id = ${platformId}` : sql``}`)
+      .all();
+    for (const b of existing) {
+      db.delete(strategyBlocks).where(sql`id = ${b.id}`).run();
+    }
+
     const created = blocks.map((block, i) => {
       let sectionKey;
       try {

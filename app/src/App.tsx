@@ -1,4 +1,4 @@
-import { Routes, Route, NavLink, useNavigate } from "react-router-dom";
+import { Routes, Route, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { api } from "./lib/api";
@@ -181,6 +181,7 @@ function ProjectSelector() {
 
 function ContextSection() {
   const navigate = useNavigate();
+  const location = useLocation();
   const currentProjectId = getStoredProjectId();
 
   const { data: products } = useQuery({
@@ -229,7 +230,9 @@ function ContextSection() {
     }
   }, [products, selectedProductId]);
 
-  const productPlatforms = (platforms || []).filter((p: any) => p.productId === selectedProductId);
+  const productPlatforms = (platforms || []).filter((p: any) =>
+    !products?.length || p.productId === selectedProductId
+  );
   const activePlatformId = productPlatforms.some((p: any) => p.id === selectedPlatformId)
     ? selectedPlatformId
     : productPlatforms[0]?.id;
@@ -327,7 +330,15 @@ function ContextSection() {
           <select
             className="input"
             value={activePlatformId || ""}
-            onChange={(e) => { setSelectedPlatformId(e.target.value); setStoredPlatformId(e.target.value); }}
+            onChange={(e) => {
+              const pid = e.target.value;
+              setSelectedPlatformId(pid);
+              setStoredPlatformId(pid);
+              const path = location.pathname;
+              if (path !== "/" && path !== "/settings" && path !== "/analytics") {
+                navigate(`${path}?platformId=${pid}`, { replace: true });
+              }
+            }}
             style={{ fontSize: 12, fontWeight: 500 }}
           >
             {productPlatforms.map((p: any) => (
@@ -343,10 +354,10 @@ function ContextSection() {
 
       <div style={{ marginTop: 4 }}>
         <div className="sidebar-section-label">❷  План</div>
-        <NavLink to={`/strategy${qs}`} end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+        <NavLink to={`/strategy${qs}`} className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
           Стратегия
         </NavLink>
-        <NavLink to={`/free-content${qs}`} end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+        <NavLink to={`/free-content${qs}`} className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
           Свободный контент
         </NavLink>
 

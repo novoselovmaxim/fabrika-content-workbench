@@ -142,12 +142,14 @@ export default function StrategyPage() {
         try { sessionStorage.removeItem(`${SAVE_KEY}_projectId`); } catch {}
       }
     }
-    const knownPids = new Set(Object.values(platformMap).map((p: any) => p.id));
-    if (currentPlatformId && !knownPids.has(currentPlatformId)) {
-      setCurrentPlatformId(null);
-      try { sessionStorage.removeItem(`${SAVE_KEY}_currentPlatformId`); } catch {}
+    if (Object.keys(platformMap).length > 0) {
+      const knownPids = new Set(Object.values(platformMap).map((p: any) => p.id));
+      if (currentPlatformId && !knownPids.has(currentPlatformId)) {
+        setCurrentPlatformId(null);
+        try { sessionStorage.removeItem(`${SAVE_KEY}_currentPlatformId`); } catch {}
+      }
     }
-  }, [allProjects]);
+  }, [allProjects, platformMap]);
 
   // Per-platform data
   const [perPlatform, setPerPlatform] = useState<Record<string, { ideas: string[]; blocks: any[]; rubrics: any[]; topics: any[]; selectedFunnelId: string | null }>>(() => loadSaved("perPlatform", {}));
@@ -412,6 +414,10 @@ export default function StrategyPage() {
           contextStep: STEPS[step].key,
         }),
       });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || `Ошибка сервера (${res.status})`);
+      }
       return res.json();
     },
     onSuccess: async (data) => {
@@ -470,7 +476,7 @@ export default function StrategyPage() {
           topics: parsed.topics || prev.topics,
         }));
       } catch (err: any) {
-        setError(err?.message || "Ошибка обработки ответа AI");
+        setError(err?.message || "Ошибка обработки ответа AI. Попробуйте ещё раз.");
       }
     },
   });
@@ -537,31 +543,6 @@ export default function StrategyPage() {
     if (step > 0) { setStep(step - 1); setChatContext(STEPS[step - 1].key); }
   };
 
-  const switchPlatform = (pid: string) => {
-    setCurrentPlatformId(pid);
-    setStoredPlatformId(pid);
-  };
-
-  const platformTabs = Object.keys(platformMap).length > 0 ? (
-    <div className="flex gap-2" style={{ marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
-      {Object.values(platformMap).map((p) => (
-        <button
-          key={p.id}
-          className={`btn ${currentPlatformId === p.id ? "btn-primary" : "btn-ghost"}`}
-          onClick={() => switchPlatform(p.id)}
-          style={{ fontSize: 12, padding: "4px 12px" }}
-        >
-          <span style={{
-            display: "inline-block", width: 8, height: 8, borderRadius: 4,
-            background: PLATFORM_COLORS[p.type] || "var(--accent)",
-            marginRight: 6,
-          }} />
-          {p.name}
-        </button>
-      ))}
-    </div>
-  ) : null;
-
   return (
     <div>
       {/* Progress bar */}
@@ -590,9 +571,6 @@ export default function StrategyPage() {
           }} />
         </div>
       </div>
-
-      {/* Platform tabs (from step 1 onwards) */}
-      {platformTabs}
 
       {/* Error banner */}
       {error && (

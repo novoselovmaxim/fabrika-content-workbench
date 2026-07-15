@@ -3,7 +3,7 @@ import { db } from "../db.js";
 import { chatMessages, strategyBlocks } from "../schema.js";
 import { sql } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
-import { generate, getModelForTask, type GenerateOptions } from "../services/aiGateway.js";
+import { generate, getModelForTask, extractJSON, type GenerateOptions } from "../services/aiGateway.js";
 import { buildProjectContext } from "../services/projectContext.js";
 
 export const chatRouter = Router();
@@ -369,7 +369,6 @@ ${(data.funnels || []).map((f: any) => {
         systemPrompt,
         temperature: useTemplate ? 0.5 : 0.7,
         maxTokens: useTemplate ? 2000 : 1500,
-        responseFormat: useTemplate ? "json" : undefined,
       } as GenerateOptions);
       aiContent = result.content;
     } catch (err: any) {
@@ -384,9 +383,21 @@ ${(data.funnels || []).map((f: any) => {
     }
 
     // 5. Strip markdown code blocks from AI response for wizard actions
-    if (wizardAction && aiContent.includes("```")) {
-      const match = aiContent.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (match) aiContent = match[1].trim();
+    //    and validate JSON extractability
+    if (wizardAction) {
+      if (aiContent.includes("```")) {
+        const match = aiContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if (match) aiContent = match[1].trim();
+      }
+      const extracted = extractJSON(aiContent);
+      try {
+        JSON.parse(extracted);
+      } catch {
+        return res.status(422).json({
+          error: "AI вернул невалидный JSON. Попробуйте ещё раз.",
+          rawPreview: aiContent.slice(0, 500),
+        });
+      }
     }
 
     // 6. Save the assistant response

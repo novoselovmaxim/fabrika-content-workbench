@@ -875,9 +875,13 @@ export default function UnpackPage() {
   };
 
   // Fill state from existing onboarding steps when status loads
+  const onboardingComplete = !!(onboardingStatus?.complete);
   useEffect(() => {
     if (initialFillRef.current || !onboardingStatus?.steps || !projectId) return;
     initialFillRef.current = true;
+
+    if (onboardingStatus.scenario) setScenario(onboardingStatus.scenario);
+
     for (const step of onboardingStatus.steps) {
       if (!step.aiOutput) continue;
       try {
@@ -1042,7 +1046,7 @@ export default function UnpackPage() {
           {STEPS.map((s, i) => {
             const isComplete = isStepComplete(s.key);
             const isCurrent = i === stepIdx;
-            const isLocked = i > highestComplete + 1 && i !== stepIdx;
+            const isLocked = !onboardingComplete && i > highestComplete + 1 && i !== stepIdx;
             return (
               <div key={s.key} style={{ display: "flex", alignItems: "center", flexShrink: 0 }}>
                 <button
@@ -1083,7 +1087,7 @@ export default function UnpackPage() {
       <div className="card" style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
 
         {/* Locked step banner */}
-        {stepIdx > highestComplete + 1 && !isStepComplete(STEPS[stepIdx].key) && (
+        {!onboardingComplete && stepIdx > highestComplete + 1 && !isStepComplete(STEPS[stepIdx].key) && (
           <div style={{
             padding: "12px 16px", background: "rgba(250,204,21,0.1)", border: "1px solid rgba(250,204,21,0.3)",
             borderRadius: 8, marginBottom: 16, fontSize: 14, display: "flex",
@@ -1110,26 +1114,43 @@ export default function UnpackPage() {
             <p className="text-sm text-dim" style={{ marginBottom: 24 }}>
               Как будем работать с проектом?
             </p>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <button
-                className={`btn ${scenario === "existing" ? "btn-primary" : "btn-ghost"}`}
-                onClick={() => startScenario.mutate("existing")}
-                disabled={startScenario.isPending}
-                style={{ padding: 24, height: "auto", flexDirection: "column", gap: 12, textAlign: "center", border: scenario === "existing" ? "2px solid var(--accent)" : "2px solid var(--border)" }}
-              >
-                <span style={{ fontWeight: 600 }}>Уже есть проект</span>
-                <span className="text-xs text-dim">Загрузите материалы, AI распакует бренд из них</span>
-              </button>
-              <button
-                className={`btn ${scenario === "new" ? "btn-primary" : "btn-ghost"}`}
-                onClick={() => startScenario.mutate("new")}
-                disabled={startScenario.isPending}
-                style={{ padding: 24, height: "auto", flexDirection: "column", gap: 12, textAlign: "center", border: scenario === "new" ? "2px solid var(--accent)" : "2px solid var(--border)" }}
-              >
-                <span style={{ fontWeight: 600 }}>Создаём новый проект</span>
-                <span className="text-xs text-dim">Пройдём шаги вместе, AI поможет проработать всё с нуля</span>
-              </button>
-            </div>
+            {onboardingComplete ? (
+              <div style={{ padding: 24, borderRadius: 8, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)" }}>
+                <div style={{ marginBottom: 8, fontWeight: 600, color: "var(--text)" }}>✅ Сценарий выбран</div>
+                <p className="text-sm text-dim" style={{ marginBottom: 12 }}>Проект уже настроен. Вы можете перейти к любому шагу для просмотра или редактирования данных.</p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, opacity: 0.5, pointerEvents: "none" }}>
+                  <div style={{ padding: 24, borderRadius: 8, border: "2px solid var(--accent)", textAlign: "center" }}>
+                    <span style={{ fontWeight: 600 }}>Уже есть проект</span>
+                    <span className="text-xs text-dim" style={{ display: "block", marginTop: 4 }}>Загрузите материалы, AI распакует бренд из них</span>
+                  </div>
+                  <div style={{ padding: 24, borderRadius: 8, border: "2px solid var(--border)", textAlign: "center" }}>
+                    <span style={{ fontWeight: 600 }}>Создаём новый проект</span>
+                    <span className="text-xs text-dim" style={{ display: "block", marginTop: 4 }}>Пройдём шаги вместе</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <button
+                  className={`btn ${scenario === "existing" ? "btn-primary" : "btn-ghost"}`}
+                  onClick={() => startScenario.mutate("existing")}
+                  disabled={startScenario.isPending}
+                  style={{ padding: 24, height: "auto", flexDirection: "column", gap: 12, textAlign: "center", border: scenario === "existing" ? "2px solid var(--accent)" : "2px solid var(--border)" }}
+                >
+                  <span style={{ fontWeight: 600 }}>Уже есть проект</span>
+                  <span className="text-xs text-dim">Загрузите материалы, AI распакует бренд из них</span>
+                </button>
+                <button
+                  className={`btn ${scenario === "new" ? "btn-primary" : "btn-ghost"}`}
+                  onClick={() => startScenario.mutate("new")}
+                  disabled={startScenario.isPending}
+                  style={{ padding: 24, height: "auto", flexDirection: "column", gap: 12, textAlign: "center", border: scenario === "new" ? "2px solid var(--accent)" : "2px solid var(--border)" }}
+                >
+                  <span style={{ fontWeight: 600 }}>Создаём новый проект</span>
+                  <span className="text-xs text-dim">Пройдём шаги вместе, AI поможет проработать всё с нуля</span>
+                </button>
+              </div>
+            )}
             {startScenario.isPending && (
               <div className="text-sm text-dim" style={{ textAlign: "center", marginTop: 16 }}>⏳ Создание проекта...</div>
             )}
@@ -2453,8 +2474,8 @@ export default function UnpackPage() {
         <button
           className="btn btn-primary"
           onClick={nextStep}
-          disabled={stepIdx === STEPS.length - 1 || !isStepComplete(STEPS[stepIdx].key)}
-          title={!isStepComplete(STEPS[stepIdx].key) ? "Заполните этот шаг, чтобы продолжить" : ""}
+          disabled={stepIdx === STEPS.length - 1 || (!onboardingComplete && !isStepComplete(STEPS[stepIdx].key))}
+          title={!onboardingComplete && !isStepComplete(STEPS[stepIdx].key) ? "Заполните этот шаг, чтобы продолжить" : ""}
         >
           Далее →
         </button>

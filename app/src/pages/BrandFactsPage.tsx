@@ -95,10 +95,12 @@ export default function BrandFactsPage() {
       <div className="flex items-center justify-between" style={{ marginBottom: 24 }}>
         <h1 className="text-lg" style={{ fontWeight: 600 }}>Факты бренда</h1>
         <div className="flex gap-2">
-          <button className="btn btn-primary btn-sm" onClick={() => extractFacts.mutate()} disabled={extractFacts.isPending}>
+          <button className="btn btn-primary btn-sm" onClick={() => extractFacts.mutate()} disabled={extractFacts.isPending}
+            title="Извлечённые факты начинаются как неподтверждённые — рекомендуется просмотреть и подтвердить их">
             {extractFacts.isPending ? "Извлечение..." : "Извлечь из базы знаний"}
           </button>
-          <button className="btn btn-primary btn-sm" onClick={() => deriveFacts.mutate()} disabled={deriveFacts.isPending}>
+          <button className="btn btn-primary btn-sm" onClick={() => deriveFacts.mutate()} disabled={deriveFacts.isPending}
+            title="Факты из онбординга автоматически подтверждаются">
             {deriveFacts.isPending ? "Обработка..." : "Вывести из онбординга"}
           </button>
           <button className="btn btn-sm" style={{ background: "var(--accent)", color: "#fff" }} onClick={() => setShowForm(!showForm)}>
@@ -129,6 +131,17 @@ export default function BrandFactsPage() {
         {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
           <button key={k} className={`btn btn-sm ${categoryFilter === k ? "btn-primary" : "btn-ghost"}`} onClick={() => setCategoryFilter(k)}>{v}</button>
         ))}
+      </div>
+
+      <div style={{
+        padding: "12px 16px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.15)",
+        borderRadius: 8, marginBottom: 16, fontSize: 13, color: "var(--text-dim)",
+      }}>
+        <div style={{ fontWeight: 600, marginBottom: 4, color: "var(--text)" }}>ℹ️ Как факты используются в контенте</div>
+        <div style={{ lineHeight: 1.6 }}>
+          AI учитывает <strong>все</strong> факты бренда при генерации постов. Подтверждённые факты — в приоритете, неподтверждённые — с меньшей вероятностью.
+          Рекомендуется подтверждать факты, чтобы контент точнее отражал бренд.
+        </div>
       </div>
 
       {isLoading ? (
@@ -188,7 +201,7 @@ export default function BrandFactsPage() {
                   <label className="flex items-center gap-1" style={{ cursor: "pointer", fontSize: 13 }}>
                     <input type="checkbox" checked={!!f.validated}
                       onChange={(e) => updateFact.mutate({ id: f.id, data: { validated: e.target.checked } })} />
-                    {f.validated ? "✓ Подтверждён" : "Не проверен"}
+                    {f.validated ? "✓ Подтверждён" : "☑️ Не проверен"}
                   </label>
                 </td>
                 <td>

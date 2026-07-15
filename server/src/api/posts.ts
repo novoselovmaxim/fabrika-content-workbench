@@ -61,12 +61,15 @@ postsRouter.get("/", (req, res) => {
       contentTypeCode: contentTypes.code,
       funnelName: funnels.name,
       funnelColor: funnels.color,
+      platformName: platforms.name,
+      platformType: platforms.type,
     })
     .from(postItems)
     .leftJoin(topicsTable, eq(postItems.topicId, topicsTable.id))
     .leftJoin(rubrics, eq(postItems.rubricId, rubrics.id))
     .leftJoin(contentTypes, eq(postItems.contentTypeId, contentTypes.id))
-    .leftJoin(funnels, eq(postItems.funnelId, funnels.id));
+    .leftJoin(funnels, eq(postItems.funnelId, funnels.id))
+    .leftJoin(platforms, eq(postItems.platformId, platforms.id));
 
   if (conditions.length > 0) query = query.where(and(...conditions));
   query = query.orderBy(postItems.scheduledDate);

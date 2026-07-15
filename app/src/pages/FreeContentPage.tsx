@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { getStoredProjectId, getStoredPlatformId } from "../lib/project";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import ChatPanel from "../components/ChatPanel";
 
 const STEPS = [
@@ -15,8 +15,9 @@ const STEPS = [
 export default function FreeContentPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const projectId = getStoredProjectId() || "";
-  const platformId = getStoredPlatformId() || undefined;
+  const platformId = searchParams.get("platformId") || getStoredPlatformId() || undefined;
 
   const [step, setStep] = useState(0);
   const [selectedRubric, setSelectedRubric] = useState<any>(null);

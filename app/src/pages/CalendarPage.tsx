@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import { getStoredProjectId } from "../lib/project";
+import { getStoredProjectId, getStoredPlatformId } from "../lib/project";
+import { PLATFORM_COLORS } from "../lib/constants";
 import { useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Trash2 } from "lucide-react";
@@ -40,15 +41,27 @@ export default function CalendarPage() {
   const queryClient = useQueryClient();
 
   const [filterProjectId, setFilterProjectId] = useState<string | undefined>(() => getStoredProjectId());
+  const [filterPlatformId, setFilterPlatformId] = useState<string | undefined>();
 
   const { data: allProjects } = useQuery({ queryKey: ["projects"], queryFn: api.projects.list });
 
+  const platformQueryKey = filterProjectId ? ["platforms", filterProjectId] : null;
+  const { data: projectPlatforms } = useQuery({
+    queryKey: platformQueryKey!,
+    queryFn: () => api.platforms.listByProject(filterProjectId!),
+    enabled: !!filterProjectId,
+  });
+
   const { data: posts } = useQuery({
-    queryKey: ["posts", year, month, filterProjectId],
+    queryKey: ["posts", year, month, filterProjectId, filterPlatformId],
     queryFn: () => {
       const start = `${year}-${String(month + 1).padStart(2, "0")}-01`;
       const end = `${year}-${String(month + 1).padStart(2, "0")}-31`;
-      return api.posts.list({ startDate: start, endDate: end, ...(filterProjectId ? { projectId: filterProjectId } : {}) });
+      return api.posts.list({
+        startDate: start, endDate: end,
+        ...(filterProjectId ? { projectId: filterProjectId } : {}),
+        ...(filterPlatformId ? { platformId: filterPlatformId } : {}),
+      });
     },
     enabled: true,
   });
@@ -61,7 +74,7 @@ export default function CalendarPage() {
       return api.posts.update(id, updates);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["posts", year, month, filterProjectId] });
+      queryClient.invalidateQueries({ queryKey: ["posts", year, month, filterProjectId, filterPlatformId] });
       queryClient.invalidateQueries({ queryKey: ["posts"] });
     },
   });
@@ -69,7 +82,7 @@ export default function CalendarPage() {
   const deletePost = useMutation({
     mutationFn: (id: string) => api.posts.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["posts", year, month, filterProjectId] });
+      queryClient.invalidateQueries({ queryKey: ["posts", year, month, filterProjectId, filterPlatformId] });
     },
   });
 
@@ -137,7 +150,7 @@ export default function CalendarPage() {
             <select
               className="input"
               value={filterProjectId || ""}
-              onChange={(e) => setFilterProjectId(e.target.value || undefined)}
+              onChange={(e) => { setFilterProjectId(e.target.value || undefined); setFilterPlatformId(undefined); }}
               style={{ fontSize: 13, fontWeight: 500, minWidth: 180 }}
             >
               <option value="">📋 Все проекты</option>
@@ -145,6 +158,19 @@ export default function CalendarPage() {
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
+            {!!filterProjectId && (
+              <select
+                className="input"
+                value={filterPlatformId || ""}
+                onChange={(e) => setFilterPlatformId(e.target.value || undefined)}
+                style={{ fontSize: 13, fontWeight: 500, minWidth: 160 }}
+              >
+                <option value="">📱 Все площадки</option>
+                {(projectPlatforms || []).map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            )}
             <div className="flex gap-2" style={{ alignItems: "center" }}>
               <button className="btn btn-ghost" onClick={prevMonth}>←</button>
               <span style={{ fontSize: 16, fontWeight: 600, minWidth: 150, textAlign: "center" }}>
@@ -229,59 +255,68 @@ export default function CalendarPage() {
                 flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2,
                 scrollbarWidth: "thin", scrollbarColor: "var(--border) transparent",
               }}>
-                {dayPosts.map((post: any) => (
-                  <div
-                    key={post.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, post.id)}
-                    style={{
-                      fontSize: 11, padding: "2px 5px", borderRadius: 4,
-                      background: post.rubricColor ? post.rubricColor + "18" : "var(--bg-hover)",
-                      color: post.rubricColor || "var(--text)",
-                      cursor: "grab", userSelect: "none",
-                      opacity: draggedPostId === post.id ? 0.35 : 1,
-                      transition: "opacity 0.15s",
-                      display: "flex", alignItems: "center", gap: 3,
-                      flexShrink: 0,
-                      position: "relative",
-                    }}
-                    onMouseEnter={(e) => {
-                      const btn = e.currentTarget.querySelector(".delete-post-btn") as HTMLElement;
-                      if (btn) btn.style.display = "flex";
-                    }}
-                    onMouseLeave={(e) => {
-                      const btn = e.currentTarget.querySelector(".delete-post-btn") as HTMLElement;
-                      if (btn) btn.style.display = "none";
-                    }}
-                  >
-                    <span className={`tag ${statusColors[post.status] || ""}`} style={{
-                      fontSize: 8, padding: "1px 3px", lineHeight: "14px", flexShrink: 0,
-                    }}>
-                      {post.contentTypeName?.slice(0, 4) || "?"}
-                    </span>
-                    <Link to={`/posts/${post.id}`} style={{
-                      textDecoration: "none", color: "inherit",
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      minWidth: 0, flex: 1,
-                    }}>
-                      {post.title}
-                    </Link>
-                    <button
-                      className="delete-post-btn"
-                      onClick={(e) => handleDelete(e, post.id, post.title)}
+                {dayPosts.map((post: any) => {
+                  const platformColor = post.platformType ? PLATFORM_COLORS[post.platformType] : null;
+                  return (
+                    <div
+                      key={post.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, post.id)}
                       style={{
-                        display: "none",
-                        border: "none", background: "transparent",
-                        cursor: "pointer", padding: 2, borderRadius: 3,
-                        color: "var(--red)", flexShrink: 0,
-                        alignItems: "center", justifyContent: "center",
-                        opacity: deletingId === post.id ? 0.4 : 1,
+                        fontSize: 11, padding: "2px 5px", borderRadius: 4,
+                        background: post.rubricColor ? post.rubricColor + "18" : "var(--bg-hover)",
+                        color: post.rubricColor || "var(--text)",
+                        cursor: "grab", userSelect: "none",
+                        opacity: draggedPostId === post.id ? 0.35 : 1,
+                        transition: "opacity 0.15s",
+                        display: "flex", alignItems: "center", gap: 3,
+                        flexShrink: 0,
+                        position: "relative",
+                      }}
+                      onMouseEnter={(e) => {
+                        const btn = e.currentTarget.querySelector(".delete-post-btn") as HTMLElement;
+                        if (btn) btn.style.display = "flex";
+                      }}
+                      onMouseLeave={(e) => {
+                        const btn = e.currentTarget.querySelector(".delete-post-btn") as HTMLElement;
+                        if (btn) btn.style.display = "none";
                       }}
                     >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                ))}
+                      {platformColor && (
+                        <span style={{
+                          width: 6, height: 6, borderRadius: 3, flexShrink: 0,
+                          background: platformColor,
+                        }} title={post.platformName || ""} />
+                      )}
+                      <span className={`tag ${statusColors[post.status] || ""}`} style={{
+                        fontSize: 8, padding: "1px 3px", lineHeight: "14px", flexShrink: 0,
+                      }}>
+                        {post.contentTypeName?.slice(0, 4) || "?"}
+                      </span>
+                      <Link to={`/posts/${post.id}`} style={{
+                        textDecoration: "none", color: "inherit",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        minWidth: 0, flex: 1,
+                      }}>
+                        {post.title}
+                      </Link>
+                      <button
+                        className="delete-post-btn"
+                        onClick={(e) => handleDelete(e, post.id, post.title)}
+                        style={{
+                          display: "none",
+                          border: "none", background: "transparent",
+                          cursor: "pointer", padding: 2, borderRadius: 3,
+                          color: "var(--red)", flexShrink: 0,
+                          alignItems: "center", justifyContent: "center",
+                          opacity: deletingId === post.id ? 0.4 : 1,
+                        }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
