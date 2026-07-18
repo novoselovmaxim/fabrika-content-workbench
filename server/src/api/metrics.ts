@@ -67,7 +67,18 @@ metricsRouter.post("/fetch", async (req, res) => {
     return res.status(400).json({ error: "platform and identifier required" });
 
   if (platform === "instagram") {
-    return res.json({ valid: false, error: "Для Instagram доступна только базовая информация профиля. Для аналитики постов используйте Apify или ручной ввод." });
+    try {
+      const r = await fetch(`${VPS}/api/metrics/instagram-scrape`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: identifier, limit: 10 }),
+        signal: AbortSignal.timeout(60000),
+      });
+      if (!r.ok) return res.json({ error: `VPS Instagram: ${r.status}` });
+      return res.json(await r.json());
+    } catch (e: any) {
+      return res.json({ error: `VPS Instagram недоступен: ${e.message}` });
+    }
   }
 
   try {

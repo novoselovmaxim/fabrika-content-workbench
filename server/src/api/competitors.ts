@@ -3,9 +3,82 @@ import { db } from "../db.js";
 import { competitorSearches, savedCompetitors, onboardingSteps, projects, excludedCompetitors } from "../schema.js";
 import { sql, eq, desc, and } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
-import { searchCompetitors } from "../services/searchService.js";
+import { searchCompetitors, analyzeCompetitorUrl } from "../services/searchService.js";
 
 export const competitorsRouter = Router();
+
+// POST /analyze-url — analyze one or more competitor URLs via AI
+competitorsRouter.post("/analyze-url", async (req, res) => {
+  try {
+    const { projectId, urls } = req.body;
+    if (!projectId || !Array.isArray(urls) || urls.length === 0) {
+      return res.status(400).json({ error: "projectId and non-empty urls[] are required" });
+    }
+
+    const results: any[] = [];
+    const now = new Date().toISOString();
+
+    for (const url of urls) {
+      const trimmed = url.trim();
+      if (!trimmed) continue;
+
+      // Skip duplicates
+      const existing = db
+        .select()
+        .from(savedCompetitors)
+        .where(and(
+          eq(savedCompetitors.projectId, projectId),
+          eq(savedCompetitors.url, trimmed)
+        ))
+        .get();
+
+      if (existing) {
+        results.push({ url: trimmed, skipped: true, reason: "already exists" });
+        continue;
+      }
+
+      // Analyze via AI
+      const competitor = await analyzeCompetitorUrl(trimmed);
+
+      // Extract extra details
+      const details = JSON.stringify({
+        mainProducts: competitor.mainProducts || [],
+        contentFormats: competitor.contentFormats || [],
+        brandVoice: competitor.brandVoice || "",
+        visualStyle: competitor.visualStyle || "",
+        uniqueSellingPoints: competitor.uniqueSellingPoints || [],
+      });
+
+      const id = uuid();
+      db.insert(savedCompetitors).values({
+        id,
+        projectId,
+        name: competitor.name || new URL(trimmed).hostname,
+        url: trimmed,
+        positioning: competitor.positioning || "",
+        strengths: JSON.stringify(competitor.strengths || []),
+        weaknesses: JSON.stringify(competitor.weaknesses || []),
+        audience: competitor.audience || "",
+        contentStrategy: competitor.contentStrategy || "",
+        source: "manual_url",
+        searchKeywords: "",
+        details,
+        createdAt: now,
+      }).run();
+
+      results.push({
+        id,
+        url: trimmed,
+        skipped: false,
+        name: competitor.name,
+      });
+    }
+
+    res.status(201).json({ saved: results.filter((r) => !r.skipped).length, skipped: results.filter((r) => r.skipped).length, results });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "URL analysis failed" });
+  }
+});
 
 competitorsRouter.get("/", (req, res) => {
   const projectId = req.query.projectId as string | undefined;
@@ -117,17 +190,34 @@ competitorsRouter.delete("/search", async (req, res) => {
     let savedCount = 0;
 
     for (const comp of allCompetitors) {
-      // Skip if this URL is excluded
-      const excluded = db
+      // Skip if URL is already saved or excluded
+      const existing = db
         .select()
-        .from(excludedCompetitors)
+        .from(savedCompetitors)
         .where(and(
-          eq(excludedCompetitors.projectId, projectId),
-          eq(excludedCompetitors.url, comp.url || "")
+          eq(savedCompetitors.projectId, projectId),
+          eq(savedCompetitors.url, comp.url || "")
         ))
         .get();
 
-      if (!excluded && comp.url) {
+      if (!existing && comp.url) {
+        const excluded = db
+          .select()
+          .from(excludedCompetitors)
+          .where(and(
+            eq(excludedCompetitors.projectId, projectId),
+            eq(excludedCompetitors.url, comp.url || "")
+          ))
+          .get();
+        if (excluded) continue;
+
+        const details = JSON.stringify({
+          mainProducts: comp.mainProducts || [],
+          contentFormats: comp.contentFormats || [],
+          brandVoice: comp.brandVoice || "",
+          visualStyle: comp.visualStyle || "",
+          uniqueSellingPoints: comp.uniqueSellingPoints || [],
+        });
         db.insert(savedCompetitors).values({
           id: uuid(),
           projectId,
@@ -140,6 +230,7 @@ competitorsRouter.delete("/search", async (req, res) => {
           contentStrategy: comp.contentStrategy || "",
           source: "search",
           searchKeywords: keywordsStr,
+          details,
           createdAt: now,
         }).run();
         savedCount++;
@@ -204,6 +295,13 @@ competitorsRouter.post("/search", async (req, res) => {
         .get();
 
       if (!existing && comp.url) {
+        const details = JSON.stringify({
+          mainProducts: comp.mainProducts || [],
+          contentFormats: comp.contentFormats || [],
+          brandVoice: comp.brandVoice || "",
+          visualStyle: comp.visualStyle || "",
+          uniqueSellingPoints: comp.uniqueSellingPoints || [],
+        });
         db.insert(savedCompetitors).values({
           id: uuid(),
           projectId,
@@ -216,6 +314,7 @@ competitorsRouter.post("/search", async (req, res) => {
           contentStrategy: comp.contentStrategy || "",
           source: "search",
           searchKeywords: keywordsStr,
+          details,
           createdAt: now,
         }).run();
         savedCount++;

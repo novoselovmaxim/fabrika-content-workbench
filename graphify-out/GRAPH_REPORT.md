@@ -1,12 +1,12 @@
-# Graph Report - .  (2026-07-08)
+# Graph Report - .  (2026-07-16)
 
 ## Corpus Check
-- 95 files · ~3,046,974 words
+- 107 files · ~3,110,689 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4271 nodes · 11901 edges · 98 communities detected
-- Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 373 edges (avg confidence: 0.8)
+- 4319 nodes · 12228 edges · 84 communities detected
+- Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 484 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -94,318 +94,304 @@
 - [[_COMMUNITY_Community 81|Community 81]]
 - [[_COMMUNITY_Community 82|Community 82]]
 - [[_COMMUNITY_Community 83|Community 83]]
-- [[_COMMUNITY_Community 84|Community 84]]
-- [[_COMMUNITY_Community 85|Community 85]]
-- [[_COMMUNITY_Community 86|Community 86]]
-- [[_COMMUNITY_Community 87|Community 87]]
-- [[_COMMUNITY_Community 88|Community 88]]
-- [[_COMMUNITY_Community 89|Community 89]]
-- [[_COMMUNITY_Community 90|Community 90]]
-- [[_COMMUNITY_Community 91|Community 91]]
-- [[_COMMUNITY_Community 92|Community 92]]
-- [[_COMMUNITY_Community 93|Community 93]]
-- [[_COMMUNITY_Community 94|Community 94]]
-- [[_COMMUNITY_Community 95|Community 95]]
-- [[_COMMUNITY_Community 96|Community 96]]
-- [[_COMMUNITY_Community 97|Community 97]]
 
 ## God Nodes (most connected - your core abstractions)
-1. `E()` - 138 edges
-2. `$t()` - 59 edges
-3. `$t()` - 59 edges
-4. `t_()` - 59 edges
-5. `fetch()` - 58 edges
-6. `Az()` - 44 edges
-7. `EL()` - 43 edges
-8. `EL()` - 43 edges
-9. `kF` - 36 edges
-10. `UF` - 33 edges
+1. `t()` - 167 edges
+2. `E()` - 94 edges
+3. `fetch()` - 65 edges
+4. `$t()` - 62 edges
+5. `t_()` - 60 edges
+6. `HL()` - 58 edges
+7. `E()` - 48 edges
+8. `EL()` - 46 edges
+9. `Az()` - 45 edges
+10. `aT` - 40 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `handleCreate()` --calls--> `mutate()`  [INFERRED]
-  app/src/App.tsx → release/electron/mac-arm64/Фабрика Контента.app/Contents/Resources/app/assets/index-CJogth5g.js
 - `pickDraft()` --calls--> `find()`  [INFERRED]
   app/src/components/PublicationTab.tsx → release/electron/mac-arm64/Фабрика Контента.app/Contents/Resources/app/assets/index-CJogth5g.js
-- `handleSaveDesignSystem()` --calls--> `mutate()`  [INFERRED]
-  app/src/pages/BrandStylesPage.tsx → release/electron/mac-arm64/Фабрика Контента.app/Contents/Resources/app/assets/index-CJogth5g.js
-- `handleApplyToStyles()` --calls--> `mutate()`  [INFERRED]
-  app/src/pages/BrandStylesPage.tsx → release/electron/mac-arm64/Фабрика Контента.app/Contents/Resources/app/assets/index-CJogth5g.js
-- `handleDelete()` --calls--> `mutate()`  [INFERRED]
-  app/src/pages/CalendarPage.tsx → release/electron/mac-arm64/Фабрика Контента.app/Contents/Resources/app/assets/index-CJogth5g.js
+- `getTemplate()` --calls--> `find()`  [INFERRED]
+  server/src/services/aiGateway.ts → release/electron/mac-arm64/Фабрика Контента.app/Contents/Resources/app/assets/index-CJogth5g.js
+- `handleCreate()` --calls--> `mutate()`  [INFERRED]
+  app/src/App.tsx → release/electron/mac-arm64/Фабрика Контента.app/Contents/Resources/app/assets/index-CJogth5g.js
+- `handleUpload()` --calls--> `fetch()`  [INFERRED]
+  app/src/components/PublicationTab.tsx → release/electron/mac-arm64/Фабрика Контента.app/Contents/Resources/app/assets/index-CJogth5g.js
+- `PlatformIndicator()` --calls--> `find()`  [INFERRED]
+  bereg-instagram-workbench/app/src/components/PlatformIndicator.tsx → release/electron/mac-arm64/Фабрика Контента.app/Contents/Resources/app/assets/index-CJogth5g.js
 
 ## Communities
 
 ### Community 0 - "Community 0"
 Cohesion: 0.01
-Nodes (167): a6(), aE(), aie(), aK(), aU(), Bae(), bB(), bG() (+159 more)
+Nodes (887): updateSlide(), updateSlideTextStyle(), seedContentTextures(), seedFunnels(), _(), _3(), _5(), _7() (+879 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.01
-Nodes (142): A6(), aV(), aX(), b4(), bae(), bE(), Bf(), bH() (+134 more)
+Nodes (208): _1(), _4(), A4(), a7(), a8(), af(), AK(), ase() (+200 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.01
-Nodes (61): d5(), zG(), Gv(), setFocused(), vV(), cancel(), cH(), Cn() (+53 more)
+Nodes (92): AS(), aU(), AV(), b3, bH, c3(), cancel(), cancelQueries() (+84 more)
 
 ### Community 3 - "Community 3"
 Cohesion: 0.01
-Nodes (126): A6(), aE(), Ate(), aV(), aX(), b4(), bH(), bm() (+118 more)
+Nodes (135): A6(), aE(), ane(), Ate(), aV(), aX(), b4(), bH() (+127 more)
 
 ### Community 4 - "Community 4"
 Cohesion: 0.02
-Nodes (45): cancel(), cH(), clear(), CV(), d3(), eF(), EH, eU() (+37 more)
+Nodes (54): d5(), zG(), b5(), cancel(), cH(), Cn(), CV(), e9 (+46 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.02
-Nodes (89): callAnthropic(), callOpenAI(), extractJSON(), generate(), generateImage(), getDbSetting(), getModelForTask(), getProviderApiKey() (+81 more)
+Nodes (115): callAnthropic(), callOpenAI(), extractJSON(), generate(), generateImage(), getDbSetting(), getModelForTask(), getProviderApiKey() (+107 more)
 
 ### Community 6 - "Community 6"
 Cohesion: 0.03
-Nodes (124): _7(), _9(), A7(), A9(), Aa(), aB(), aG(), AL() (+116 more)
+Nodes (142): f6(), jie(), Oie(), la(), _6(), _7(), aae(), aE() (+134 more)
 
 ### Community 7 - "Community 7"
 Cohesion: 0.03
-Nodes (123): _7(), _9(), A7(), A9(), aB(), AL(), are(), aT() (+115 more)
+Nodes (83): _2(), _8(), add(), aH(), am(), aV(), b2(), bm() (+75 more)
 
 ### Community 8 - "Community 8"
 Cohesion: 0.03
-Nodes (66): seedContentTextures(), seedFunnels(), _5(), add(), Af(), canRun(), dT(), Dw() (+58 more)
+Nodes (136): _7(), _9(), A7(), A9(), Aa(), aB(), aG(), AL() (+128 more)
 
 ### Community 9 - "Community 9"
 Cohesion: 0.03
-Nodes (116): _(), _7(), _9(), a7(), a9(), AB(), aX(), b7() (+108 more)
+Nodes (31): e7(), zK(), bV(), cancel(), cE(), Dd(), em, eV() (+23 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.03
-Nodes (31): AS(), AV(), b3, b5(), cancel(), cV(), Dp, eE() (+23 more)
+Nodes (99): a2(), a6(), aD(), Aee(), AP(), are(), bd(), be() (+91 more)
 
 ### Community 11 - "Community 11"
-Cohesion: 0.03
-Nodes (91): aE(), aF(), AR(), br(), cee(), CF(), Dc(), defaultMutationOptions() (+83 more)
+Cohesion: 0.04
+Nodes (73): a5(), n5(), addObserver(), aI(), bindMethods(), c2(), cI(), clear() (+65 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.04
-Nodes (86): kI(), addObserver(), aF(), AS(), aW(), ba(), bindMethods(), build() (+78 more)
+Cohesion: 0.03
+Nodes (92): IH(), _6(), AR(), bE(), br(), Bre(), bV(), cee() (+84 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.03
-Nodes (89): ate(), bL(), bte(), Cc(), cie(), cJ(), cL(), cne() (+81 more)
+Cohesion: 0.05
+Nodes (75): O8(), UC(), _a(), aa(), aB(), Aq(), aR(), aT (+67 more)
 
 ### Community 14 - "Community 14"
-Cohesion: 0.04
-Nodes (85): _a(), a8(), Ad(), aee(), aq(), b5(), BL(), Bp() (+77 more)
+Cohesion: 0.05
+Nodes (83): _a(), a8(), Ad(), aee(), aq(), BL(), Bp(), bq() (+75 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.04
-Nodes (85): _a(), a8(), Ad(), aee(), aq(), au(), b5(), BL() (+77 more)
+Nodes (75): _4(), Ak(), az(), Bd(), bj(), bne(), bz(), cj() (+67 more)
 
 ### Community 16 - "Community 16"
 Cohesion: 0.04
-Nodes (86): aL(), An(), ar(), Az(), bee(), bS(), Bt(), bz() (+78 more)
+Nodes (66): dU(), w8(), add(), build(), bY(), c4(), canRun(), Cp() (+58 more)
 
 ### Community 17 - "Community 17"
-Cohesion: 0.04
-Nodes (60): Ac(), add(), bY(), c4(), canRun(), Cp(), d3(), d4() (+52 more)
+Cohesion: 0.05
+Nodes (59): addObserver(), aF(), AS(), ba(), bindMethods(), cancelQueries(), clear(), clearGcTimeout() (+51 more)
 
 ### Community 18 - "Community 18"
 Cohesion: 0.05
-Nodes (71): w8(), addObserver(), AS(), bindMethods(), build(), cancelQueries(), clearGcTimeout(), clearTimeout() (+63 more)
+Nodes (58): aie(), BI(), bie(), bW(), By(), cl(), eie(), F6() (+50 more)
 
 ### Community 19 - "Community 19"
-Cohesion: 0.04
-Nodes (76): _6(), aae(), aie(), Ak(), bE(), bie(), Bre(), bV() (+68 more)
+Cohesion: 0.05
+Nodes (50): _(), aj(), al(), bte(), cancelQueries(), d4(), d8(), dne() (+42 more)
 
 ### Community 20 - "Community 20"
-Cohesion: 0.06
-Nodes (64): checkCompliance(), a8(), AI(), Aq(), aT(), aw(), bI(), cq() (+56 more)
+Cohesion: 0.08
+Nodes (53): xie(), a3(), Ale(), An(), Aoe(), ble(), cle(), continue() (+45 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.04
-Nodes (66): Ad(), aG(), AH(), AP(), Bie(), bV(), Cae(), cF() (+58 more)
+Cohesion: 0.05
+Nodes (18): handleChange(), handleCreate(), async(), handleApplyToStyles(), handleSaveDesignSystem(), updateStyle(), handleDelete(), getMutationCache() (+10 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.04
-Nodes (64): _4(), _6(), aae(), Ak(), am(), ba(), Bre(), cie() (+56 more)
+Cohesion: 0.08
+Nodes (49): Za(), aoe(), c5(), coe(), continue(), Cw(), dS(), Ek() (+41 more)
 
 ### Community 23 - "Community 23"
-Cohesion: 0.05
-Nodes (54): dU(), add(), b3(), BU(), bY(), c4(), canRun(), Cp() (+46 more)
+Cohesion: 0.07
+Nodes (49): ba(), bB(), Dj(), e6(), Ej(), fj(), gj(), gM() (+41 more)
 
 ### Community 24 - "Community 24"
-Cohesion: 0.04
-Nodes (54): IH(), Mee(), _3(), aH, AR(), b_(), br(), cee() (+46 more)
+Cohesion: 0.06
+Nodes (36): _3(), aH, b3(), Df(), dV(), Dw(), E3(), eF() (+28 more)
 
 ### Community 25 - "Community 25"
-Cohesion: 0.05
-Nodes (64): _4(), bj(), bne(), bz(), Cc(), Cd(), cj(), cne() (+56 more)
+Cohesion: 0.06
+Nodes (36): Ac(), aj(), Bte(), f4(), GS(), ite(), kp(), ld() (+28 more)
 
 ### Community 26 - "Community 26"
-Cohesion: 0.05
-Nodes (58): Ate(), aW(), bj(), bne(), bz(), Cc(), cj(), Ed() (+50 more)
+Cohesion: 0.06
+Nodes (29): CL(), dp(), dX(), DZ(), e4(), EV(), Ew(), FF() (+21 more)
 
 ### Community 27 - "Community 27"
 Cohesion: 0.07
-Nodes (54): addObserver(), b8(), bindMethods(), bY(), clearGcTimeout(), constructor(), Cp(), createResult() (+46 more)
+Nodes (39): am(), ay(), c1(), displayable(), dre(), fre(), GY(), h6() (+31 more)
 
 ### Community 28 - "Community 28"
-Cohesion: 0.05
-Nodes (51): aj(), build(), cee(), cR(), d_(), d3(), d8(), defaultMutationOptions() (+43 more)
+Cohesion: 0.07
+Nodes (34): aie(), bae(), Bc(), bie(), c6(), eie(), Fc(), Gae() (+26 more)
 
 ### Community 29 - "Community 29"
-Cohesion: 0.07
-Nodes (52): a5(), aoe(), c5(), coe(), continue(), Cw(), dS(), Ek() (+44 more)
+Cohesion: 0.1
+Nodes (30): A1(), aae(), _d(), em(), g6(), gee(), gG(), GI() (+22 more)
 
 ### Community 30 - "Community 30"
-Cohesion: 0.08
-Nodes (48): aoe(), boe(), continue(), doe(), Dse(), ER(), find(), foe() (+40 more)
+Cohesion: 0.09
+Nodes (28): vB(), aW(), ax(), cse(), cW(), dse(), EW(), fK() (+20 more)
 
 ### Community 31 - "Community 31"
-Cohesion: 0.08
-Nodes (47): a5(), aoe(), c5(), coe(), continue(), Cw(), Ek(), eoe() (+39 more)
+Cohesion: 0.09
+Nodes (24): aW(), b_(), Cc(), Eo(), fB(), fn(), h3(), iie() (+16 more)
 
 ### Community 32 - "Community 32"
-Cohesion: 0.05
-Nodes (43): _3(), aie(), Bc(), bie(), c6(), eie(), f3(), fB() (+35 more)
+Cohesion: 0.09
+Nodes (19): _9(), ay(), b9(), c9(), cz(), e9(), I9(), j9() (+11 more)
 
 ### Community 33 - "Community 33"
-Cohesion: 0.06
-Nodes (41): ane(), bae(), Bc(), Boe(), c6(), defaultMutationOptions(), Di(), doe() (+33 more)
+Cohesion: 0.11
+Nodes (19): az(), dc(), e7(), gV(), hx(), jH(), Jre(), Kd() (+11 more)
 
 ### Community 34 - "Community 34"
-Cohesion: 0.08
-Nodes (42): A1(), az(), Bd(), cY(), dK(), DT(), dY(), eee() (+34 more)
-
-### Community 35 - "Community 35"
-Cohesion: 0.07
-Nodes (42): aG(), aj(), az(), bG(), Bte(), cG(), cY(), DG() (+34 more)
-
-### Community 36 - "Community 36"
-Cohesion: 0.06
-Nodes (21): a_(), bF(), c3(), cancelQueries(), CS(), fetchInfiniteQuery(), g3(), gU() (+13 more)
-
-### Community 37 - "Community 37"
-Cohesion: 0.07
-Nodes (39): am(), ay(), c1(), d9(), displayable(), dre(), f9(), h9() (+31 more)
-
-### Community 38 - "Community 38"
-Cohesion: 0.06
-Nodes (10): runMigrations(), addDays(), buildWeekPlanPrompt(), formatDate(), checkRateLimit(), load(), convertFile(), dataForStep() (+2 more)
-
-### Community 39 - "Community 39"
-Cohesion: 0.07
-Nodes (15): handleChange(), handleCreate(), VV, X3(), PlatformIndicator(), getStoredPlatformId(), getStoredProductId(), getStoredProjectId() (+7 more)
-
-### Community 40 - "Community 40"
-Cohesion: 0.07
-Nodes (34): ase(), ay(), bJ(), bne(), ed(), ene(), Ew(), fD() (+26 more)
-
-### Community 41 - "Community 41"
-Cohesion: 0.08
-Nodes (35): f6(), jie(), Oie(), A1(), Aa(), em(), fre(), gee() (+27 more)
-
-### Community 42 - "Community 42"
-Cohesion: 0.08
-Nodes (26): _C(), Ac(), bw(), c_(), f4(), GS(), gw(), jw() (+18 more)
-
-### Community 43 - "Community 43"
-Cohesion: 0.07
-Nodes (32): b3(), CF(), CL(), Df(), dp(), dX(), DZ(), E3() (+24 more)
-
-### Community 44 - "Community 44"
-Cohesion: 0.09
-Nodes (34): are(), bre(), Cd(), dre(), Ere(), ET(), fT(), hre() (+26 more)
-
-### Community 45 - "Community 45"
-Cohesion: 0.09
-Nodes (33): ay(), c1(), d9(), displayable(), dre(), f9(), fre(), h6() (+25 more)
-
-### Community 46 - "Community 46"
-Cohesion: 0.07
-Nodes (18): _3(), bw, clear(), dK(), Dm(), j3(), MH(), NF() (+10 more)
-
-### Community 47 - "Community 47"
-Cohesion: 0.09
-Nodes (30): aj(), are(), Bte(), CL(), dd(), em(), Eo(), f6() (+22 more)
-
-### Community 48 - "Community 48"
-Cohesion: 0.11
-Nodes (7): bH, dH(), dV(), lB(), Mp(), optionalRemove(), sH()
-
-### Community 49 - "Community 49"
-Cohesion: 0.13
-Nodes (15): aH, dV(), Gm(), Hw(), i4(), Km(), nV(), OH() (+7 more)
-
-### Community 50 - "Community 50"
-Cohesion: 0.1
-Nodes (19): BU(), Cte(), eU(), Fw(), Hp(), KC(), lie(), Nte() (+11 more)
-
-### Community 51 - "Community 51"
-Cohesion: 0.12
-Nodes (4): B_(), fK, uK(), Vp()
-
-### Community 52 - "Community 52"
-Cohesion: 0.12
-Nodes (18): ane(), Boe(), Cd(), cne(), Di(), doe(), fne(), lne() (+10 more)
-
-### Community 53 - "Community 53"
 Cohesion: 0.13
 Nodes (4): bK, iB, kee(), tm()
 
-### Community 54 - "Community 54"
-Cohesion: 0.15
-Nodes (2): bK, iB
+### Community 35 - "Community 35"
+Cohesion: 0.16
+Nodes (3): a9, HH, optionalRemove()
 
-### Community 55 - "Community 55"
-Cohesion: 0.13
-Nodes (11): dB(), fH(), HH(), k5(), q5(), setFocused(), tH(), _v() (+3 more)
+### Community 36 - "Community 36"
+Cohesion: 0.14
+Nodes (13): BU(), eU(), Hp(), lie(), Lo(), rU(), _S(), ti() (+5 more)
 
-### Community 56 - "Community 56"
-Cohesion: 0.2
-Nodes (2): handleApplyToStyles(), handleSaveDesignSystem()
+### Community 37 - "Community 37"
+Cohesion: 0.16
+Nodes (16): cne(), Do(), Gc(), K1(), lne(), lse(), lW(), mre() (+8 more)
 
-### Community 57 - "Community 57"
-Cohesion: 0.25
-Nodes (0): 
+### Community 38 - "Community 38"
+Cohesion: 0.16
+Nodes (3): MK(), RK, um()
 
-### Community 58 - "Community 58"
-Cohesion: 0.33
-Nodes (4): LicenseGate(), useActivateLicense(), useLicense(), useRequestLicense()
+### Community 39 - "Community 39"
+Cohesion: 0.16
+Nodes (3): fK, uK(), Vp()
 
-### Community 59 - "Community 59"
-Cohesion: 0.33
-Nodes (1): handleDelete()
-
-### Community 60 - "Community 60"
+### Community 40 - "Community 40"
 Cohesion: 0.5
 Nodes (2): getSystemTheme(), resolveTheme()
 
-### Community 61 - "Community 61"
-Cohesion: 0.5
-Nodes (2): UpdateBanner(), useUpdater()
+### Community 41 - "Community 41"
+Cohesion: 0.4
+Nodes (0): 
 
-### Community 62 - "Community 62"
+### Community 42 - "Community 42"
+Cohesion: 0.6
+Nodes (3): addDays(), buildWeekPlanPrompt(), formatDate()
+
+### Community 43 - "Community 43"
 Cohesion: 0.5
 Nodes (0): 
 
-### Community 63 - "Community 63"
+### Community 44 - "Community 44"
 Cohesion: 0.5
 Nodes (0): 
 
-### Community 64 - "Community 64"
+### Community 45 - "Community 45"
 Cohesion: 0.67
 Nodes (2): AnimatedCounter(), useInView()
 
-### Community 65 - "Community 65"
+### Community 46 - "Community 46"
 Cohesion: 0.67
 Nodes (0): 
 
-### Community 66 - "Community 66"
+### Community 47 - "Community 47"
 Cohesion: 0.67
+Nodes (0): 
+
+### Community 48 - "Community 48"
+Cohesion: 0.67
+Nodes (0): 
+
+### Community 49 - "Community 49"
+Cohesion: 0.67
+Nodes (1): runMigrations()
+
+### Community 50 - "Community 50"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 51 - "Community 51"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 52 - "Community 52"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 53 - "Community 53"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 54 - "Community 54"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 55 - "Community 55"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 56 - "Community 56"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 57 - "Community 57"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 58 - "Community 58"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 59 - "Community 59"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 60 - "Community 60"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 61 - "Community 61"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 62 - "Community 62"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 63 - "Community 63"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 64 - "Community 64"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 65 - "Community 65"
+Cohesion: 1.0
+Nodes (0): 
+
+### Community 66 - "Community 66"
+Cohesion: 1.0
 Nodes (0): 
 
 ### Community 67 - "Community 67"
 Cohesion: 1.0
-Nodes (2): get_script_dir(), main()
+Nodes (0): 
 
 ### Community 68 - "Community 68"
 Cohesion: 1.0
@@ -471,138 +457,90 @@ Nodes (0):
 Cohesion: 1.0
 Nodes (0): 
 
-### Community 84 - "Community 84"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 85 - "Community 85"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 86 - "Community 86"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 87 - "Community 87"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 88 - "Community 88"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 89 - "Community 89"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 90 - "Community 90"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 91 - "Community 91"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 92 - "Community 92"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 93 - "Community 93"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 94 - "Community 94"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 95 - "Community 95"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 96 - "Community 96"
-Cohesion: 1.0
-Nodes (0): 
-
-### Community 97 - "Community 97"
-Cohesion: 1.0
-Nodes (0): 
-
 ## Knowledge Gaps
-- **Thin community `Community 68`** (2 nodes): `BrandInterview.tsx`, `BrandInterview()`
+- **Thin community `Community 50`** (2 nodes): `BrandInterview.tsx`, `BrandInterview()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 69`** (2 nodes): `KnowledgeIndicator.tsx`, `KnowledgeIndicator()`
+- **Thin community `Community 51`** (2 nodes): `UpdateBanner.tsx`, `handleDownload()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 70`** (2 nodes): `KnowledgeBase.tsx`, `getTags()`
+- **Thin community `Community 52`** (2 nodes): `KnowledgeIndicator.tsx`, `KnowledgeIndicator()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 71`** (2 nodes): `projects.ts`, `extractJSON()`
+- **Thin community `Community 53`** (2 nodes): `useRequestLicense.ts`, `useRequestLicense()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 72`** (2 nodes): `extractJSON()`, `audiences.ts`
+- **Thin community `Community 54`** (2 nodes): `useUpdater.ts`, `useUpdater()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 73`** (1 nodes): `vite.config.ts`
+- **Thin community `Community 55`** (2 nodes): `toggleSelect()`, `AnalyticsPage.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 74`** (1 nodes): `main.tsx`
+- **Thin community `Community 56`** (2 nodes): `KnowledgeBase.tsx`, `getTags()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 75`** (1 nodes): `GeneratePanel.tsx`
+- **Thin community `Community 57`** (2 nodes): `projects.ts`, `extractJSON()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 76`** (1 nodes): `ChatPanel.tsx`
+- **Thin community `Community 58`** (2 nodes): `extractJSON()`, `audiences.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 77`** (1 nodes): `constants.ts`
+- **Thin community `Community 59`** (1 nodes): `vite.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 78`** (1 nodes): `AnalyticsPage.tsx`
+- **Thin community `Community 60`** (1 nodes): `main.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 79`** (1 nodes): `BrandFactsPage.tsx`
+- **Thin community `Community 61`** (1 nodes): `electron.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 80`** (1 nodes): `drizzle.config.ts`
+- **Thin community `Community 62`** (1 nodes): `GeneratePanel.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 81`** (1 nodes): `mammoth.d.ts`
+- **Thin community `Community 63`** (1 nodes): `LicenseGate.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 82`** (1 nodes): `rubrics.ts`
+- **Thin community `Community 64`** (1 nodes): `ChatPanel.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 83`** (1 nodes): `competitors.ts`
+- **Thin community `Community 65`** (1 nodes): `constants.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 84`** (1 nodes): `textures.ts`
+- **Thin community `Community 66`** (1 nodes): `BrandFactsPage.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 85`** (1 nodes): `contentTypes.ts`
+- **Thin community `Community 67`** (1 nodes): `drizzle.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 86`** (1 nodes): `instagram.ts`
+- **Thin community `Community 68`** (1 nodes): `mammoth.d.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 87`** (1 nodes): `drafts.ts`
+- **Thin community `Community 69`** (1 nodes): `rubrics.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 88`** (1 nodes): `pipeline.ts`
+- **Thin community `Community 70`** (1 nodes): `competitors.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 89`** (1 nodes): `topics.ts`
+- **Thin community `Community 71`** (1 nodes): `textures.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 90`** (1 nodes): `chat.ts`
+- **Thin community `Community 72`** (1 nodes): `contentTypes.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 91`** (1 nodes): `strategy.ts`
+- **Thin community `Community 73`** (1 nodes): `analytics.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 92`** (1 nodes): `products.ts`
+- **Thin community `Community 74`** (1 nodes): `drafts.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 93`** (1 nodes): `keywords.ts`
+- **Thin community `Community 75`** (1 nodes): `pipeline.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 94`** (1 nodes): `funnels.ts`
+- **Thin community `Community 76`** (1 nodes): `topics.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 95`** (1 nodes): `platforms.ts`
+- **Thin community `Community 77`** (1 nodes): `products.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 96`** (1 nodes): `hantStages.ts`
+- **Thin community `Community 78`** (1 nodes): `keywords.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 97`** (1 nodes): `preload.ts`
+- **Thin community `Community 79`** (1 nodes): `funnels.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 80`** (1 nodes): `platforms.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 81`** (1 nodes): `metrics.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 82`** (1 nodes): `hantStages.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 83`** (1 nodes): `preload.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `E()` connect `Community 9` to `Community 0`, `Community 1`, `Community 2`, `Community 3`, `Community 4`, `Community 5`, `Community 6`, `Community 7`, `Community 8`, `Community 10`, `Community 11`, `Community 12`, `Community 13`, `Community 14`, `Community 15`, `Community 16`, `Community 17`, `Community 18`, `Community 19`, `Community 21`, `Community 22`, `Community 23`, `Community 24`, `Community 27`, `Community 28`, `Community 32`, `Community 34`, `Community 35`, `Community 36`, `Community 37`, `Community 43`, `Community 44`, `Community 45`, `Community 47`, `Community 50`?**
-  _High betweenness centrality (0.319) - this node is a cross-community bridge._
-- **Why does `fetch()` connect `Community 5` to `Community 0`, `Community 36`, `Community 9`, `Community 10`, `Community 13`, `Community 16`, `Community 27`, `Community 28`, `Community 30`?**
-  _High betweenness centrality (0.063) - this node is a cross-community bridge._
-- **Why does `find()` connect `Community 30` to `Community 0`, `Community 2`, `Community 5`, `Community 39`, `Community 8`, `Community 9`, `Community 46`?**
-  _High betweenness centrality (0.034) - this node is a cross-community bridge._
-- **Are the 88 inferred relationships involving `E()` (e.g. with `_L()` and `PL()`) actually correct?**
-  _`E()` has 88 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 2 inferred relationships involving `$t()` (e.g. with `eY()` and `E()`) actually correct?**
-  _`$t()` has 2 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 2 inferred relationships involving `$t()` (e.g. with `eY()` and `E()`) actually correct?**
-  _`$t()` has 2 INFERRED edges - model-reasoned connections that need verification._
-- **Are the 5 inferred relationships involving `t_()` (e.g. with `Hw()` and `Hw()`) actually correct?**
-  _`t_()` has 5 INFERRED edges - model-reasoned connections that need verification._
+- **Why does `t()` connect `Community 10` to `Community 0`, `Community 1`, `Community 2`, `Community 4`, `Community 5`, `Community 6`, `Community 7`, `Community 8`, `Community 9`, `Community 11`, `Community 12`, `Community 13`, `Community 14`, `Community 15`, `Community 16`, `Community 18`, `Community 19`, `Community 20`, `Community 22`, `Community 23`, `Community 24`, `Community 25`, `Community 26`, `Community 28`, `Community 30`, `Community 32`, `Community 35`, `Community 37`?**
+  _High betweenness centrality (0.180) - this node is a cross-community bridge._
+- **Why does `E()` connect `Community 0` to `Community 2`, `Community 3`, `Community 4`, `Community 5`, `Community 8`, `Community 12`, `Community 14`, `Community 15`, `Community 16`, `Community 17`, `Community 24`, `Community 25`, `Community 26`, `Community 27`, `Community 31`?**
+  _High betweenness centrality (0.077) - this node is a cross-community bridge._
+- **Why does `Az()` connect `Community 0` to `Community 2`, `Community 9`, `Community 13`, `Community 19`, `Community 20`, `Community 22`, `Community 24`, `Community 25`, `Community 29`?**
+  _High betweenness centrality (0.036) - this node is a cross-community bridge._
+- **Are the 75 inferred relationships involving `t()` (e.g. with `OL()` and `CL()`) actually correct?**
+  _`t()` has 75 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 44 inferred relationships involving `E()` (e.g. with `_L()` and `PL()`) actually correct?**
+  _`E()` has 44 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 48 inferred relationships involving `fetch()` (e.g. with `handleUpload()` and `async()`) actually correct?**
+  _`fetch()` has 48 INFERRED edges - model-reasoned connections that need verification._
+- **Are the 5 inferred relationships involving `$t()` (e.g. with `eY()` and `persist()`) actually correct?**
+  _`$t()` has 5 INFERRED edges - model-reasoned connections that need verification._

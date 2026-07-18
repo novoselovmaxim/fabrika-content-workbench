@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db.js";
-import { projectKnowledge, projects } from "../schema.js";
+import { projectKnowledge, projects, brandFacts } from "../schema.js";
 import { sql, eq, and, desc } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import multer from "multer";
@@ -11,6 +11,8 @@ import mammoth from "mammoth";
 import TurndownService from "turndown";
 import { PATHS } from "../paths.js";
 import { generate } from "../services/aiGateway.js";
+import { fetchUrlContent } from "../services/urlFetchService.js";
+import { extractFactsFromKnowledge } from "../services/factExtraction.js";
 
 const uploadDir = PATHS.knowledge;
 fs.mkdirSync(uploadDir, { recursive: true });
@@ -181,7 +183,7 @@ knowledgeRouter.get("/stats/:projectId", (req, res) => {
 });
 
 // POST / — create a note or link
-knowledgeRouter.post("/", (req, res) => {
+knowledgeRouter.post("/", async (req, res) => {
   const { projectId, type, title, content, sourceUrl, tags } = req.body;
   if (!projectId || !title) {
     return res.status(400).json({ error: "projectId and title are required" });
@@ -189,22 +191,70 @@ knowledgeRouter.post("/", (req, res) => {
 
   const id = uuid();
   const now = new Date().toISOString();
+  let finalContent = content || "";
+  let finalTitle = title;
+
+  // If link type, fetch the URL and extract content + title
+  if (type === "link" && sourceUrl) {
+    const fetched = await fetchUrlContent(sourceUrl);
+    if (fetched.content) {
+      finalContent = fetched.content;
+      if (fetched.title && !title.startsWith("http")) {
+        finalTitle = fetched.title;
+      }
+    } else {
+      console.warn(`[knowledge] Failed to fetch ${sourceUrl}: ${fetched.error || "unknown"}`);
+    }
+  }
+
+  const needProcessing = finalContent.length >= 20;
+
   const data = {
     id,
     projectId,
     type: type || "note",
-    title,
-    content: content || "",
+    title: finalTitle,
+    content: finalContent,
     sourceUrl: sourceUrl || null,
     tags: tags ? JSON.stringify(tags) : null,
-    wordCount: wordCount(content || ""),
+    wordCount: wordCount(finalContent || ""),
+    processed: needProcessing ? 0 : 1,
+    processingError: null,
+    factsCount: 0,
     createdAt: now,
     updatedAt: now,
   };
 
   db.insert(projectKnowledge).values(data).run();
-  res.status(201).json({ ...data, tags });
+
+  // Return immediately
+  const created = db.select().from(projectKnowledge).where(eq(projectKnowledge.id, id)).get();
+  res.status(201).json(created);
+
+  // Async: extract brand facts from this entry (after response sent)
+  if (needProcessing) {
+    processKnowledgeEntry(projectId, id);
+  }
 });
+
+async function processKnowledgeEntry(projectId: string, entryId: string) {
+  try {
+    const count = await extractFactsFromKnowledge(projectId, entryId);
+    db.update(projectKnowledge).set({
+      processed: 1,
+      factsCount: count,
+      updatedAt: new Date().toISOString(),
+    }).where(eq(projectKnowledge.id, entryId)).run();
+    console.log(`[knowledge] Processed ${entryId}: ${count} facts`);
+  } catch (err: any) {
+    db.update(projectKnowledge).set({
+      processed: 1,
+      processingError: err.message,
+      updatedAt: new Date().toISOString(),
+    }).where(eq(projectKnowledge.id, entryId)).run();
+    console.error(`[knowledge] Processing failed for ${entryId}:`, err.message);
+  }
+}
 
 // POST /upload — upload and convert a file
 knowledgeRouter.post("/upload", upload.single("file"), async (req, res) => {
@@ -228,12 +278,22 @@ knowledgeRouter.post("/upload", upload.single("file"), async (req, res) => {
       fileSize: req.file.size,
       tags: tags ? JSON.stringify(tags) : null,
       wordCount: wordCount(content),
+      processed: 0,
+      processingError: null,
+      factsCount: 0,
       createdAt: now,
       updatedAt: now,
     };
 
     db.insert(projectKnowledge).values(data).run();
-    res.status(201).json({ ...data, tags: tags ? JSON.parse(JSON.stringify(tags)) : [] });
+
+    const created = db.select().from(projectKnowledge).where(eq(projectKnowledge.id, id)).get();
+    res.status(201).json(created);
+
+    // Async: extract brand facts
+    if (content.length >= 20) {
+      processKnowledgeEntry(projectId, id);
+    }
   } catch (err: any) {
     res.status(500).json({ error: err.message || "File conversion failed" });
   }

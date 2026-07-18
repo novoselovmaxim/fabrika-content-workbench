@@ -9,6 +9,10 @@ import StoriesTab from "../components/content-tabs/StoriesTab";
 import PublicationTab from "../components/PublicationTab";
 import { BarChart3, RefreshCw, Pencil } from "lucide-react";
 
+function safeJsonParse(val: string) {
+  try { return JSON.parse(val); } catch { return null; }
+}
+
 const SUPPORTED_OWN_METRICS: Record<string, string[]> = {
   instagram: ["engagement_rate", "likes", "comments", "reach", "impressions", "saves"],
   vk: ["engagement_rate", "reach", "likes", "comments", "shares"],
@@ -203,12 +207,15 @@ function DraftsSection({ id, drafts, queryClient, post, updatePost }: {
                         )}
                       </div>
                     )}
-                    {d.usedBrandFacts && d.usedBrandFacts.length > 0 && (
-                      <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-dim)" }}>
-                        <span style={{ fontWeight: 600 }}>🧠 Факты бренда:</span>{' '}
-                        {d.usedBrandFacts.join(", ")}
-                      </div>
-                    )}
+                    {(() => {
+                      const facts = typeof d.usedBrandFacts === 'string' ? safeJsonParse(d.usedBrandFacts) : d.usedBrandFacts;
+                      return Array.isArray(facts) && facts.length > 0 ? (
+                        <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-dim)" }}>
+                          <span style={{ fontWeight: 600 }}>🧠 Факты бренда:</span>{' '}
+                          {facts.join(", ")}
+                        </div>
+                      ) : null;
+                    })()}
                     {d.explanation && !isCaption && (
                       <div style={{ marginTop: 4, fontSize: 11, color: "var(--text-dim)", fontStyle: "italic" }}>
                         {d.explanation}
@@ -295,12 +302,15 @@ function DraftsSection({ id, drafts, queryClient, post, updatePost }: {
                   {d.contentMarkdown || <span className="text-dim">Пустой черновик — нажмите чтобы редактировать</span>}
                 </div>
               )}
-              {d.usedBrandFacts && d.usedBrandFacts.length > 0 && (
-                <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-dim)" }}>
-                  <span style={{ fontWeight: 600 }}>🧠 Факты бренда:</span>{' '}
-                  {d.usedBrandFacts.join(", ")}
-                </div>
-              )}
+              {(() => {
+                const facts = typeof d.usedBrandFacts === 'string' ? safeJsonParse(d.usedBrandFacts) : d.usedBrandFacts;
+                return Array.isArray(facts) && facts.length > 0 ? (
+                  <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-dim)" }}>
+                    <span style={{ fontWeight: 600 }}>🧠 Факты бренда:</span>{' '}
+                    {facts.join(", ")}
+                  </div>
+                ) : null;
+              })()}
               {d.explanation && (
                 <div style={{ marginTop: 4, fontSize: 11, color: "var(--text-dim)", fontStyle: "italic" }}>
                   {d.explanation}
@@ -646,6 +656,7 @@ const contentTabRef = useRef<ContentTabHandle>(null);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["post", id] }),
         queryClient.invalidateQueries({ queryKey: ["drafts", id] }),
+        queryClient.invalidateQueries({ queryKey: ["assets", id] }),
       ]);
       setSaveStatus("saved");
       setLastSavedStep(currentStep);
@@ -663,33 +674,35 @@ const contentTabRef = useRef<ContentTabHandle>(null);
   }, [currentStep]);
 
   const lockAndNext = async () => {
-    if (currentStep === "content" && contentTabRef.current) {
-      const savedDraftId = await contentTabRef.current.saveDraft();
-      if (savedDraftId && (post.contentTypeCode === "carousel" || post.contentTypeCode === "post")) {
-        updatePost.mutate({ versionCurrentId: savedDraftId });
+    try {
+      if (currentStep === "content" && contentTabRef.current) {
+        const savedDraftId = await contentTabRef.current.saveDraft();
+        if (savedDraftId && (post.contentTypeCode === "carousel" || post.contentTypeCode === "post")) {
+          updatePost.mutate({ versionCurrentId: savedDraftId });
+        }
       }
-    }
-    const steps: Step[] = ["meta", "content", "drafts", "review", "publication"];
-    const idx = steps.indexOf(currentStep);
-    if (idx < steps.length - 1) {
-      setLocked((prev) => new Set(prev).add(currentStep));
-      setCurrentStep(steps[idx + 1]);
-    }
-    if (post) {
-      const statusOrder = ["idea", "planned", "draft", "generated", "editing", "ready", "scheduled", "published", "archived"];
-      const stepTarget: Record<Step, string> = {
-        meta: "draft",
-        content: "generated",
-        drafts: "editing",
-        review: "ready",
-        publication: "ready",
-      };
-      const currentStatusIdx = statusOrder.indexOf(post.status);
-      const targetStatusIdx = statusOrder.indexOf(stepTarget[currentStep]);
-      if (currentStatusIdx >= 0 && currentStatusIdx < targetStatusIdx) {
-        updatePost.mutate({ status: stepTarget[currentStep] });
+      const steps: Step[] = ["meta", "content", "drafts", "review", "publication"];
+      const idx = steps.indexOf(currentStep);
+      if (idx < steps.length - 1) {
+        setLocked((prev) => new Set(prev).add(currentStep));
+        setCurrentStep(steps[idx + 1]);
       }
-    }
+      if (post) {
+        const statusOrder = ["idea", "planned", "draft", "generated", "editing", "ready", "scheduled", "published", "archived"];
+        const stepTarget: Record<Step, string> = {
+          meta: "draft",
+          content: "generated",
+          drafts: "editing",
+          review: "ready",
+          publication: "ready",
+        };
+        const currentStatusIdx = statusOrder.indexOf(post.status);
+        const targetStatusIdx = statusOrder.indexOf(stepTarget[currentStep]);
+        if (currentStatusIdx >= 0 && currentStatusIdx < targetStatusIdx) {
+          updatePost.mutate({ status: stepTarget[currentStep] });
+        }
+      }
+    } catch {}
   };
 
   const isStepDone = (key: Step) => {

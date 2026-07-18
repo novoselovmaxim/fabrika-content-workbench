@@ -90,6 +90,15 @@ export const api = {
     get: (projectId: string) => request<any[]>(`/projects/${projectId}/brand-styles`),
     save: (projectId: string, styles: any[]) =>
       request<any>(`/projects/${projectId}/brand-styles`, { method: "PUT", body: JSON.stringify({ styles }) }),
+    uploadLogo: (projectId: string, styleId: string, file: File) => {
+      const form = new FormData();
+      form.append("file", file);
+      return fetch(`/api/assets/upload-logo?projectId=${projectId}&styleId=${styleId}`, {
+        method: "POST", body: form,
+      }).then((r) => r.json()) as Promise<{ url: string }>;
+    },
+    deleteLogo: (projectId: string, styleId: string) =>
+      request<void>(`/assets/delete-logo?projectId=${projectId}&styleId=${styleId}`, { method: "DELETE" }),
   },
 
   topics: {
@@ -215,6 +224,8 @@ export const api = {
     delete: (id: string) => request<void>(`/competitors/${id}`, { method: "DELETE" }),
     deleteSaved: (id: string) => request<void>(`/competitors/saved/${id}`, { method: "DELETE" }),
     clearSaved: (projectId: string) => request<void>(`/competitors/saved/${projectId}/all`, { method: "DELETE" }),
+    analyzeUrl: (projectId: string, urls: string[]) =>
+      request<any>(`/competitors/analyze-url`, { method: "POST", body: JSON.stringify({ projectId, urls }) }),
   },
 
   generate: {

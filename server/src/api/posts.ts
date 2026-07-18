@@ -63,6 +63,7 @@ postsRouter.get("/", (req, res) => {
       funnelColor: funnels.color,
       platformName: platforms.name,
       platformType: platforms.type,
+      platformAccountHandle: platforms.accountHandle,
     })
     .from(postItems)
     .leftJoin(topicsTable, eq(postItems.topicId, topicsTable.id))
@@ -84,6 +85,9 @@ postsRouter.get("/:id", (req, res) => {
       id: postItems.id,
       projectId: postItems.projectId,
       platformId: postItems.platformId,
+      platformType: platforms.type,
+      platformName: platforms.name,
+      platformAccountHandle: platforms.accountHandle,
       title: postItems.title,
       status: postItems.status,
       scheduledDate: postItems.scheduledDate,
@@ -115,6 +119,7 @@ postsRouter.get("/:id", (req, res) => {
       funnelColor: funnels.color,
     })
     .from(postItems)
+    .leftJoin(platforms, eq(postItems.platformId, platforms.id))
     .leftJoin(topicsTable, eq(postItems.topicId, topicsTable.id))
     .leftJoin(rubrics, eq(postItems.rubricId, rubrics.id))
     .leftJoin(contentTypes, eq(postItems.contentTypeId, contentTypes.id))

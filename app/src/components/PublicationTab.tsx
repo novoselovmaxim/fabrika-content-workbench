@@ -15,7 +15,7 @@ const statusColors: Record<string, string> = {
 
 const statuses = ["idea", "planned", "draft", "generated", "editing", "ready", "scheduled", "published", "archived"];
 
-function CarouselPreview({ slides, caption }: { slides: any[]; caption: string }) {
+function CarouselPreview({ slides, caption, displayName }: { slides: any[]; caption: string; displayName: string }) {
   const [idx, setIdx] = useState(0);
   const current = slides[idx];
 
@@ -141,9 +141,9 @@ function CarouselPreview({ slides, caption }: { slides: any[]; caption: string }
             <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 600 }}>
               Б
             </div>
-            <span style={{ fontWeight: 600, fontSize: 13 }}>@username</span>
+            <span style={{ fontWeight: 600, fontSize: 13 }}>@{displayName}</span>
           </div>
-          <div><strong style={{ fontWeight: 600 }}>@username</strong> {renderMarkdown(caption)}</div>
+          <div><strong style={{ fontWeight: 600 }}>@{displayName}</strong> {renderMarkdown(caption)}</div>
         </div>
       )}
     </div>
@@ -200,7 +200,145 @@ function renderInlineText(text: string, key: number): React.ReactNode {
   return parts.length > 0 ? <>{parts}</> : text;
 }
 
-function PostPreview({ imageUrl, caption }: { imageUrl?: string; caption: string }) {
+function TelegramPreview({ imageUrl, caption, displayName }: { imageUrl?: string; caption: string; displayName: string }) {
+  const copyCaption = async () => {
+    if (caption) await navigator.clipboard.writeText(caption);
+  };
+
+  return (
+    <div style={{ width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 4 }}>
+      {/* Telegram-style channel header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", background: "var(--bg)", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#2AABEE", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 16, fontWeight: 700, flexShrink: 0 }}>
+          {(displayName || "T")[0].toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, color: "var(--fg)", lineHeight: 1.3 }}>{displayName}</div>
+          <div style={{ fontSize: 11, color: "var(--dim)" }}>канал</div>
+        </div>
+      </div>
+      {/* Image */}
+      {imageUrl && (
+        <div style={{ width: "100%", aspectRatio: "1/1", background: "#f0f0f0", overflow: "hidden" }}>
+          <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        </div>
+      )}
+      {/* Caption */}
+      {caption && (
+        <div style={{ padding: "8px 16px", position: "relative", fontSize: 14, lineHeight: 1.5, color: "var(--fg)" }}>
+          <button onClick={copyCaption} className="preview-copy-btn" title="Копировать текст">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" />
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+          </button>
+          {renderMarkdown(caption)}
+        </div>
+      )}
+      {/* View count footer (Telegram-style) */}
+      <div style={{ padding: "4px 16px 12px", fontSize: 11, color: "var(--dim)", display: "flex", alignItems: "center", gap: 16 }}>
+        <span>👁 0</span>
+        <button onClick={copyCaption} style={{ background: "none", border: "none", cursor: "pointer", color: "#2AABEE", fontSize: 12, padding: 0 }}>📋 Копировать</button>
+      </div>
+    </div>
+  );
+}
+
+function VKPreview({ imageUrl, caption, displayName }: { imageUrl?: string; caption: string; displayName: string }) {
+  const copyCaption = async () => {
+    if (caption) await navigator.clipboard.writeText(caption);
+  };
+
+  return (
+    <div style={{ width: "100%", maxWidth: 420, borderRadius: 12, overflow: "hidden", border: "1px solid var(--border)", background: "#fff" }}>
+      {/* VK header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px" }}>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#0077FF", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 700, flexShrink: 0 }}>
+          {(displayName || "V")[0].toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: "#2a5885" }}>{displayName}</div>
+          <div style={{ fontSize: 11, color: "#818c99" }}>Сообщество</div>
+        </div>
+      </div>
+      {/* Image */}
+      {imageUrl && (
+        <div style={{ width: "100%", aspectRatio: "1/1", background: "#f0f0f0" }}>
+          <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        </div>
+      )}
+      {/* Caption */}
+      {caption && (
+        <div style={{ padding: "8px 16px", position: "relative", fontSize: 13, lineHeight: 1.5, color: "#000" }}>
+          <button onClick={copyCaption} className="preview-copy-btn" title="Копировать текст">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" />
+              <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+            </svg>
+          </button>
+          {renderMarkdown(caption)}
+        </div>
+      )}
+      {/* VK action bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16, padding: "8px 16px 12px", fontSize: 12, color: "#818c99" }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>❤ 0</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>💬 0</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>↗ 0</span>
+        <span style={{ flex: 1 }} />
+        <button onClick={copyCaption} style={{ background: "none", border: "none", cursor: "pointer", color: "#818c99", fontSize: 12, padding: 0 }}>📋</button>
+      </div>
+    </div>
+  );
+}
+
+function YouTubePreview({ imageUrl, caption, displayName }: { imageUrl?: string; caption: string; displayName: string }) {
+  const copyCaption = async () => {
+    if (caption) await navigator.clipboard.writeText(caption);
+  };
+
+  return (
+    <div style={{ width: "100%", maxWidth: 420 }}>
+      {/* Thumbnail */}
+      <div style={{ width: "100%", aspectRatio: "16/9", background: "#111", borderRadius: 12, overflow: "hidden", position: "relative" }}>
+        {imageUrl ? (
+          <img src={imageUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+        ) : (
+          <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#555", fontSize: 13 }}>
+            Нет превью
+          </div>
+        )}
+        {/* Play button overlay */}
+        <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 48, height: 48, background: "rgba(0,0,0,0.7)", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><polygon points="8,5 19,12 8,19" /></svg>
+        </div>
+        {/* Duration badge */}
+        <div style={{ position: "absolute", bottom: 6, right: 6, background: "rgba(0,0,0,0.8)", color: "#fff", fontSize: 11, padding: "2px 6px", borderRadius: 4 }}>0:00</div>
+      </div>
+      {/* Info row */}
+      <div style={{ display: "flex", gap: 12, marginTop: 10 }}>
+        <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#555", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 14, fontWeight: 700 }}>
+          {(displayName || "Y")[0].toUpperCase()}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 600, fontSize: 14, lineHeight: 1.3, color: "var(--fg)", marginBottom: 4 }}>{caption.slice(0, 80) || "Заголовок видео"}</div>
+          <div style={{ fontSize: 12, color: "var(--dim)" }}>{displayName}</div>
+          <div style={{ fontSize: 12, color: "var(--dim)", marginTop: 2 }}>0 просмотров</div>
+        </div>
+      </div>
+      {/* Like/dislike bar */}
+      {caption && (
+        <div style={{ marginTop: 8, padding: "6px 0", fontSize: 12, color: "var(--dim)", display: "flex", alignItems: "center", gap: 12 }}>
+          <span>👍 0</span>
+          <span>👎 0</span>
+          <span style={{ flex: 1 }} />
+          <button onClick={copyCaption} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--dim)", fontSize: 12, padding: 0 }}>📋</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PostPreview({ imageUrl, caption, displayName }: { imageUrl?: string; caption: string; displayName: string }) {
   const downloadImage = async () => {
     if (!imageUrl) return;
     const ext = imageUrl.split(".").pop() || "png";
@@ -227,7 +365,7 @@ function PostPreview({ imageUrl, caption }: { imageUrl?: string; caption: string
           <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 600 }}>
             Б
           </div>
-          <span style={{ fontWeight: 600, fontSize: 13, color: "#262626" }}>@username</span>
+          <span style={{ fontWeight: 600, fontSize: 13, color: "#262626" }}>@{displayName}</span>
         </div>
 
         {/* Изображение */}
@@ -266,7 +404,7 @@ function PostPreview({ imageUrl, caption }: { imageUrl?: string; caption: string
               <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
             </svg>
           </button>
-            <strong style={{ fontWeight: 600 }}>@username</strong> {renderMarkdown(caption)}
+            <strong style={{ fontWeight: 600 }}>@{displayName}</strong> {renderMarkdown(caption)}
           </div>
         )}
       </div>
@@ -445,8 +583,12 @@ export default function PublicationTab({
     }
   } catch {}
   if (!selectedImageUrl) {
-    selectedImageUrl = assets?.find((a: any) => a.type === "image")?.sourceUrl || "";
+    const imageAssets = (assets || []).filter((a: any) => a.type === "image");
+    const last = imageAssets.sort((a: any, b: any) => (a.createdAt || a.id) > (b.createdAt || b.id) ? 1 : -1).at(-1);
+    selectedImageUrl = last?.sourceUrl || "";
   }
+
+  const displayName = post.platformAccountHandle || post.platformName || "username";
 
   const [downloading, setDownloading] = useState(false);
 
@@ -714,22 +856,56 @@ export default function PublicationTab({
       {/* Предпросмотр — эмуляция платформы */}
       <div className="card">
         <div className="card-header">
-          <span className="card-title">👁 Предпросмотр в Instagram</span>
+          <span className="card-title">👁 Предпросмотр в {post.platformName || "Instagram"}</span>
           <span className="text-xs text-dim">{contentTypeCode === "carousel" ? "Карусель" : contentTypeCode === "stories" ? "Stories" : contentTypeCode === "reel" ? "Reels" : "Пост"}</span>
         </div>
         <div style={{ display: "flex", justifyContent: "center", padding: "16px 0" }}>
-          {contentTypeCode === "carousel" ? (
-            <CarouselPreview slides={carouselSlides} caption={caption} />
-          ) : contentTypeCode === "stories" ? (
-            <StoriesPreview cards={storyCards} />
-          ) : contentTypeCode === "reel" ? (
-            <ReelPreview script={reelScript} />
-          ) : (
-            <PostPreview
-              imageUrl={selectedImageUrl}
-              caption={caption}
-            />
-          )}
+          {(() => {
+            const platform = (post.platformType || post.platformName || "").toLowerCase();
+            if (platform === "telegram" && contentTypeCode !== "carousel" && contentTypeCode !== "stories" && contentTypeCode !== "reel") {
+              return (
+                <TelegramPreview
+                  imageUrl={selectedImageUrl}
+                  caption={caption}
+                  displayName={displayName}
+                />
+              );
+            }
+            if (platform === "youtube") {
+              return (
+                <YouTubePreview
+                  imageUrl={selectedImageUrl}
+                  caption={caption}
+                  displayName={displayName}
+                />
+              );
+            }
+            if (platform === "vk" && contentTypeCode !== "carousel" && contentTypeCode !== "stories" && contentTypeCode !== "reel") {
+              return (
+                <VKPreview
+                  imageUrl={selectedImageUrl}
+                  caption={caption}
+                  displayName={displayName}
+                />
+              );
+            }
+            if (contentTypeCode === "carousel") {
+              return <CarouselPreview slides={carouselSlides} caption={caption} displayName={displayName} />;
+            }
+            if (contentTypeCode === "stories") {
+              return <StoriesPreview cards={storyCards} />;
+            }
+            if (contentTypeCode === "reel") {
+              return <ReelPreview script={reelScript} />;
+            }
+            return (
+              <PostPreview
+                imageUrl={selectedImageUrl}
+                caption={caption}
+                displayName={displayName}
+              />
+            );
+          })()}
         </div>
         {/* Подсказка если данных нет */}
         {contentTypeCode === "carousel" && carouselSlides.length === 0 && (

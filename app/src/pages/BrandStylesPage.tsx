@@ -39,6 +39,7 @@ const DEFAULT_DESIGN_SYSTEM: DesignSystem = {
 export default function BrandStylesPage() {
   const queryClient = useQueryClient();
   const currentProjectId = getStoredProjectId();
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   const { data: project } = useQuery({
     queryKey: ["project", currentProjectId],
@@ -98,7 +99,12 @@ export default function BrandStylesPage() {
   const addStyle = () => {
     setLocalStyles((prev) => [
       ...prev,
-      { id: crypto.randomUUID(), name: "", contentType: "carousel", systemPrompt: "", isActive: false, logoUrl: "" },
+      {
+        id: crypto.randomUUID(), name: "", contentType: "carousel",
+        systemPrompt: "", isActive: false,
+        logoUrl: "", logoAutoApply: true,
+        logoPosition: "bottom-right", logoSize: 10, logoOpacity: 0.7,
+      },
     ]);
   };
 
@@ -408,16 +414,102 @@ export default function BrandStylesPage() {
                   </button>
                 </div>
                 <div>
-                  <label className="text-xs text-dim" style={{ display: "block", marginBottom: 2 }}>
-                    URL логотипа бренда (опционально)
+                  <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>
+                    Логотип бренда
                   </label>
-                  <input
-                    className="input"
-                    value={style.logoUrl || ""}
-                    onChange={(e) => updateStyle(style.id, "logoUrl", e.target.value)}
-                    placeholder="https://example.com/logo.png"
-                    style={{ fontSize: 12 }}
-                  />
+                  <div className="flex items-center gap-3" style={{ flexWrap: "wrap" }}>
+                    {style.logoUrl ? (
+                      <div style={{ position: "relative", width: 80, height: 80, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border)", background: "repeating-conic-gradient(#e0e0e0 0% 25%, #ffffff 0% 50%) 0% 0% / 12px 12px" }}>
+                        {failedImages[style.id] ? (
+                          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "var(--red)", textAlign: "center", lineHeight: 1.2, padding: 2 }}>
+                            ошибка<br/>загрузки
+                          </div>
+                        ) : (
+                          <img src={style.logoUrl} alt="logo" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                            onError={() => setFailedImages((p) => ({ ...p, [style.id]: true }))}
+                            onLoad={() => setFailedImages((p) => ({ ...p, [style.id]: false }))} />
+                        )}
+                      </div>
+                    ) : (
+                      <label style={{ width: 80, height: 80, borderRadius: 8, border: "1px dashed var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "var(--text-dim)", background: "var(--bg-hover)", cursor: "pointer" }}>
+                        + загрузить
+                        <input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" style={{ display: "none" }}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            try {
+                              const result = await api.brandStyles.uploadLogo(currentProjectId, style.id, file);
+                              updateStyle(style.id, "logoUrl", result.url);
+                            } catch (err: any) {
+                              alert("Ошибка загрузки: " + err.message);
+                            }
+                            e.target.value = "";
+                          }} />
+                      </label>
+                    )}
+                    <div className="flex flex-col gap-1">
+                      {style.logoUrl ? (
+                        <>
+                          <label className="btn btn-ghost" style={{ fontSize: 11, padding: "4px 10px", cursor: "pointer" }}>
+                            🔄 Заменить
+                            <input type="file" accept=".png,.jpg,.jpeg,.webp,.svg" style={{ display: "none" }}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                try {
+                                  const result = await api.brandStyles.uploadLogo(currentProjectId, style.id, file);
+                                  updateStyle(style.id, "logoUrl", result.url);
+                                } catch (err: any) { alert("Ошибка загрузки: " + err.message); }
+                                e.target.value = "";
+                              }} />
+                          </label>
+                          <button className="btn btn-ghost" style={{ fontSize: 10, color: "var(--red)", padding: "2px 6px" }}
+                            onClick={async () => {
+                              try { await api.brandStyles.deleteLogo(currentProjectId, style.id); } catch {}
+                              updateStyle(style.id, "logoUrl", "");
+                            }}>
+                            🗑 Удалить
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-xs text-dim">PNG / JPG / WebP / SVG</span>
+                      )}
+                    </div>
+                  </div>
+                  {style.logoUrl && (
+                    <div style={{ marginTop: 8, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                      <label className="flex items-center gap-2 text-sm" style={{ cursor: "pointer" }}>
+                        <input type="checkbox" checked={style.logoAutoApply ?? true}
+                          onChange={(e) => updateStyle(style.id, "logoAutoApply", e.target.checked)} />
+                        Авто-наложение при генерации
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-dim">Позиция:</span>
+                        <select className="input" style={{ width: 140, fontSize: 11 }}
+                          value={style.logoPosition || "bottom-right"}
+                          onChange={(e) => updateStyle(style.id, "logoPosition", e.target.value)}>
+                          <option value="bottom-right">Внизу справа</option>
+                          <option value="bottom-left">Внизу слева</option>
+                          <option value="top-right">Вверху справа</option>
+                          <option value="top-left">Вверху слева</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-dim">Размер:</span>
+                        <input type="range" min={3} max={25} value={style.logoSize ?? 10}
+                          onChange={(e) => updateStyle(style.id, "logoSize", Number(e.target.value))}
+                          style={{ width: 80 }} />
+                        <span className="text-xs text-dim">{style.logoSize ?? 10}%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-dim">Непрозрачность:</span>
+                        <input type="range" min={10} max={100} value={(style.logoOpacity ?? 0.7) * 100}
+                          onChange={(e) => updateStyle(style.id, "logoOpacity", Number(e.target.value) / 100)}
+                          style={{ width: 80 }} />
+                        <span className="text-xs text-dim">{Math.round((style.logoOpacity ?? 0.7) * 100)}%</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs text-dim" style={{ display: "block", marginBottom: 2 }}>

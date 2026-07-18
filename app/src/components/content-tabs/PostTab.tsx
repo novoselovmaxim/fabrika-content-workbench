@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../lib/api";
+import { PLATFORM_FORMATS, PLATFORM_DEFAULT_SIZE, PLATFORM_LABELS, PLATFORM_CHAR_LIMITS } from "../../lib/constants";
+import { CharCounter } from "../../components/CharCounter";
 
 export interface ContentTabHandle {
   saveDraft: () => Promise<string | null>;
@@ -25,7 +27,14 @@ const PostTab = forwardRef<ContentTabHandle, {
   const [loaded, setLoaded] = useState(false);
   const [brandStyles, setBrandStyles] = useState<any[]>([]);
   const [selectedStyleId, setSelectedStyleId] = useState<string>("");
+  const [logoMode, setLogoMode] = useState<string>("none");
   const [draftId, setDraftId] = useState<string | null>(null);
+
+  const formats = PLATFORM_FORMATS[post.platformType] || PLATFORM_FORMATS.instagram;
+  const captionLimit = PLATFORM_CHAR_LIMITS[post.platformType]?.caption || 2200;
+  const [selectedFormat, setSelectedFormat] = useState<string>(
+    PLATFORM_DEFAULT_SIZE[post.platformType] || PLATFORM_DEFAULT_SIZE.instagram
+  );
 
   const { data: assets, refetch: refetchAssets } = useQuery({
     queryKey: ["assets", postId],
@@ -130,13 +139,22 @@ const PostTab = forwardRef<ContentTabHandle, {
         body: JSON.stringify({
           postItemId: postId,
           prompt: visualPrompt,
+          size: selectedFormat,
           stylePrompt: selectedStyle?.systemPrompt || "",
+          ...(selectedStyle?.logoUrl && logoMode !== "none" ? {
+            logoMode,
+            logoUrl: selectedStyle.logoUrl,
+            logoPosition: selectedStyle.logoPosition,
+            logoSize: selectedStyle.logoSize,
+            logoOpacity: selectedStyle.logoOpacity,
+          } : {}),
         }),
       });
       if (!res.ok) throw new Error(((await res.json()).error || "Ошибка"));
       const asset = await res.json();
       setImageUrl(asset.sourceUrl);
       refetchAssets();
+      await saveDraft(asset.sourceUrl);
     } catch (err: any) {
       alert("❌ " + err.message);
     } finally {
@@ -169,6 +187,7 @@ const PostTab = forwardRef<ContentTabHandle, {
       const uploaded = await res.json();
       setImageUrl(uploaded.sourceUrl);
       refetchAssets();
+      await saveDraft(uploaded.sourceUrl);
     } catch (err: any) {
       alert("❌ " + err.message);
     } finally {
@@ -177,40 +196,48 @@ const PostTab = forwardRef<ContentTabHandle, {
     }
   };
 
-  const saveDraft = async () => {
+  const saveDraft = async (overrideImageUrl?: string) => {
     setSaving(true);
-    const body: any = {
-      postItemId: postId,
-      stage: "caption",
-      contentMarkdown: text,
-    };
-    body.contentJson = JSON.stringify({
-      visualPrompt: visualPrompt || "",
-      imageUrl: imageUrl || "",
-    });
-    let currentDraftId = draftId;
-    if (currentDraftId) {
-      await fetch(`/api/drafts/${currentDraftId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+    try {
+      const finalImageUrl = overrideImageUrl || imageUrl || "";
+      const body: any = {
+        postItemId: postId,
+        stage: "caption",
+        contentMarkdown: text,
+      };
+      body.contentJson = JSON.stringify({
+        visualPrompt: visualPrompt || "",
+        imageUrl: finalImageUrl,
       });
-    } else {
-      const res = await fetch("/api/drafts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (data.id) {
-        setDraftId(data.id);
-        currentDraftId = data.id;
+      let currentDraftId = draftId;
+      if (currentDraftId) {
+        const res = await fetch(`/api/drafts/${currentDraftId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error("PATCH draft failed");
+      } else {
+        const res = await fetch("/api/drafts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) throw new Error("POST draft failed");
+        const data = await res.json();
+        if (data.id) {
+          setDraftId(data.id);
+          currentDraftId = data.id;
+        }
       }
+      snapRef.current = { text, visualPrompt, imageUrl: finalImageUrl };
+      qc.invalidateQueries({ queryKey: ["drafts", postId] });
+      setSaving(false);
+      return currentDraftId || null;
+    } catch {
+      setSaving(false);
+      return null;
     }
-    snapRef.current = { text, visualPrompt, imageUrl };
-    qc.invalidateQueries({ queryKey: ["drafts", postId] });
-    setSaving(false);
-    return currentDraftId || null;
   };
 
   useImperativeHandle(ref, () => ({
@@ -261,6 +288,35 @@ const PostTab = forwardRef<ContentTabHandle, {
                   Применяется к генерации
                 </span>
               )}
+              {selectedStyle?.logoUrl && (
+                <div className="flex items-center gap-2" style={{ marginLeft: 4 }}>
+                  <span className="text-xs text-dim">Лого:</span>
+                  {["none", "reference", "overlay"].map((mode) => (
+                    <label key={mode} className="flex items-center gap-1" style={{ cursor: "pointer", fontSize: 11 }}>
+                      <input type="radio" name="logoMode" checked={logoMode === mode}
+                        onChange={() => setLogoMode(mode)} />
+                      {mode === "none" ? "Без" : mode === "reference" ? "Референс" : "Наложение"}
+                    </label>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-3" style={{ flexWrap: "wrap", marginLeft: 4 }}>
+                <label className="text-sm text-dim" style={{ fontWeight: 500 }}>
+                  Формат:
+                </label>
+                <select
+                  className="input"
+                  style={{ width: 200 }}
+                  value={selectedFormat}
+                  onChange={(e) => setSelectedFormat(e.target.value)}
+                >
+                  {formats.map((f) => (
+                    <option key={f.size} value={f.size}>
+                      {f.label} ({f.size})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
           <div style={{ position: "relative", width: "100%" }}>
@@ -286,12 +342,20 @@ const PostTab = forwardRef<ContentTabHandle, {
               }}
             />
           </div>
+          {text && (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 2 }}>
+              <CharCounter current={text.length} limit={captionLimit} />
+            </div>
+          )}
           <div className="text-xs text-dim" style={{ marginBottom: 8 }}>
             Можно использовать Markdown: **жирный**, *курсив*, #теги, [ссылка](url), — строки разделяются переносом
           </div>
           <div>
             <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>
               Промпт для изображения
+              <span className="text-dim" style={{ marginLeft: 8, opacity: 0.6 }}>
+                — формат {formats.find(f => f.size === selectedFormat)?.label} ({selectedFormat}) для {PLATFORM_LABELS[post.platformType] || "площадки"}
+              </span>
             </label>
             <div className="flex gap-2" style={{ flexWrap: "wrap", alignItems: "flex-start" }}>
               <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
@@ -348,14 +412,17 @@ const PostTab = forwardRef<ContentTabHandle, {
               />
             </div>
             {imageUrl && (
-              <div style={{ marginTop: 8, borderRadius: 8, overflow: "hidden", maxWidth: 400 }}>
+              <div style={{ marginTop: 8, borderRadius: 8, overflow: "hidden", maxWidth: 400, position: "relative" }}>
                 <img src={imageUrl} alt="" style={{ width: "100%", display: "block" }} />
+                <span style={{ position: "absolute", bottom: 6, left: 6, background: "rgba(0,0,0,0.7)", color: "#fff", fontSize: 10, padding: "2px 6px", borderRadius: 4 }}>
+                  ⭐ Основная
+                </span>
               </div>
             )}
             {imageAssets.length > 0 && (
               <div style={{ marginTop: 8 }}>
                 <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>
-                  Все изображения ({imageAssets.length}) — нажмите чтобы выбрать
+                  Все изображения ({imageAssets.length}) — нажмите чтобы выбрать и сохранить
                 </label>
                 <div className="flex gap-2" style={{ flexWrap: "wrap" }}>
                   {imageAssets.map((a: any) => {
@@ -363,7 +430,14 @@ const PostTab = forwardRef<ContentTabHandle, {
                     return (
                       <div key={a.id} style={{ position: "relative" }}>
                         <div
-                          onClick={() => setImageUrl(a.sourceUrl)}
+                          onClick={async () => {
+                            try {
+                              if (a.sourceUrl !== imageUrl) {
+                                setImageUrl(a.sourceUrl);
+                                await saveDraft(a.sourceUrl);
+                              }
+                            } catch {}
+                          }}
                           style={{
                             width: 80,
                             height: 80,
@@ -381,6 +455,11 @@ const PostTab = forwardRef<ContentTabHandle, {
                             style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                           />
                         </div>
+                        {isSelected && (
+                          <span style={{ position: "absolute", top: -2, left: -2, fontSize: 14, lineHeight: 1 }}>
+                            ⭐
+                          </span>
+                        )}
                         <button
                           onClick={() => deleteAsset(a.id)}
                           style={{
@@ -415,7 +494,7 @@ const PostTab = forwardRef<ContentTabHandle, {
               className="btn btn-primary"
               disabled={saving}
               style={{ alignSelf: "flex-start" }}
-              onClick={saveDraft}
+              onClick={() => saveDraft()}
             >
               {saving ? "Сохранение..." : "💾 Сохранить как черновик"}
             </button>

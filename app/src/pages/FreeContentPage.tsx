@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { getStoredProjectId, getStoredPlatformId } from "../lib/project";
+import { PLATFORM_COLORS } from "../lib/constants";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import ChatPanel from "../components/ChatPanel";
 
@@ -28,6 +29,14 @@ export default function FreeContentPage() {
   const [scheduledDate, setScheduledDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [error, setError] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
+
+  const { data: platforms } = useQuery({
+    queryKey: ["platforms", projectId],
+    queryFn: () => api.platforms.listByProject(projectId!),
+    enabled: !!projectId,
+  });
+  const currentPlatform = platforms?.find((p: any) => p.id === platformId);
+  const platformColor = PLATFORM_COLORS[currentPlatform?.type] || "var(--accent)";
 
   const { data: rubrics } = useQuery({
     queryKey: ["rubrics", projectId, platformId],
@@ -124,7 +133,20 @@ export default function FreeContentPage() {
   return (
     <div style={{ width: "100%" }}>
       <div className="page-header">
-        <h2>Свободный контент</h2>
+        <h2>
+          Свободный контент
+          {currentPlatform && (
+            <span style={{
+              fontSize: 11, marginLeft: 10, verticalAlign: "middle",
+              background: `${platformColor}18`,
+              color: platformColor,
+              border: `1px solid ${platformColor}30`,
+              borderRadius: 6, padding: "2px 10px", fontWeight: 500,
+            }}>
+              {currentPlatform.name}
+            </span>
+          )}
+        </h2>
         <p>Создайте пост вручную с помощью AI на каждом шаге</p>
       </div>
 

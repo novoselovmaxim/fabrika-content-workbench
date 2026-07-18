@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { api } from "./lib/api";
 import { getStoredProjectId, setStoredProjectId, clearStoredProjectId, getStoredPlatformId, setStoredPlatformId, clearStoredPlatformId, getStoredProductId, setStoredProductId, clearStoredProductId } from "./lib/project";
+import { PLATFORM_COLORS } from "./lib/constants";
 import { LicenseGate } from "./components/LicenseGate";
 
 import Dashboard from "./pages/Dashboard";
@@ -298,6 +299,8 @@ function ContextSection() {
   }
 
   const activeProduct = products.find((p: any) => p.id === selectedProductId);
+  const activePlatform = productPlatforms.find((p: any) => p.id === activePlatformId);
+  const platformColor = PLATFORM_COLORS[activePlatform?.type] || "var(--accent)";
   const qs = activePlatformId ? `?platformId=${activePlatformId}` : "";
 
   return (
@@ -326,7 +329,8 @@ function ContextSection() {
       ) : null}
 
       {productPlatforms.length > 1 ? (
-        <div style={{ padding: "4px 12px" }}>
+        <div style={{ padding: "4px 12px", display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: platformColor, flexShrink: 0 }} />
           <select
             className="input"
             value={activePlatformId || ""}
@@ -339,7 +343,7 @@ function ContextSection() {
                 navigate(`${path}?platformId=${pid}`, { replace: true });
               }
             }}
-            style={{ fontSize: 12, fontWeight: 500 }}
+            style={{ fontSize: 12, fontWeight: 500, flex: 1 }}
           >
             {productPlatforms.map((p: any) => (
               <option key={p.id} value={p.id}>{p.name}</option>
@@ -347,17 +351,20 @@ function ContextSection() {
           </select>
         </div>
       ) : productPlatforms.length === 1 ? (
-        <div style={{ padding: "4px 12px", fontSize: 12, fontWeight: 500, color: "var(--text-dim)" }}>
-          {productPlatforms[0].name}
+        <div style={{ padding: "4px 12px", display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 500, color: "var(--text-dim)" }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: platformColor, flexShrink: 0 }} />
+          {activePlatform?.name}
         </div>
       ) : null}
 
       <div style={{ marginTop: 4 }}>
         <div className="sidebar-section-label">❷  План</div>
-        <NavLink to={`/strategy${qs}`} className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+        <NavLink to={`/strategy${qs}`} className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+          style={{ borderLeft: `2px solid ${platformColor}20` }}>
           Стратегия
         </NavLink>
-        <NavLink to={`/free-content${qs}`} className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+        <NavLink to={`/free-content${qs}`} className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}
+          style={{ borderLeft: `2px solid ${platformColor}20` }}>
           Свободный контент
         </NavLink>
 

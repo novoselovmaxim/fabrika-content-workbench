@@ -103,6 +103,7 @@ export const savedCompetitors = sqliteTable("saved_competitors", {
   contentStrategy: text("content_strategy"),
   source: text("source").default("search"),
   searchKeywords: text("search_keywords"),
+  details: text("details"),
   createdAt: text("created_at").default(sql`(current_timestamp)`),
 });
 
@@ -168,6 +169,7 @@ export const platforms = sqliteTable("platforms", {
     .references(() => products.id, { onDelete: "set null" }),
   type: text("type").notNull(),
   name: text("name").notNull(),
+  accountHandle: text("account_handle"),
   config: text("config_json"),
   status: text("status").default("active"),
   currentFunnelId: text("current_funnel_id").references(() => funnels.id, { onDelete: "set null" }),
@@ -384,6 +386,9 @@ export const projectKnowledge = sqliteTable("project_knowledge", {
   wordCount: integer("word_count"),
   tags: text("tags"),
   ordering: integer("ordering").default(0),
+  processed: integer("processed").default(0),
+  processingError: text("processing_error"),
+  factsCount: integer("facts_count").default(0),
   createdAt: text("created_at").default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").default(sql`(current_timestamp)`),
 });

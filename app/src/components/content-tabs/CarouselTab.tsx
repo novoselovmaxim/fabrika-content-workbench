@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ContentTabHandle } from "./PostTab";
+import { PLATFORM_FORMATS, PLATFORM_DEFAULT_SIZE, PLATFORM_LABELS, PLATFORM_CHAR_LIMITS } from "../../lib/constants";
+import { CharCounter } from "../../components/CharCounter";
 
 function wrapTextPreview(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
   const words = text.split(/\s+/);
@@ -19,8 +21,10 @@ function wrapTextPreview(ctx: CanvasRenderingContext2D, text: string, maxWidth: 
   return lines;
 }
 
-function SlideCanvasPreview({ slide }: { slide: any }) {
+function SlideCanvasPreview({ slide, canvasWidth, canvasHeight }: { slide: any; canvasWidth?: number; canvasHeight?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const cw = canvasWidth || 1024;
+  const ch = canvasHeight || 1024;
 
   useEffect(() => {
     const canvas = ref.current;
@@ -36,17 +40,15 @@ function SlideCanvasPreview({ slide }: { slide: any }) {
       });
       if (!active) return;
 
-      const cvsSize = 1024;
-      canvas.width = cvsSize;
-      canvas.height = cvsSize;
+      canvas.width = cw;
+      canvas.height = ch;
       const ctx = canvas.getContext("2d")!;
 
-      // Cover: fit image into square, crop overflow
-      const scale = Math.max(cvsSize / img.naturalWidth, cvsSize / img.naturalHeight);
+      const scale = Math.max(cw / img.naturalWidth, ch / img.naturalHeight);
       const sw = img.naturalWidth * scale;
       const sh = img.naturalHeight * scale;
-      const sx = (cvsSize - sw) / 2;
-      const sy = (cvsSize - sh) / 2;
+      const sx = (cw - sw) / 2;
+      const sy = (ch - sh) / 2;
       ctx.drawImage(img, sx, sy, sw, sh);
 
       const ts = slide.textStyle || {};
@@ -54,21 +56,21 @@ function SlideCanvasPreview({ slide }: { slide: any }) {
       const bgOpacity = (ts.backgroundOpacity ?? 65) / 100;
 
       if (pos === "bottom") {
-        const grad = ctx.createLinearGradient(0, canvas.height * 0.55, 0, canvas.height);
+        const grad = ctx.createLinearGradient(0, ch * 0.55, 0, ch);
         ctx.fillStyle = grad;
         grad.addColorStop(0, "rgba(0,0,0,0)");
         grad.addColorStop(1, `rgba(0,0,0,${bgOpacity})`);
         ctx.fillStyle = grad;
-        ctx.fillRect(0, canvas.height * 0.55, canvas.width, canvas.height * 0.45);
+        ctx.fillRect(0, ch * 0.55, cw, ch * 0.45);
       } else if (pos === "top") {
-        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.45);
+        const grad = ctx.createLinearGradient(0, 0, 0, ch * 0.45);
         grad.addColorStop(0, `rgba(0,0,0,${bgOpacity})`);
         grad.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height * 0.45);
+        ctx.fillRect(0, 0, cw, ch * 0.45);
       } else {
         ctx.fillStyle = `rgba(0,0,0,${bgOpacity * 0.5})`;
-        ctx.fillRect(0, canvas.height * 0.35, canvas.width, canvas.height * 0.3);
+        ctx.fillRect(0, ch * 0.35, cw, ch * 0.3);
       }
 
       const fontSize = ts.fontSize || 30;
@@ -78,25 +80,24 @@ function SlideCanvasPreview({ slide }: { slide: any }) {
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
 
-      // Wait for font to be loaded before measuring
       await document.fonts.ready;
 
-      const textLines = wrapTextPreview(ctx, slide.text || "", canvas.width - 80);
+      const textLines = wrapTextPreview(ctx, slide.text || "", cw - 80);
       const lineHeight = fontSize * 1.35;
 
       let startY: number;
       const totalH = textLines.length * lineHeight;
       if (pos === "top") startY = 40 + totalH;
-      else if (pos === "center") startY = canvas.height / 2 + totalH / 2;
-      else startY = canvas.height - 40;
+      else if (pos === "center") startY = ch / 2 + totalH / 2;
+      else startY = ch - 40;
 
       textLines.forEach((line, i) => {
         const y = Math.round(startY - (textLines.length - 1 - i) * lineHeight);
-        ctx.fillText(line, canvas.width / 2, y);
+        ctx.fillText(line, cw / 2, y);
       });
     })();
     return () => { active = false; };
-  }, [slide.imageUrl, slide.text, slide.textStyle]);
+  }, [slide.imageUrl, slide.text, slide.textStyle, cw, ch]);
 
   return (
     <canvas
@@ -118,6 +119,7 @@ const CarouselTab = forwardRef<ContentTabHandle, { post: any; postId: string; qu
   const [loaded, setLoaded] = useState(false);
   const [brandStyles, setBrandStyles] = useState<any[]>([]);
   const [selectedStyleId, setSelectedStyleId] = useState<string>("");
+  const [logoMode, setLogoMode] = useState<string>("none");
   const [postAssets, setPostAssets] = useState<any[]>([]);
   const [showAssetPicker, setShowAssetPicker] = useState<number | null>(null);
   const autoSaveTimer = useRef<any>(null);
@@ -129,6 +131,15 @@ const CarouselTab = forwardRef<ContentTabHandle, { post: any; postId: string; qu
   const [generatingCaption, setGeneratingCaption] = useState(false);
   const [generatingTags, setGeneratingTags] = useState(false);
   const [uploadingBg, setUploadingBg] = useState<number | null>(null);
+
+  const formats = PLATFORM_FORMATS[post.platformType] || PLATFORM_FORMATS.instagram;
+  const captionLimit = PLATFORM_CHAR_LIMITS[post.platformType]?.caption || 2200;
+  const [selectedFormat, setSelectedFormat] = useState<string>(
+    PLATFORM_DEFAULT_SIZE[post.platformType] || PLATFORM_DEFAULT_SIZE.instagram
+  );
+  const fmt = formats.find(f => f.size === selectedFormat);
+  const cw = fmt?.width || 1024;
+  const ch = fmt?.height || 1024;
 
   useImperativeHandle(ref, () => ({
     saveDraft,
@@ -471,7 +482,7 @@ const CarouselTab = forwardRef<ContentTabHandle, { post: any; postId: string; qu
     return lines;
   };
 
-  const composeOnCanvas = async (slide: any, rawUrl: string): Promise<string | null> => {
+  const composeOnCanvas = async (slide: any, rawUrl: string, outW?: number, outH?: number): Promise<string | null> => {
     try {
       const img = new window.Image();
       img.crossOrigin = "anonymous";
@@ -482,17 +493,17 @@ const CarouselTab = forwardRef<ContentTabHandle, { post: any; postId: string; qu
       });
 
       const canvas = document.createElement("canvas");
-      const cvsSize = 1024;
-      canvas.width = cvsSize;
-      canvas.height = cvsSize;
+      const cw2 = outW || cw;
+      const ch2 = outH || ch;
+      canvas.width = cw2;
+      canvas.height = ch2;
       const ctx = canvas.getContext("2d")!;
 
-      // Cover: fit image into square, crop overflow
-      const scale = Math.max(cvsSize / img.naturalWidth, cvsSize / img.naturalHeight);
+      const scale = Math.max(cw2 / img.naturalWidth, ch2 / img.naturalHeight);
       const sw = img.naturalWidth * scale;
       const sh = img.naturalHeight * scale;
-      const sx = (cvsSize - sw) / 2;
-      const sy = (cvsSize - sh) / 2;
+      const sx = (cw2 - sw) / 2;
+      const sy = (ch2 - sh) / 2;
       ctx.drawImage(img, sx, sy, sw, sh);
 
       const ts = slide.textStyle || {};
@@ -500,18 +511,20 @@ const CarouselTab = forwardRef<ContentTabHandle, { post: any; postId: string; qu
       const bgOpacity = (ts.backgroundOpacity ?? 65) / 100;
 
       if (pos === "bottom") {
-        const grad = ctx.createLinearGradient(0, canvas.height * 0.55, 0, canvas.height);
+        const grad = ctx.createLinearGradient(0, ch2 * 0.55, 0, ch2);
+        grad.addColorStop(0, "rgba(0,0,0,0)");
+        grad.addColorStop(1, `rgba(0,0,0,${bgOpacity})`);
         ctx.fillStyle = grad;
-        ctx.fillRect(0, canvas.height * 0.55, canvas.width, canvas.height * 0.45);
+        ctx.fillRect(0, ch2 * 0.55, cw2, ch2 * 0.45);
       } else if (pos === "top") {
-        const grad = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.45);
+        const grad = ctx.createLinearGradient(0, 0, 0, ch2 * 0.45);
         grad.addColorStop(0, `rgba(0,0,0,${bgOpacity})`);
         grad.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, canvas.width, canvas.height * 0.45);
+        ctx.fillRect(0, 0, cw2, ch2 * 0.45);
       } else {
         ctx.fillStyle = `rgba(0,0,0,${bgOpacity * 0.5})`;
-        ctx.fillRect(0, canvas.height * 0.35, canvas.width, canvas.height * 0.3);
+        ctx.fillRect(0, ch2 * 0.35, cw2, ch2 * 0.3);
       }
 
       const fontSize = ts.fontSize || 30;
@@ -522,9 +535,8 @@ const CarouselTab = forwardRef<ContentTabHandle, { post: any; postId: string; qu
       ctx.textBaseline = "bottom";
 
       const padding = 40;
-      const maxTextWidth = canvas.width - padding * 2;
+      const maxTextWidth = cw2 - padding * 2;
 
-      // Wait for font to be loaded before measuring
       await document.fonts.ready;
 
       const textLines = wrapTextCanvas(ctx, slide.text || "", maxTextWidth);
@@ -533,10 +545,10 @@ const CarouselTab = forwardRef<ContentTabHandle, { post: any; postId: string; qu
       let startY: number;
       const totalH = textLines.length * lineHeight;
       if (pos === "top") startY = padding + totalH;
-      else if (pos === "center") startY = canvas.height / 2 + totalH / 2;
-      else startY = canvas.height - padding;
+      else if (pos === "center") startY = ch2 / 2 + totalH / 2;
+      else startY = ch2 - padding;
 
-      const x = ts.textAlign === "left" ? padding : canvas.width / 2;
+      const x = ts.textAlign === "left" ? padding : cw2 / 2;
 
       textLines.forEach((line, i) => {
         const y = Math.round(startY - (textLines.length - 1 - i) * lineHeight);
@@ -582,7 +594,15 @@ const CarouselTab = forwardRef<ContentTabHandle, { post: any; postId: string; qu
         body: JSON.stringify({
           postItemId: postId,
           prompt: cur.visualPrompt,
+          size: selectedFormat,
           stylePrompt: selectedStyle?.systemPrompt || "",
+          ...(selectedStyle?.logoUrl && logoMode !== "none" ? {
+            logoMode,
+            logoUrl: selectedStyle.logoUrl,
+            logoPosition: selectedStyle.logoPosition,
+            logoSize: selectedStyle.logoSize,
+            logoOpacity: selectedStyle.logoOpacity,
+          } : {}),
         }),
       });
       if (!res.ok) throw new Error(((await res.json()).error || "Ошибка"));
@@ -895,6 +915,38 @@ const CarouselTab = forwardRef<ContentTabHandle, { post: any; postId: string; qu
               Применяется к генерации
             </span>
           )}
+          {selectedStyle?.logoUrl && (
+            <div className="flex items-center gap-2" style={{ marginLeft: 4 }}>
+              <span className="text-xs text-dim">Лого:</span>
+              {["none", "reference", "overlay"].map((mode) => (
+                <label key={mode} className="flex items-center gap-1" style={{ cursor: "pointer", fontSize: 11 }}>
+                  <input type="radio" name="logoMode" checked={logoMode === mode}
+                    onChange={() => setLogoMode(mode)} />
+                  {mode === "none" ? "Без" : mode === "reference" ? "Референс" : "Наложение"}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {slides.length > 0 && (
+        <div className="flex items-center gap-3" style={{ flexWrap: "wrap" }}>
+          <label className="text-sm text-dim" style={{ fontWeight: 500 }}>Формат:</label>
+          <select
+            className="input"
+            style={{ width: 200 }}
+            value={selectedFormat}
+            onChange={(e) => setSelectedFormat(e.target.value)}
+          >
+            {formats.map((f) => (
+              <option key={f.size} value={f.size}>
+                {f.label} ({f.size})
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-dim">
+            {cw}×{ch} для {PLATFORM_LABELS[post.platformType] || "площадки"}
+          </span>
         </div>
       )}
 
@@ -1041,11 +1093,16 @@ const CarouselTab = forwardRef<ContentTabHandle, { post: any; postId: string; qu
                 <div>
                   <label className="text-xs text-dim" style={{ display: "block", marginBottom: 2 }}>Текст на слайде</label>
                   <textarea className="input" rows={2} value={slide.text || ""} onChange={(e) => updateSlide(i, "text", e.target.value)} />
+                  {slide.text && (
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 2 }}>
+                      <CharCounter current={slide.text.length} limit={300} />
+                    </div>
+                  )}
                 </div>
 
                 {/* Canvas Preview */}
                 {(!slide.format || slide.format === "image") && slide.imageUrl && (
-                  <SlideCanvasPreview slide={slide} />
+                  <SlideCanvasPreview slide={slide} canvasWidth={cw} canvasHeight={ch} />
                 )}
 
                 {/* Text Style Controls */}
@@ -1431,7 +1488,7 @@ const CarouselTab = forwardRef<ContentTabHandle, { post: any; postId: string; qu
       <div className="card">
         <div className="card-header" style={{ padding: 0 }}>
           <span className="card-title">📝 Текст поста (подпись)</span>
-          {captionText && <span className="tag tag-ready">{captionText.length} зн.</span>}
+          {captionText && <CharCounter current={captionText.length} limit={captionLimit} />}
         </div>
         <div className="flex flex-col gap-3" style={{ marginTop: 8 }}>
           <div style={{ position: "relative", width: "100%" }}>

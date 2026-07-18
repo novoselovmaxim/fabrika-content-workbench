@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import type { ContentTabHandle } from "./PostTab";
+import { PLATFORM_LABELS } from "../../lib/constants";
+import { CharCounter } from "../../components/CharCounter";
 
 const StoriesTab = forwardRef<ContentTabHandle, { post: any; postId: string }>(({ post, postId }, ref) => {
   const [cards, setCards] = useState<any[]>([]);
@@ -8,6 +10,7 @@ const StoriesTab = forwardRef<ContentTabHandle, { post: any; postId: string }>((
   const [saving, setSaving] = useState(false);
   const [brandStyles, setBrandStyles] = useState<any[]>([]);
   const [selectedStyleId, setSelectedStyleId] = useState<string>("");
+  const [logoMode, setLogoMode] = useState<string>("none");
   const snapRef = useRef({ cardsJson: "" });
 
   useEffect(() => {
@@ -94,6 +97,13 @@ const StoriesTab = forwardRef<ContentTabHandle, { post: any; postId: string }>((
           prompt: cards[i].visualNote,
           size: "1080x1920",
           stylePrompt: selectedStyle?.systemPrompt || "",
+          ...(selectedStyle?.logoUrl && logoMode !== "none" ? {
+            logoMode,
+            logoUrl: selectedStyle.logoUrl,
+            logoPosition: selectedStyle.logoPosition,
+            logoSize: selectedStyle.logoSize,
+            logoOpacity: selectedStyle.logoOpacity,
+          } : {}),
         }),
       });
       if (!res.ok) throw new Error(((await res.json()).error || "Ошибка"));
@@ -131,6 +141,9 @@ const StoriesTab = forwardRef<ContentTabHandle, { post: any; postId: string }>((
     <div className="flex flex-col gap-4">
       <div className="card-header">
         <span className="card-title">Сценарий Stories</span>
+        <span className="text-xs text-dim">
+          {PLATFORM_LABELS[post.platformType] || ""} · 1080×1920 (9:16)
+        </span>
       </div>
 
       <button className="btn btn-primary" onClick={generate} disabled={generating} style={{ alignSelf: "flex-start" }}>
@@ -160,6 +173,18 @@ const StoriesTab = forwardRef<ContentTabHandle, { post: any; postId: string }>((
                   Применяется к генерации
                 </span>
               )}
+              {selectedStyle?.logoUrl && (
+                <div className="flex items-center gap-2" style={{ marginLeft: 4 }}>
+                  <span className="text-xs text-dim">Лого:</span>
+                  {["none", "reference", "overlay"].map((mode) => (
+                    <label key={mode} className="flex items-center gap-1" style={{ cursor: "pointer", fontSize: 11 }}>
+                      <input type="radio" name="logoMode" checked={logoMode === mode}
+                        onChange={() => setLogoMode(mode)} />
+                      {mode === "none" ? "Без" : mode === "reference" ? "Референс" : "Наложение"}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -173,6 +198,11 @@ const StoriesTab = forwardRef<ContentTabHandle, { post: any; postId: string }>((
                 <div>
                   <label className="text-xs text-dim" style={{ display: "block", marginBottom: 2 }}>Текст на экране</label>
                   <input className="input" value={card.text || ""} onChange={(e) => updateCard(i, "text", e.target.value)} />
+                  {card.text && (
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 2 }}>
+                      <CharCounter current={card.text.length} limit={150} />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs text-dim" style={{ display: "block", marginBottom: 2 }}>Визуальная заметка</label>

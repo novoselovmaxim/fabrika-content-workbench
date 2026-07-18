@@ -773,7 +773,13 @@ export default function StrategyPage() {
             <h3 style={{ fontSize: 18, marginBottom: 12 }}>
               Стратегия продвижения
               {currentPlatform && (
-                <span className="tag tag-planned" style={{ fontSize: 11, marginLeft: 8, verticalAlign: "middle" }}>
+                <span style={{
+                  fontSize: 11, marginLeft: 8, verticalAlign: "middle",
+                  background: `${PLATFORM_COLORS[currentPlatform.type] || "var(--accent)"}18`,
+                  color: PLATFORM_COLORS[currentPlatform.type] || "var(--accent)",
+                  border: `1px solid ${PLATFORM_COLORS[currentPlatform.type] || "var(--accent)"}30`,
+                  borderRadius: 6, padding: "2px 10px", fontWeight: 500,
+                }}>
                   {currentPlatform.name}
                 </span>
               )}

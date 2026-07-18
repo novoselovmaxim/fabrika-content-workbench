@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import path from "path";
+import fs from "fs";
 import { exec } from "child_process";
 import { PATHS } from "./paths.js";
 import { topicsRouter } from "./api/topics.js";
@@ -52,6 +53,13 @@ app.use(express.json());
 // Статика — ассеты (изображения и т.д.)
 app.use("/uploads", express.static(PATHS.uploads));
 app.use("/generated", express.static(PATHS.generated));
+
+// Явный роут для логотипов (обходит возможные проблемы с вложенными путями статики)
+app.get("/uploads/logos/:filename", (req, res) => {
+  const filePath = path.join(PATHS.uploads, "logos", req.params.filename);
+  if (!fs.existsSync(filePath)) return res.status(404).end();
+  res.sendFile(filePath);
+});
 
 // Health
 app.get("/api/health", (_req, res) => {

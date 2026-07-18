@@ -1,6 +1,6 @@
 import { v4 as uuid } from "uuid";
 import { db } from "../db.js";
-import { brandFacts, projectKnowledge, projects } from "../schema.js";
+import { brandFacts, projectKnowledge, projects, products } from "../schema.js";
 import { eq, and } from "drizzle-orm";
 import { generate, getModelForTask, extractJSON } from "./aiGateway.js";
 
@@ -98,6 +98,24 @@ export async function deriveFactsFromOnboarding(projectId: string): Promise<numb
 
   let total = 0;
 
+  // ── Products ──
+  const productRows = db.select().from(products)
+    .where(eq(products.projectId, projectId)).all();
+  for (const p of productRows) {
+    db.insert(brandFacts).values({
+      id: uuid(),
+      projectId,
+      category: "product",
+      sourceType: "ai_inferred",
+      sourceRef: p.id,
+      factText: `${p.name}${p.description ? `: ${p.description}` : ""}`,
+      confidence: 0.9,
+      validated: 1,
+    }).run();
+    total++;
+  }
+
+  // ── Value Prop ──
   if (project.valueProp) {
     try {
       const vp = JSON.parse(project.valueProp);
@@ -123,30 +141,34 @@ export async function deriveFactsFromOnboarding(projectId: string): Promise<numb
     } catch {}
   }
 
+  // ── Audience (deep 17-parameter format with groups) ──
   if (project.audience) {
     try {
       const parsed = JSON.parse(project.audience);
-      const groups = Array.isArray(parsed) ? parsed : [parsed];
+      const groups = parsed.groups || (Array.isArray(parsed) ? parsed : [parsed]);
 
       for (const group of groups) {
         const textFields: string[] = [];
 
-        if (group.pains) {
-          const pains = Array.isArray(group.pains) ? group.pains : [group.pains];
-          textFields.push(...pains.map((p: any) => typeof p === "string" ? p : p.text || p.description || ""));
-        }
-        if (group.objections) {
-          const objections = Array.isArray(group.objections) ? group.objections : [group.objections];
-          textFields.push(...objections.map((o: any) => typeof o === "string" ? o : o.text || o.description || ""));
-        }
-        if (group.desiredResult) {
-          textFields.push(typeof group.desiredResult === "string" ? group.desiredResult : group.desiredResult.text || "");
+        // Collect from all relevant fields
+        const fieldsToExtract = [
+          "portrait", "summary", "pains", "fears", "irritations",
+          "goals", "beliefs", "stepsToSolve", "alternatives",
+          "whyAlternativesFail", "desiredResult", "globalFears", "objections"
+        ];
+        for (const field of fieldsToExtract) {
+          const val = group[field];
+          if (!val) continue;
+          if (Array.isArray(val)) {
+            textFields.push(...val.filter((v: any) => typeof v === "string" && v.length > 10));
+          } else if (typeof val === "string" && val.length > 10) {
+            textFields.push(val);
+          }
         }
 
         for (const text of textFields) {
-          if (!text || text.length < 10) continue;
           const existing = db.select().from(brandFacts)
-            .where(and(eq(brandFacts.projectId, projectId), eq(brandFacts.sourceRef, "audience_deep"), eq(brandFacts.factText, text)))
+            .where(and(eq(brandFacts.projectId, projectId), eq(brandFacts.factText, text)))
             .get();
           if (existing) continue;
 

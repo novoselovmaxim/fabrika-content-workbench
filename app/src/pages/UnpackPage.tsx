@@ -156,6 +156,7 @@ export default function UnpackPage() {
     onSuccess: (_, variables) => {
       setUnpackKnowledgeCount((c) => c + 1);
       queryClient.invalidateQueries({ queryKey: ["knowledge-stats", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["knowledge", projectId] });
       if (variables.type === "link") {
         setLinkSaved(true);
         setTimeout(() => setLinkSaved(false), 3000);
@@ -258,6 +259,8 @@ export default function UnpackPage() {
   const [competitorLastPrompt, setCompetitorLastPrompt] = useState("");
   const [savedCompetitors, setSavedCompetitors] = useState<any[]>([]);
   const [savedCompetitorsLoading, setSavedCompetitorsLoading] = useState(false);
+  const [analyzeUrlsLoading, setAnalyzeUrlsLoading] = useState(false);
+  const [analyzeUrlsResult, setAnalyzeUrlsResult] = useState<string | null>(null);
 
   // Auto-fill keywords textarea from generatedKeywords when entering competitors step
   const prevStepRef = useRef(step);
@@ -288,6 +291,29 @@ export default function UnpackPage() {
       });
     }
   }, [step, projectId]);
+
+  const analyzeCompetitorUrls = useMutation({
+    mutationFn: async () => {
+      const pid = await ensureProject();
+      const urls = competitorUrls.filter((u) => u.trim());
+      if (urls.length === 0) throw new Error("Нет URL для анализа");
+      return api.competitors.analyzeUrl(pid, urls);
+    },
+    onSuccess: (data) => {
+      const saved = data.saved || 0;
+      const skipped = data.skipped || 0;
+      const parts: string[] = [];
+      if (saved > 0) parts.push(`✅ Сохранено: ${saved}`);
+      if (skipped > 0) parts.push(`⏭ Пропущено (уже есть): ${skipped}`);
+      setAnalyzeUrlsResult(parts.join(" • ") || "Готово");
+      setCompetitorUrls([""]);
+      if (projectId) {
+        api.competitors.getSaved(projectId).then(setSavedCompetitors).catch(() => {});
+      }
+    },
+    onError: (err: any) => setAnalyzeUrlsResult(`❌ ${err?.message || "Ошибка анализа"}`),
+    onSettled: () => setAnalyzeUrlsLoading(false),
+  });
 
   const analyzeCompetitors = useMutation({
     mutationFn: async () => {
@@ -823,6 +849,30 @@ export default function UnpackPage() {
     enabled: !!projectId,
   });
 
+  // ── Processing status ──
+  function renderProcessStatus(item: any) {
+    if (item.processed === 0) {
+      return <span className="text-xs" style={{ color: "var(--accent)" }}>⏳ Анализ...</span>;
+    }
+    if (item.processingError) {
+      return <span className="text-xs" style={{ color: "var(--red)" }} title={item.processingError}>❌ Ошибка</span>;
+    }
+    if ((item.factsCount || 0) > 0) {
+      return <span className="text-xs" style={{ color: "var(--green)" }}>✅ {item.factsCount} фактов</span>;
+    }
+    return <span className="text-xs text-dim">✅ Обработан</span>;
+  }
+
+  // Auto-refresh knowledge lists while entries are still processing
+  const hasUnprocessed = [...uploadedFiles, ...uploadedNotes, ...uploadedLinks].some((i: any) => i.processed === 0);
+  useEffect(() => {
+    if (!hasUnprocessed || !projectId) return;
+    const interval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ["knowledge", projectId] });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [hasUnprocessed, projectId, queryClient]);
+
   // ── Saved competitors (for complete tab) ──
   const { data: savedCompetitorsList } = useQuery({
     queryKey: ["saved-competitors", projectId],
@@ -1205,6 +1255,7 @@ export default function UnpackPage() {
                           <span className="text-sm" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.title}</span>
                           {f.wordCount > 0 && <span className="text-xs text-dim">· {f.wordCount} слов</span>}
                           {f.fileSize > 0 && <span className="text-xs text-dim">· {formatFileSize(f.fileSize)}</span>}
+                          {renderProcessStatus(f)}
                         </div>
                         <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px", color: "var(--red)", flexShrink: 0 }}
                           onClick={() => { if (confirm(`Удалить "${f.title}"?`)) deleteKnowledgeFile.mutate(f.id); }}>
@@ -1251,6 +1302,7 @@ export default function UnpackPage() {
                             <span>✏️</span>
                             <span className="text-sm" style={{ fontWeight: 600 }}>{n.title}</span>
                             {n.wordCount > 0 && <span className="text-xs text-dim">· {n.wordCount} слов</span>}
+                            {renderProcessStatus(n)}
                           </div>
                           {(n.content || "").length > 0 && (
                             <div className="text-xs text-dim" style={{ marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -1275,6 +1327,7 @@ export default function UnpackPage() {
                           <div className="flex items-center gap-2">
                             <span>🔗</span>
                             <span className="text-sm" style={{ fontWeight: 600 }}>{l.title}</span>
+                            {renderProcessStatus(l)}
                           </div>
                           <div className="text-xs" style={{ marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--accent)" }}>
                             {l.content}
@@ -1598,7 +1651,26 @@ export default function UnpackPage() {
                     )}
                   </div>
                 ))}
-                <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setCompetitorUrls([...competitorUrls, ""])}>+ Добавить URL</button>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+                  <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => setCompetitorUrls([...competitorUrls, ""])}>+ Добавить URL</button>
+                  <button
+                    className="btn btn-primary"
+                    style={{ fontSize: 12 }}
+                    onClick={() => {
+                      setAnalyzeUrlsResult(null);
+                      setAnalyzeUrlsLoading(true);
+                      analyzeCompetitorUrls.mutate();
+                    }}
+                    disabled={analyzeUrlsLoading || competitorUrls.every((u) => !u.trim())}
+                  >
+                    {analyzeUrlsLoading ? "⏳ Анализ URL..." : "🔍 Анализировать URL"}
+                  </button>
+                </div>
+                {analyzeUrlsResult && (
+                  <p className="text-xs" style={{ marginTop: 6, color: analyzeUrlsResult.startsWith("❌") ? "var(--red)" : "var(--green)" }}>
+                    {analyzeUrlsResult}
+                  </p>
+                )}
               </div>
 
               <div className="card">
@@ -1693,19 +1765,32 @@ export default function UnpackPage() {
                         <div key={comp.id} style={{ padding: 8, background: "var(--bg-hover)", borderRadius: 6, display: "flex", gap: 8, alignItems: "flex-start" }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 600, fontSize: 13 }}>{comp.name}</div>
-                            <div className="text-xs text-dim" style={{ marginTop: 2 }}>
-                              <a href={comp.url} target="_blank" rel="noopener noreferrer" className="text-xs">
-                                {comp.url}
-                              </a>
-                              {comp.positioning && <div><strong>Позиционирование:</strong> {comp.positioning}</div>}
-                              {comp.strengths && <div><strong>Сильные:</strong> {JSON.parse(comp.strengths || "[]").join(", ")}</div>}
-                              {comp.weaknesses && <div><strong>Слабые:</strong> {JSON.parse(comp.weaknesses || "[]").join(", ")}</div>}
-                              {comp.audience && <div><strong>Аудитория:</strong> {comp.audience}</div>}
-                              {comp.contentStrategy && <div><strong>Стратегия:</strong> {comp.contentStrategy}</div>}
-                              <div className="text-xs text-dim" style={{ marginTop: 4 }}>
-                                Найден: {new Date(comp.created_at).toLocaleString()} • По запросу: {comp.search_keywords || "—"}
+                              <div className="text-xs text-dim" style={{ marginTop: 2 }}>
+                                <a href={comp.url} target="_blank" rel="noopener noreferrer" className="text-xs">
+                                  {comp.url}
+                                </a>
+                                {comp.positioning && <div style={{ marginTop: 2 }}><strong>Позиционирование:</strong> {comp.positioning}</div>}
+                                {comp.strengths && <div style={{ marginTop: 2 }}><strong>Сильные:</strong> {JSON.parse(comp.strengths || "[]").join(", ")}</div>}
+                                {comp.weaknesses && <div style={{ marginTop: 2 }}><strong>Слабые:</strong> {JSON.parse(comp.weaknesses || "[]").join(", ")}</div>}
+                                {comp.audience && <div style={{ marginTop: 2 }}><strong>Аудитория:</strong> {comp.audience}</div>}
+                                {comp.contentStrategy && <div style={{ marginTop: 2 }}><strong>Стратегия:</strong> {comp.contentStrategy}</div>}
+                                {comp.details && (() => {
+                                  try {
+                                    const d = typeof comp.details === "string" ? JSON.parse(comp.details) : comp.details;
+                                    const parts: string[] = [];
+                                    if (d.mainProducts?.length) parts.push(`📦 ${d.mainProducts.join(", ")}`);
+                                    if (d.contentFormats?.length) parts.push(`🎬 ${d.contentFormats.join(", ")}`);
+                                    if (d.uniqueSellingPoints?.length) parts.push(`💡 ${d.uniqueSellingPoints.join(", ")}`);
+                                    if (d.brandVoice) parts.push(`🗣 ${d.brandVoice}`);
+                                    if (d.visualStyle) parts.push(`🎨 ${d.visualStyle}`);
+                                    return parts.length > 0 ? <div style={{ marginTop: 2, lineHeight: 1.5 }}>{parts.map((p, i) => <div key={i}>{p}</div>)}</div> : null;
+                                  } catch { return null; }
+                                })()}
+                                <div className="text-xs text-dim" style={{ marginTop: 4 }}>
+                                  {comp.source === "manual_url" ? "📝 Ручной ввод" : "🔍 Поиск"} • {new Date(comp.created_at).toLocaleString()}
+                                  {comp.search_keywords ? ` • По запросу: ${comp.search_keywords}` : ""}
+                                </div>
                               </div>
-                            </div>
                           </div>
                           <button
                             className="btn btn-ghost"

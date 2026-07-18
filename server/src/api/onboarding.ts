@@ -2,11 +2,12 @@ import { Router } from "express";
 import path from "path";
 import fs from "fs";
 import { db } from "../db.js";
-import { projects, projectKnowledge, onboardingSteps, products, projectKeywords, platforms, competitorSearches, audiences, savedCompetitors, rubrics, topics, settings } from "../schema.js";
+import { projects, projectKnowledge, onboardingSteps, products, projectKeywords, platforms, competitorSearches, audiences, savedCompetitors, rubrics, topics, settings, brandFacts } from "../schema.js";
 import { sql, eq, and, desc } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import { generate, getModelForTask, extractJSON } from "../services/aiGateway.js";
 import { HANT_STAGES } from "../services/hantStages.js";
+import { deriveFactsFromOnboarding } from "../services/factExtraction.js";
 
 export const onboardingRouter = Router();
 
@@ -328,7 +329,7 @@ onboardingRouter.post("/:projectId/generate-audience", async (req, res) => {
 });
 
 // ── Shared: build audience analysis prompt from project data ──
-function buildAudiencePrompt(project: any, knowledgeText: string, competitorsText: string, savedCompetitorsText: string, keywordsText: string): string {
+function buildAudiencePrompt(project: any, brandFactsText: string, knowledgeText: string, competitorsText: string, savedCompetitorsText: string, keywordsText: string): string {
   return [
     `Ты — маркетолог-аналитик и стратег. Проведи глубокий анализ целевой аудитории по методологии.`,
     ``,
@@ -338,7 +339,10 @@ function buildAudiencePrompt(project: any, knowledgeText: string, competitorsTex
     project.description ? `Описание: ${project.description}` : null,
     keywordsText ? `Ключевые слова: ${keywordsText}` : null,
     ``,
-    `## БАЗА ЗНАНИЙ`,
+    `## ФАКТЫ О БРЕНДЕ (структурированные)`,
+    brandFactsText || "Факты о бренде отсутствуют.",
+    ``,
+    `## СЫРЫЕ МАТЕРИАЛЫ`,
     knowledgeText || "Материалы отсутствуют.",
     ``,
     `## КОНКУРЕНТЫ И РЫНОК`,
@@ -407,26 +411,45 @@ function loadAudienceContext(projectId: string) {
   const project = db.select().from(projects).where(eq(projects.id, projectId)).get();
   if (!project) return null;
 
+  // ── Brand facts (structured knowledge core) ──
+  const factRows = db.select().from(brandFacts)
+    .where(eq(brandFacts.projectId, projectId))
+    .orderBy(desc(brandFacts.validated), desc(brandFacts.confidence))
+    .all();
+  let brandFactsText = "";
+  if (factRows.length > 0) {
+    const byCategory: Record<string, string[]> = {};
+    for (const f of factRows) {
+      const cat = f.category || "other";
+      if (!byCategory[cat]) byCategory[cat] = [];
+      byCategory[cat].push(f.factText);
+    }
+    brandFactsText = "Факты о бренде:\n" + Object.entries(byCategory)
+      .map(([cat, facts]) => `[${cat}]\n${facts.map((t) => `  • ${t}`).join("\n")}`)
+      .join("\n\n");
+  }
+
+  // ── Raw knowledge (additional context) ──
   const knowledgeEntries = db.select().from(projectKnowledge)
     .where(eq(projectKnowledge.projectId, projectId))
     .orderBy(desc(projectKnowledge.createdAt))
     .all();
-
   let knowledgeText = "";
-  for (const entry of knowledgeEntries.slice(0, 8)) {
-    const preview = (entry.content || "").slice(0, 2000);
+  for (const entry of knowledgeEntries.slice(0, 5)) {
+    const preview = (entry.content || "").slice(0, 2500);
     knowledgeText += `\n--- ${entry.title} (${entry.type}) ---\n${preview}\n`;
   }
 
+  // ── Keywords ──
   const keywords = db.select().from(projectKeywords)
     .where(eq(projectKeywords.projectId, projectId)).all();
   const keywordsText = keywords.map((k: any) => k.keyword).join(", ");
 
+  // ── Competitors ──
   const latestCompetitorSearch = db.select().from(competitorSearches)
     .where(eq(competitorSearches.projectId, projectId))
     .orderBy(desc(competitorSearches.createdAt))
     .get();
-
   let competitorsText = "Данные о конкурентах отсутствуют.";
   if (latestCompetitorSearch) {
     try {
@@ -449,7 +472,7 @@ function loadAudienceContext(projectId: string) {
     ).join("\n");
   }
 
-  return { project, knowledgeText, competitorsText, savedCompetitorsText, keywordsText };
+  return { project, brandFactsText, knowledgeText, competitorsText, savedCompetitorsText, keywordsText };
 }
 
 // GET /:projectId/generate-audience-deep-prompt — возвращает сформированный промпт (без генерации)
@@ -459,7 +482,7 @@ onboardingRouter.get("/:projectId/generate-audience-deep-prompt", (req, res) => 
     const ctx = loadAudienceContext(projectId);
     if (!ctx) return res.status(404).json({ error: "Project not found" });
 
-    const prompt = buildAudiencePrompt(ctx.project, ctx.knowledgeText, ctx.competitorsText, ctx.savedCompetitorsText, ctx.keywordsText);
+    const prompt = buildAudiencePrompt(ctx.project, ctx.brandFactsText, ctx.knowledgeText, ctx.competitorsText, ctx.savedCompetitorsText, ctx.keywordsText);
     res.json({ prompt });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to build prompt" });
@@ -475,7 +498,7 @@ onboardingRouter.post("/:projectId/generate-audience-deep", async (req, res) => 
     const ctx = loadAudienceContext(projectId);
     if (!ctx) return res.status(404).json({ error: "Project not found" });
 
-    const userPrompt = promptOverride || buildAudiencePrompt(ctx.project, ctx.knowledgeText, ctx.competitorsText, ctx.savedCompetitorsText, ctx.keywordsText);
+    const userPrompt = promptOverride || buildAudiencePrompt(ctx.project, ctx.brandFactsText, ctx.knowledgeText, ctx.competitorsText, ctx.savedCompetitorsText, ctx.keywordsText);
 
     const model = getModelForTask("strategy");
     const result = await generate({
@@ -566,6 +589,15 @@ onboardingRouter.post("/:projectId/generate-value-prop", async (req, res) => {
 
     const audience = project.audience ? JSON.parse(project.audience) : {};
 
+    // Load brand facts
+    const factRows = db.select().from(brandFacts)
+      .where(eq(brandFacts.projectId, projectId))
+      .orderBy(desc(brandFacts.validated), desc(brandFacts.confidence))
+      .all();
+    const brandFactsText = factRows.length > 0
+      ? factRows.map((f) => `[${f.category}] ${f.factText}`).join("\n")
+      : "";
+
     const model = getModelForTask("strategy");
     const result = await generate({
       provider: model.startsWith("vsellm/") ? "vsellm" : model.includes("/") ? "zveno" : "openai",
@@ -576,6 +608,7 @@ onboardingRouter.post("/:projectId/generate-value-prop", async (req, res) => {
         mission: project.mission,
         audience: audience.portrait || project.audience,
         pains: project.pains,
+        brandFacts: brandFactsText,
       }),
       systemPrompt: `Ты — маркетолог-стратег. Сформируй ценностное предложение по методологии.
       
@@ -670,6 +703,15 @@ onboardingRouter.post("/:projectId/generate-hant-multi", async (req, res) => {
       `Группа ${i + 1}: "${g.name}"\nОписание: ${g.summary || ""}\nБоли: ${(g.pains || []).join(", ")}\nСтрахи: ${(g.fears || []).join(", ")}\nЦели: ${(g.goals || []).join(", ")}\nУбеждения: ${(g.beliefs || []).join(", ")}\nЧто раздражает: ${(g.irritations || []).join(", ")}\nЖелаемый результат: ${g.desiredResult || ""}`
     ).join("\n\n");
 
+    // Load brand facts
+    const factRows = db.select().from(brandFacts)
+      .where(eq(brandFacts.projectId, projectId))
+      .orderBy(desc(brandFacts.validated), desc(brandFacts.confidence))
+      .all();
+    const brandFactsText = factRows.length > 0
+      ? factRows.map((f) => `[${f.category}] ${f.factText}`).join("\n")
+      : "";
+
     const userPrompt = [
       `Ты — маркетолог-стратег. Для КАЖДОЙ группы целевой аудитории построй отдельную матрицу пути клиента по 9 стадиям Ханта.`,
       ``,
@@ -677,6 +719,7 @@ onboardingRouter.post("/:projectId/generate-hant-multi", async (req, res) => {
       project.niche ? `Ниша: ${project.niche}` : null,
       project.mission ? `Миссия: ${project.mission}` : null,
       project.description ? `Описание: ${project.description}` : null,
+      brandFactsText ? `\n## Факты о бренде\n${brandFactsText}\n` : null,
       ``,
       `## Группы ЦА (всего ${audienceGroups.length})`,
       groupsDescription,
@@ -841,6 +884,13 @@ onboardingRouter.patch("/:projectId/step/:stepKey", (req, res) => {
     .where(eq(onboardingSteps.id, existing.id)).get();
 
   res.json(updated);
+
+  // Async: derive brand facts from onboarding data when step completes
+  if (status === "done" && ["audience", "hant", "value_prop", "products"].includes(stepKey)) {
+    deriveFactsFromOnboarding(projectId).catch((err) =>
+      console.error(`[onboarding] Fact derivation failed after ${stepKey}:`, err.message)
+    );
+  }
 });
 
 // POST /:projectId/generate-keywords — AI extracts keywords from materials
@@ -855,13 +905,21 @@ onboardingRouter.post("/:projectId/generate-keywords", async (req, res) => {
 
     const context = knowledge.map((k) => `${k.title}: ${(k.content || "").slice(0, 2000)}`).join("\n\n");
 
+    // Also include brand facts for richer keyword extraction
+    const factRows = db.select().from(brandFacts)
+      .where(eq(brandFacts.projectId, projectId))
+      .all();
+    const brandFactsContext = factRows.length > 0
+      ? "\nФакты о бренде:\n" + factRows.map((f) => f.factText).join("\n")
+      : "";
+
     const model = getModelForTask("strategy");
     const result = await generate({
       provider: model.startsWith("vsellm/") ? "vsellm" : model.includes("/") ? "zveno" : "openai",
       model,
       prompt: JSON.stringify({
         action: "extract_keywords",
-        context,
+        context: context + brandFactsContext,
         niche: project.niche,
         mission: project.mission,
       }),
@@ -917,6 +975,15 @@ onboardingRouter.post("/:projectId/generate-products", async (req, res) => {
       .where(eq(projectKnowledge.projectId, projectId)).all();
     const context = knowledge.map((k) => `${k.title}: ${(k.content || "").slice(0, 2000)}`).join("\n\n");
 
+    // Load brand facts
+    const factRows = db.select().from(brandFacts)
+      .where(eq(brandFacts.projectId, projectId))
+      .orderBy(desc(brandFacts.validated), desc(brandFacts.confidence))
+      .all();
+    const brandFactsText = factRows.length > 0
+      ? factRows.map((f) => `[${f.category}] ${f.factText}`).join("\n")
+      : "";
+
     const model = getModelForTask("strategy");
     const result = await generate({
       provider: model.startsWith("vsellm/") ? "vsellm" : model.includes("/") ? "zveno" : "openai",
@@ -924,6 +991,7 @@ onboardingRouter.post("/:projectId/generate-products", async (req, res) => {
       prompt: JSON.stringify({
         action: "generate_products",
         context,
+        brandFacts: brandFactsText,
         niche: project.niche,
         mission: project.mission,
       }),
@@ -1140,43 +1208,80 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
           return res.status(502).json({ error: `Instagram: ${e.message}` });
         }
       } else {
+        const VPS = "http://80.87.111.142:4000";
+        let username = identifier.replace(/^@/, "");
+        const urlMatch = username.match(/instagram\.com\/([^/?]+)/);
+        if (urlMatch) username = urlMatch[1];
+        username = username.replace(/\/+$/, "");
+
+        // 1) Try Apify (if configured)
+        let apifyPosts = null;
         try {
           const { fetchInstagramProfile, fetchInstagramPosts, isApifyConfigured } = await import("../services/apify.js");
           if (isApifyConfigured()) {
-            let username = identifier.replace(/^@/, "");
-            const urlMatch = username.match(/instagram\.com\/([^/?]+)/);
-            if (urlMatch) username = urlMatch[1];
-            username = username.replace(/\/+$/, "");
             const rawPosts = await fetchInstagramPosts(username, 20);
-            if (!rawPosts) {
-              console.error(`[onboarding] fetchInstagramPosts returned null for "${username}"`);
-            }
-            const profile = await fetchInstagramProfile(username);
-            const posts = (rawPosts || []).map((p) => ({
-              text: p.caption || "",
-              title: p.caption?.slice(0, 100) || `Instagram ${p.code || ""}`,
-              url: p.url || "",
-              date: p.createdAt || "",
-              likes: p.likeCount || 0,
-              comments: p.commentCount || 0,
-            }));
-            if (profile) {
-              fetchData = {
+            if (rawPosts && rawPosts.length > 0) {
+              const profile = await fetchInstagramProfile(username);
+              const posts = rawPosts.map((p) => ({
+                text: p.caption || "",
+                title: p.caption?.slice(0, 100) || `Instagram ${p.code || ""}`,
+                url: p.url || "",
+                date: p.createdAt || "",
+                likes: p.likeCount || 0,
+                comments: p.commentCount || 0,
+              }));
+              apifyPosts = {
                 posts,
-                channel: {
-                  title: profile.fullName || profile.username || identifier,
-                  name: profile.username || identifier,
-                  subscriberCount: profile.followerCount,
-                },
+                channel: profile
+                  ? { title: profile.fullName || profile.username || username, name: profile.username || username, subscriberCount: profile.followerCount }
+                  : { title: username, name: username, subscriberCount: 0 },
               };
-            } else {
-              fetchData = { posts, channel: { title: identifier, name: identifier, subscriberCount: 0 } };
             }
-          } else {
-            fetchData = { posts: [], channel: { title: identifier, name: identifier, subscriberCount: 0 }, _noApify: true };
           }
-        } catch (e: any) {
-          return res.status(502).json({ error: `Instagram: ${e.message}` });
+        } catch (e) {
+          console.error(`[onboarding] Apify failed for "${username}":`, e);
+        }
+
+        if (apifyPosts) {
+          fetchData = apifyPosts;
+        } else {
+          // 2) Fallback: VPS Instagram scraper
+          try {
+            const r = await fetch(`${VPS}/api/metrics/fetch`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ platform: "instagram", identifier: username }),
+              signal: AbortSignal.timeout(60000),
+            });
+            if (!r.ok) {
+              const body = await r.json().catch(() => ({}));
+              throw new Error(body.error || `VPS вернул ${r.status}`);
+            }
+            const vpsData = await r.json();
+            if (vpsData.error || vpsData.valid === false) {
+              throw new Error(vpsData.error || "VPS не смог получить данные Instagram");
+            }
+            fetchData = {
+              posts: (vpsData.posts || []).map((p: any) => ({
+                text: p.caption || p.text || "",
+                title: (p.caption || p.text || "").slice(0, 100) || `Instagram ${(p.id || "").slice(0, 8)}`,
+                url: p.url || "",
+                date: p.date || "",
+                likes: p.likes || 0,
+                comments: p.comments || 0,
+              })),
+              channel: {
+                title: vpsData.name || username,
+                name: vpsData.identifier || username,
+                subscriberCount: vpsData.subscribers || 0,
+              },
+            };
+          } catch (e: any) {
+            return res.status(503).json({
+              error: `Instagram: не удалось получить посты. Apify недоступен, VPS не отвечает (${e.message}).`,
+              detail: e.message,
+            });
+          }
         }
       }
     } else {
@@ -1200,16 +1305,41 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
       }
     }
 
+    // 1b. Save/update platform record for all platforms
+    const importedChannel = fetchData.channel || {};
+    const channelName = importedChannel.title || importedChannel.name || identifier;
+    let handle = identifier.replace(/^@/, "");
+    const urlMatch = handle.match(/(instagram\.com|t\.me|vk\.com|youtube\.com)\/([^/?]+)/);
+    if (urlMatch) handle = urlMatch[2];
+    handle = handle.replace(/\/+$/, "");
+    const existingPlatform = db.select().from(platforms).where(
+      and(eq(platforms.projectId, projectId), eq(platforms.type, platform))
+    ).get();
+    if (existingPlatform) {
+      db.update(platforms).set({
+        accountHandle: handle,
+        name: channelName,
+      }).where(eq(platforms.id, existingPlatform.id)).run();
+    } else {
+      db.insert(platforms).values({
+        id: uuid(),
+        projectId,
+        type: platform,
+        name: channelName,
+        accountHandle: handle,
+        status: "active",
+        suggested: 0,
+        ordering: 0,
+        createdAt: new Date().toISOString(),
+      }).run();
+    }
+
     // 2. Save each post as knowledge entry
     const posts: any[] = fetchData.posts || [];
     if (posts.length === 0) {
-      let message = "Канал найден, но посты не получены";
-      if (fetchData._noApify) {
-        message = "Apify не настроен. Добавьте APIFY_API_KEY в настройках, чтобы импортировать посты.";
-      }
       return res.status(200).json({
         imported: 0,
-        message,
+        message: "Канал найден, но посты не получены",
         channel: fetchData.channel || null,
         analysis: null,
       });

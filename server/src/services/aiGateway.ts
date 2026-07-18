@@ -27,6 +27,7 @@ export interface GenerateOptions {
   temperature?: number;
   maxTokens?: number;
   responseFormat?: "text" | "json";
+  images?: { mime: string; b64: string }[];
 }
 
 export interface GenerateResult {
@@ -130,6 +131,16 @@ export function getTaskModelKeys(): { task: string; label: string; dbKey: string
 }
 
 async function callOpenAI(opts: GenerateOptions, provider: AiProvider): Promise<GenerateResult> {
+  const content: any = opts.images?.length
+    ? [
+        { type: "text", text: opts.prompt },
+        ...opts.images.map((img) => ({
+          type: "image_url",
+          image_url: { url: `data:${img.mime};base64,${img.b64}` },
+        })),
+      ]
+    : opts.prompt;
+
   const res = await fetch(`${provider.baseUrl}/chat/completions`, {
     method: "POST",
     headers: {
@@ -140,7 +151,7 @@ async function callOpenAI(opts: GenerateOptions, provider: AiProvider): Promise<
       model: opts.model,
       messages: [
         ...(opts.systemPrompt ? [{ role: "system", content: opts.systemPrompt }] : []),
-        { role: "user", content: opts.prompt },
+        { role: "user", content },
       ],
       temperature: opts.temperature ?? 0.7,
       max_tokens: opts.maxTokens ?? 2000,

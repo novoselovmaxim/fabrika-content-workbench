@@ -18,6 +18,18 @@ const statusColors: Record<string, string> = {
   scheduled: "tag-scheduled", published: "tag-published", archived: "tag-archived",
 };
 
+const contentTypeBadge: Record<string, { bg: string; text: string }> = {
+  post: { bg: "#3b82f6", text: "#fff" },
+  reel: { bg: "#ec4899", text: "#fff" },
+  carousel: { bg: "#8b5cf6", text: "#fff" },
+  stories: { bg: "#f97316", text: "#fff" },
+};
+
+const PLATFORM_SHORT: Record<string, string> = {
+  instagram: "IG", telegram: "TG", youtube: "YT",
+  dzen: "Дз", vk: "VK",
+};
+
 function getMonthDays(year: number, month: number) {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -42,6 +54,14 @@ export default function CalendarPage() {
 
   const [filterProjectId, setFilterProjectId] = useState<string | undefined>(() => getStoredProjectId());
   const [filterPlatformId, setFilterPlatformId] = useState<string | undefined>();
+
+  const [hoverInfo, setHoverInfo] = useState<{
+    post: any;
+    platformColor: string | undefined;
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
 
   const { data: allProjects } = useQuery({ queryKey: ["projects"], queryFn: api.projects.list });
 
@@ -256,7 +276,7 @@ export default function CalendarPage() {
                 scrollbarWidth: "thin", scrollbarColor: "var(--border) transparent",
               }}>
                 {dayPosts.map((post: any) => {
-                  const platformColor = post.platformType ? PLATFORM_COLORS[post.platformType] : null;
+                  const platformColor = post.platformType ? PLATFORM_COLORS[post.platformType] : undefined;
                   return (
                     <div
                       key={post.id}
@@ -265,7 +285,7 @@ export default function CalendarPage() {
                       style={{
                         fontSize: 11, padding: "2px 5px", borderRadius: 4,
                         background: post.rubricColor ? post.rubricColor + "18" : "var(--bg-hover)",
-                        color: post.rubricColor || "var(--text)",
+                        color: "var(--text)",
                         cursor: "grab", userSelect: "none",
                         opacity: draggedPostId === post.id ? 0.35 : 1,
                         transition: "opacity 0.15s",
@@ -276,20 +296,29 @@ export default function CalendarPage() {
                       onMouseEnter={(e) => {
                         const btn = e.currentTarget.querySelector(".delete-post-btn") as HTMLElement;
                         if (btn) btn.style.display = "flex";
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoverInfo({ post, platformColor, top: rect.top, left: rect.left, width: rect.width });
                       }}
                       onMouseLeave={(e) => {
                         const btn = e.currentTarget.querySelector(".delete-post-btn") as HTMLElement;
                         if (btn) btn.style.display = "none";
+                        setHoverInfo(null);
                       }}
                     >
-                      {platformColor && (
-                        <span style={{
-                          width: 6, height: 6, borderRadius: 3, flexShrink: 0,
-                          background: platformColor,
-                        }} title={post.platformName || ""} />
-                      )}
-                      <span className={`tag ${statusColors[post.status] || ""}`} style={{
-                        fontSize: 8, padding: "1px 3px", lineHeight: "14px", flexShrink: 0,
+                      <span style={{
+                        fontSize: 8, padding: "1px 3px", borderRadius: 3, lineHeight: "14px",
+                        flexShrink: 0, fontWeight: 600,
+                        background: `${platformColor}20`,
+                        color: platformColor,
+                        border: platformColor ? `1px solid ${platformColor}40` : "none",
+                      }}>
+                        {PLATFORM_SHORT[post.platformType] || post.platformType?.slice(0, 2).toUpperCase() || "?"}
+                      </span>
+                      <span style={{
+                        fontSize: 8, padding: "1px 3px", borderRadius: 3, lineHeight: "14px",
+                        flexShrink: 0, fontWeight: 600,
+                        background: contentTypeBadge[post.contentTypeCode]?.bg || "var(--bg-hover)",
+                        color: contentTypeBadge[post.contentTypeCode]?.text || "var(--text-dim)",
                       }}>
                         {post.contentTypeName?.slice(0, 4) || "?"}
                       </span>
@@ -322,6 +351,37 @@ export default function CalendarPage() {
           );
         })}
       </div>
+      {hoverInfo && (
+        <div style={{
+          position: "fixed",
+          left: Math.max(10, Math.min(hoverInfo.left, window.innerWidth - 330)),
+          bottom: window.innerHeight - hoverInfo.top + 8,
+          zIndex: 2000,
+          background: "var(--bg-card)",
+          border: "1px solid var(--border)",
+          borderRadius: 8,
+          padding: "8px 10px",
+          fontSize: 12,
+          lineHeight: 1.4,
+          boxShadow: "var(--shadow-lg)",
+          maxWidth: 320,
+          pointerEvents: "none",
+        }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
+            <span style={{ color: hoverInfo.platformColor, fontWeight: 600 }}>{hoverInfo.post.platformName || "?"}</span>
+            <span style={{ color: "var(--text-dim)" }}>·</span>
+            <span style={{ color: contentTypeBadge[hoverInfo.post.contentTypeCode]?.bg || "var(--text-dim)", fontWeight: 500 }}>
+              {hoverInfo.post.contentTypeName || "?"}
+            </span>
+          </div>
+          {hoverInfo.post.funnelName && (
+            <div style={{ color: "var(--text-dim)", fontStyle: "italic", marginBottom: 2 }}>
+              {hoverInfo.post.funnelName}
+            </div>
+          )}
+          <div style={{ color: "var(--text)", fontWeight: 500 }}>{hoverInfo.post.title}</div>
+        </div>
+      )}
     </div>
   );
 }

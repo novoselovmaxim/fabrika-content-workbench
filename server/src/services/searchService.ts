@@ -11,6 +11,11 @@ export interface Competitor {
   weaknesses: string[];
   audience: string;
   contentStrategy: string;
+  mainProducts?: string[];
+  contentFormats?: string[];
+  brandVoice?: string;
+  visualStyle?: string;
+  uniqueSellingPoints?: string[];
 }
 
 export interface SearchResult {
@@ -136,12 +141,28 @@ async function analyzeResults(
 ${JSON.stringify(rawResults, null, 2)}
 
 Верни JSON-объект с полями:
-- "direct": массив прямых конкурентов, каждый с полями: name, url, positioning, strengths (string[]), weaknesses (string[]), audience, contentStrategy
-- "indirect": массив косвенных конкурентов, те же поля
+- "direct": массив прямых конкурентов
+- "indirect": массив косвенных конкурентов
+
+Каждый конкурент содержит:
+  - name (строка): название бренда
+  - url (строка): URL
+  - positioning (строка): позиционирование 1-2 предложения
+  - strengths (string[]): 3-5 сильных сторон
+  - weaknesses (string[]): 3-5 слабых сторон
+  - audience (строка): описание целевой аудитории
+  - contentStrategy (строка): описание контент-стратегии
+  - mainProducts (string[]): основные продукты/услуги
+  - contentFormats (string[]): форматы контента (видео, статьи, подкасты, etc.)
+  - brandVoice (строка): голос бренда и тональность
+  - visualStyle (строка): визуальный стиль (цвета, типографика, стиль фото)
+  - uniqueSellingPoints (string[]): уникальные торговые предложения
+
+Также:
 - "marketInsights": строка с выводами о рыночных трендах и пробелах
 - "keywordsFound": массив найденных ключевых слов
 
-Ответь ТОЛЬКА валидным JSON без пояснений.`;
+Ответь ТОЛЬКО валидным JSON без пояснений.`;
 
   const result = await generate({
     provider: "vsellm",
@@ -170,6 +191,97 @@ ${JSON.stringify(rawResults, null, 2)}
       indirect: [],
       marketInsights: "AI анализ не удалось обработать",
       keywordsFound: [],
+    };
+  }
+}
+
+export async function analyzeCompetitorUrl(
+  url: string
+): Promise<Competitor> {
+  const model = getModelForTask("strategy");
+
+  // Fetch page content
+  let pageContent = "";
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; FabrikaAnalyzer/1.0)",
+        Accept: "text/html",
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (res.ok) {
+      const html = await res.text();
+      const text = html
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      pageContent = text.slice(0, 8000);
+    }
+  } catch {
+    // If fetch fails, pass URL only
+  }
+
+  const prompt = `Проанализируй конкурента по URL и доступной информации.
+
+URL: ${url}
+${pageContent ? `\nСодержимое страницы:\n${pageContent}\n` : "\n(доступ к странице не получен, анализируй по URL)\n"}
+
+Верни JSON с полями:
+- "name": название бренда
+- "url": ${url}
+- "positioning": позиционирование (1-2 предложения)
+- "strengths": массив 3-5 сильных сторон
+- "weaknesses": массив 3-5 слабых сторон
+- "audience": описание целевой аудитории
+- "contentStrategy": описание контент-стратегии
+- "mainProducts": массив основных продуктов/услуг
+- "contentFormats": массив форматов контента (видео, статьи, подкасты, etc.)
+- "brandVoice": голос бренда и тональность
+- "visualStyle": визуальный стиль
+- "uniqueSellingPoints": массив УТП
+
+Ответь ТОЛЬКО валидным JSON без пояснений.`;
+
+  const result = await generate({
+    provider: "vsellm",
+    model,
+    prompt,
+    systemPrompt: "Ты эксперт по анализу конкурентов. Анализируй информацию и возвращай структурированный JSON на русском.",
+    temperature: 0.3,
+    maxTokens: 3000,
+    responseFormat: "json",
+  });
+
+  const raw = result.content;
+  try {
+    const parsed = JSON.parse(extractJSON(raw));
+    return {
+      name: parsed.name || "Unknown",
+      url,
+      positioning: parsed.positioning || "",
+      strengths: parsed.strengths || [],
+      weaknesses: parsed.weaknesses || [],
+      audience: parsed.audience || "",
+      contentStrategy: parsed.contentStrategy || "",
+      mainProducts: parsed.mainProducts || [],
+      contentFormats: parsed.contentFormats || [],
+      brandVoice: parsed.brandVoice || "",
+      visualStyle: parsed.visualStyle || "",
+      uniqueSellingPoints: parsed.uniqueSellingPoints || [],
+    };
+  } catch (e: any) {
+    console.error("[searchService] URL analysis JSON parse failed:", e.message, "raw:", raw.slice(0, 300));
+    return {
+      name: new URL(url).hostname,
+      url,
+      positioning: "",
+      strengths: [],
+      weaknesses: [],
+      audience: "",
+      contentStrategy: "",
     };
   }
 }
