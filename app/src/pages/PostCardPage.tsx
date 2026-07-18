@@ -7,6 +7,7 @@ import PostTab, { type ContentTabHandle } from "../components/content-tabs/PostT
 import ReelTab from "../components/content-tabs/ReelTab";
 import StoriesTab from "../components/content-tabs/StoriesTab";
 import PublicationTab from "../components/PublicationTab";
+import ComplianceBadge from "../components/ComplianceBadge";
 import { BarChart3, RefreshCw, Pencil } from "lucide-react";
 
 function safeJsonParse(val: string) {
@@ -345,70 +346,192 @@ const RISK_LABELS: Record<string, string> = {
   "low": "Низкий",
 };
 
-function ComplianceBlock({ draftId }: { draftId: string | null }) {
+function PostTypeSelector({ post, updatePost }: { post: any; updatePost: any }) {
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestion, setSuggestion] = useState<any>(null);
+
+  const types = [
+    { value: "advertising", label: "Реклама", desc: "Прямая реклама, применяются все правила 38-ФЗ" },
+    { value: "sponsored", label: "Спонсорская интеграция", desc: "Платное размещение, те же требования" },
+    { value: "personal", label: "Личный блог", desc: "Не реклама, правила не применяются" },
+    { value: "educational", label: "Образование", desc: "Базовые правила" },
+    { value: "informational", label: "Новости / Инфо", desc: "Базовые правила" },
+    { value: "other", label: "Другое", desc: "Не реклама" },
+  ];
+
+  const handleSuggest = async () => {
+    setSuggesting(true);
+    try {
+      const textToCheck = [post.title, post.hook, post.keyMessage].filter(Boolean).join("\n");
+      if (!textToCheck) return;
+      const res = await api.compliance.suggestPostType(textToCheck, post.title);
+      setSuggestion(res);
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  const applySuggestion = () => {
+    if (suggestion?.postType) {
+      updatePost.mutate({ postType: suggestion.postType });
+      setSuggestion(null);
+    }
+  };
+
+  return (
+    <div>
+      <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Тип поста</label>
+      <div className="flex gap-2">
+        <select
+          className="input"
+          value={post.postType || ""}
+          onChange={(e) => updatePost.mutate({ postType: e.target.value || null })}
+          style={{ flex: 1 }}
+        >
+          <option value="">Не выбран</option>
+          {types.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+        </select>
+        <button className="btn btn-ghost" style={{ fontSize: 12, flexShrink: 0 }} onClick={handleSuggest} disabled={suggesting}>
+          {suggesting ? "..." : "✨ AI"}
+        </button>
+      </div>
+      {post.postType && (
+        <div className="text-xs text-dim" style={{ marginTop: 2 }}>
+          {types.find(t => t.value === post.postType)?.desc}
+        </div>
+      )}
+      {suggestion && (
+        <div style={{ marginTop: 6, padding: "6px 10px", background: "var(--bg-hover)", borderRadius: 8, fontSize: 12 }}>
+          <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
+            <span>AI: <strong>{types.find(t => t.value === suggestion.postType)?.label || suggestion.postType}</strong></span>
+          </div>
+          <div className="text-xs text-dim" style={{ marginBottom: 4 }}>{suggestion.reason}</div>
+          <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px" }} onClick={applySuggestion}>
+            Применить
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AgeRatingSelector({ post, updatePost }: { post: any; updatePost: any }) {
+  const [suggesting, setSuggesting] = useState(false);
+  const [suggestion, setSuggestion] = useState<any>(null);
+
+  const ratings = ["0+", "6+", "12+", "16+", "18+"];
+
+  const handleSuggest = async () => {
+    if (!post.versionCurrentId) return;
+    setSuggesting(true);
+    try {
+      const drafts = await api.drafts.listByPost(post.id);
+      const activeDraft = drafts?.find((d: any) => d.id === post.versionCurrentId) || drafts?.[0];
+      if (activeDraft?.contentMarkdown) {
+        const res = await api.compliance.suggestAgeRating(activeDraft.contentMarkdown);
+        setSuggestion(res);
+      }
+    } finally {
+      setSuggesting(false);
+    }
+  };
+
+  const applySuggestion = () => {
+    if (suggestion?.ageRating) {
+      updatePost.mutate({ ageRating: suggestion.ageRating });
+      setSuggestion(null);
+    }
+  };
+
+  return (
+    <div>
+      <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Возрастная категория</label>
+      <div className="flex gap-2">
+        <select
+          className="input"
+          value={post.ageRating || ""}
+          onChange={(e) => updatePost.mutate({ ageRating: e.target.value || null })}
+          style={{ flex: 1 }}
+        >
+          <option value="">Не выбрана</option>
+          {ratings.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        <button className="btn btn-ghost" style={{ fontSize: 12, flexShrink: 0 }} onClick={handleSuggest} disabled={suggesting}>
+          {suggesting ? "..." : "✨ AI"}
+        </button>
+      </div>
+      {suggestion && (
+        <div style={{ marginTop: 6, padding: "6px 10px", background: "var(--bg-hover)", borderRadius: 8, fontSize: 12 }}>
+          <div className="flex items-center gap-2" style={{ marginBottom: 4 }}>
+            <span>AI: <strong>{suggestion.ageRating}</strong></span>
+          </div>
+          <div className="text-xs text-dim" style={{ marginBottom: 4 }}>{suggestion.reason}</div>
+          <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 8px" }} onClick={applySuggestion}>
+            Применить
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ComplianceBlock({ postId, draftId, post }: { postId: string; draftId: string | null; post: any }) {
   const [checking, setChecking] = useState(false);
-  const [result, setResult] = useState<{ riskScore: number; riskTags: string[]; violatedRules: string[] } | null>(null);
+  const [result, setResult] = useState<any>(null);
 
   const runCheck = useCallback(async () => {
-    if (!draftId) return;
+    if (!draftId && !postId) return;
     setChecking(true);
     try {
-      const res = await api.compliance.checkDraft(draftId);
+      const res = await api.compliance.checkPost(postId, draftId || undefined);
       setResult(res);
     } finally {
       setChecking(false);
     }
-  }, [draftId]);
+  }, [postId, draftId]);
 
-  useEffect(() => { if (draftId) runCheck(); }, [draftId, runCheck]);
+  useEffect(() => { if (postId) runCheck(); }, [postId, runCheck]);
 
-  if (!draftId) return null;
+  if (!postId) return null;
 
   return (
     <div className="card">
       <div className="card-header">
         <span className="card-title">Риски публикации</span>
-        <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={runCheck} disabled={checking}>
-          {checking ? "Проверка..." : "🔄 Проверить"}
-        </button>
+        <div className="flex items-center gap-2">
+          {post?.postType && (
+            <span className="tag" style={{ fontSize: 10, background: "var(--bg-hover)", color: "var(--fg)" }}>
+              {post.postType === "advertising" ? "Реклама" :
+               post.postType === "sponsored" ? "Спонсорское" :
+               post.postType === "personal" ? "Личное" :
+               post.postType === "educational" ? "Обучение" :
+               post.postType === "informational" ? "Инфо" : post.postType}
+            </span>
+          )}
+          <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={runCheck} disabled={checking}>
+            {checking ? "Проверка..." : "🔄 Проверить заново"}
+          </button>
+        </div>
       </div>
       {result ? (
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-dim">Уровень риска:</span>
-            <span className="tag" style={{
-              background: result.riskScore > 0.6 ? "var(--red)" : result.riskScore > 0.3 ? "var(--orange, #e68a2e)" : "var(--green, #2e7d32)",
-              color: "#fff",
-            }}>
-              {result.riskScore > 0.6 ? "⚠ Высокий" : result.riskScore > 0.3 ? "⚡ Средний" : "✓ Низкий"}
-            </span>
-            <span className="text-xs text-dim">({(result.riskScore * 100).toFixed(0)}%)</span>
-          </div>
-          {result.violatedRules.length > 0 && (
-            <div>
-              <span className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Нарушенные правила:</span>
-              <div className="flex flex-col gap-1">
-                {result.violatedRules.map((r, i) => (
-                  <div key={i} className="text-sm" style={{ color: "var(--red)", padding: "4px 8px", background: "var(--bg-hover)", borderRadius: 6 }}>
-                    {r}
-                  </div>
-                ))}
-              </div>
+          <ComplianceBadge
+            riskScore={result.riskScore}
+            riskLevel={result.riskLevel}
+            violations={result.violations}
+          />
+          {result.riskScore > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <span className="text-xs text-dim">
+                💡 Отредактируйте текст на вкладке «Черновики» и вернитесь для повторной проверки
+              </span>
             </div>
-          )}
-          {result.riskTags.length > 0 && (
-            <div className="flex gap-1 flex-wrap">
-              {result.riskTags.map((t) => (
-                <span key={t} className="tag tag-draft" style={{ fontSize: 10 }}>{t}</span>
-              ))}
-            </div>
-          )}
-          {result.riskScore === 0 && (
-            <div className="text-sm" style={{ color: "var(--green)" }}>Нарушений не найдено</div>
           )}
         </div>
+      ) : checking ? (
+        <div className="text-dim text-sm">Проверка...</div>
       ) : (
-        <div className="text-dim text-sm">Проверьте черновик на риски</div>
+        <div className="text-dim text-sm">Нажмите «Проверить», чтобы просканировать пост на риски</div>
       )}
     </div>
   );
@@ -490,7 +613,7 @@ function ReviewStep({ id, post, queryClient, lockAndNext }: {
         </div>
       </div>
 
-      <ComplianceBlock draftId={activeDraftId} />
+      <ComplianceBlock postId={id} draftId={activeDraftId} post={post} />
 
       <div className="card">
         <div className="card-header">
@@ -735,8 +858,8 @@ const contentTabRef = useRef<ContentTabHandle>(null);
     { key: "publication", label: "Публикация" },
   ];
 
-  if (isLoading) return <div className="text-dim">Loading...</div>;
-  if (!post) return <div className="text-dim">Post not found</div>;
+  if (isLoading) return <div className="text-dim">Загрузка...</div>;
+  if (!post) return <div className="text-dim">Пост не найден</div>;
 
   const contentTypeCode = post.contentTypeCode || "post";
   const stepIdx = steps.findIndex((s) => s.key === currentStep);
@@ -928,7 +1051,7 @@ const contentTabRef = useRef<ContentTabHandle>(null);
         <div className="card">
           <div className="card-header">
             <span className="card-title">Метаданные</span>
-            <span className="text-xs text-dim">Нажмите для генерации поля на основе контекста</span>
+            <span className="text-xs text-dim">Нажмите ✨ для генерации поля на основе контекста</span>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div className="flex flex-col gap-4">
@@ -968,6 +1091,38 @@ const contentTabRef = useRef<ContentTabHandle>(null);
               </div>
             </div>
           </div>
+
+          {/* Compliance metadata section */}
+          <div style={{ marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 16 }}>
+            <span className="text-sm" style={{ fontWeight: 600, marginBottom: 12, display: "block" }}>Compliance</span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+              <PostTypeSelector post={post} updatePost={updatePost} />
+              <AgeRatingSelector post={post} updatePost={updatePost} />
+              <div className="flex items-center gap-3" style={{ paddingTop: 6 }}>
+                <label className="switch" style={{ margin: 0 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!post.isAdvertisingMarked}
+                    onChange={(e) => updatePost.mutate({ isAdvertisingMarked: e.target.checked ? 1 : 0 })}
+                  />
+                  <span className="slider round" />
+                </label>
+                <div>
+                  <div className="text-sm">Маркировка «Реклама»</div>
+                  <div className="text-xs text-dim">Пост содержит пометку «Реклама»</div>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Рекламодатель</label>
+                <input className="input" value={post.advertiserInfo || ""} onChange={(e) => updatePost.mutate({ advertiserInfo: e.target.value })} placeholder="ООО Ромашка / ИНН 1234567890" />
+              </div>
+              <div>
+                <label className="text-xs text-dim" style={{ display: "block", marginBottom: 4 }}>Токен ЕРИР (ОРД)</label>
+                <input className="input" value={post.ordToken || ""} onChange={(e) => updatePost.mutate({ ordToken: e.target.value })} placeholder="erid:..." />
+              </div>
+            </div>
+          </div>
+
           <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
             <button className="btn btn-primary" onClick={lockAndNext}>
               Зафиксировать и далее →
@@ -1016,6 +1171,29 @@ const contentTabRef = useRef<ContentTabHandle>(null);
       {/* Publication step */}
       {currentStep === "publication" && (
         <div>
+          {(() => {
+            const isAd = post.postType === "advertising" || post.postType === "sponsored";
+            const missingMarking = isAd && !post.isAdvertisingMarked;
+            const missingAdvertiser = isAd && !post.advertiserInfo;
+            const hasIssues = missingMarking || missingAdvertiser;
+            return hasIssues ? (
+              <div className="card" style={{ borderLeft: "3px solid var(--orange)", marginBottom: 16 }}>
+                <div className="text-sm" style={{ fontWeight: 600, marginBottom: 8 }}>⚠️ Проблемы перед публикацией</div>
+                <div className="flex flex-col gap-2">
+                  {missingMarking && (
+                    <div className="text-xs" style={{ color: "var(--orange)" }}>
+                      {`Пост помечен как «${post.postType === "advertising" ? "Реклама" : "Спонсорская интеграция"}», но не содержит пометку «Реклама». Отметьте чекбокс на вкладке «Метаданные».`}
+                    </div>
+                  )}
+                  {missingAdvertiser && (
+                    <div className="text-xs" style={{ color: "var(--orange)" }}>
+                      Не указан рекламодатель. Заполните поле в метаданных поста.
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null;
+          })()}
           <PublicationTab post={post} updatePost={updatePost} assets={assets} pipeline={pipeline} drafts={drafts} />
           <div style={{ marginTop: 16, display: "flex", justifyContent: "center", gap: 12 }}>
             {(() => {

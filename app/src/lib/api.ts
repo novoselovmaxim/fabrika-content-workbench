@@ -292,18 +292,39 @@ export const api = {
   },
 
   compliance: {
-    check: (text: string, projectId?: string) =>
-      request<{ riskScore: number; riskTags: string[]; violatedRules: string[] }>("/compliance/check", {
+    check: (text: string, options?: { projectId?: string; platform?: string; useAi?: boolean; postType?: string; metadata?: any }) =>
+      request<any>("/compliance/check", {
         method: "POST",
-        body: JSON.stringify({ text, projectId }),
+        body: JSON.stringify({ text, ...options }),
       }),
-    checkDraft: (draftId: string) => request<any>(`/compliance/draft/${draftId}/check`, { method: "POST" }),
+    checkDraft: (draftId: string, platform?: string) =>
+      request<any>(`/compliance/draft/${draftId}/check`, {
+        method: "POST",
+        body: JSON.stringify({ platform }),
+      }),
+    checkPost: (postId: string, draftId?: string) =>
+      request<any>(`/compliance/post/${postId}/check`, {
+        method: "POST", body: JSON.stringify({ draftId }),
+      }),
+    suggestPostType: (text: string, title?: string) =>
+      request<any>("/compliance/suggest-post-type", {
+        method: "POST", body: JSON.stringify({ text, title }),
+      }),
+    suggestAgeRating: (text: string) =>
+      request<any>("/compliance/suggest-age-rating", {
+        method: "POST", body: JSON.stringify({ text }),
+      }),
     listPolicyRules: () => request<any[]>("/compliance/policy-rules"),
     createPolicyRule: (data: { code: string; description: string; pattern?: string; severity?: string }) =>
       request<any>("/compliance/policy-rules", { method: "POST", body: JSON.stringify(data) }),
     updatePolicyRule: (id: string, data: any) =>
       request<any>(`/compliance/policy-rules/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
     deletePolicyRule: (id: string) => request<void>(`/compliance/policy-rules/${id}`, { method: "DELETE" }),
+    listRules: () => request<any[]>("/compliance/rules"),
+    syncRules: () => request<any>("/compliance/rules/sync", { method: "POST" }),
+    toggleRule: (ruleId: string, data: any) =>
+      request<any>(`/compliance/rules/${ruleId}`, { method: "PATCH", body: JSON.stringify(data) }),
+    getHistory: (draftId: string) => request<any[]>(`/compliance/history/${draftId}`),
   },
 
   brandFacts: {

@@ -95,6 +95,35 @@ export function runMigrations(): void {
     )
   `);
 
+  // Migration 0003 — compliance tables
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS compliance_rules (
+      id text PRIMARY KEY NOT NULL,
+      rule_id text NOT NULL UNIQUE,
+      category text NOT NULL,
+      article text NOT NULL,
+      title text NOT NULL,
+      description text NOT NULL,
+      severity text DEFAULT 'medium',
+      enabled integer DEFAULT 1,
+      platform_overrides text,
+      created_at text DEFAULT (current_timestamp),
+      updated_at text DEFAULT (current_timestamp)
+    )
+  `);
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS compliance_checks (
+      id text PRIMARY KEY NOT NULL,
+      draft_id text,
+      post_item_id text,
+      platform text,
+      status text DEFAULT 'pending',
+      risk_score real,
+      results_json text,
+      checked_at text DEFAULT (current_timestamp)
+    )
+  `);
+
   // ALTER TABLE from migration 0002 (wrapped for idempotency)
   for (const stmt of [
     "ALTER TABLE draft_versions ADD COLUMN used_brand_facts text",
@@ -107,6 +136,13 @@ export function runMigrations(): void {
     "ALTER TABLE post_items ADD COLUMN last_reviewed_at text",
     "ALTER TABLE projects ADD COLUMN primary_language text DEFAULT 'ru'",
     "ALTER TABLE projects ADD COLUMN supported_languages text",
+    "ALTER TABLE post_items ADD COLUMN post_type text",
+    "ALTER TABLE post_items ADD COLUMN age_rating text",
+    "ALTER TABLE post_items ADD COLUMN is_advertising_marked integer DEFAULT 0",
+    "ALTER TABLE post_items ADD COLUMN advertiser_info text",
+    "ALTER TABLE post_items ADD COLUMN ord_token text",
+    "ALTER TABLE compliance_rules ADD COLUMN rule_type text DEFAULT 'text'",
+    "ALTER TABLE compliance_rules ADD COLUMN applies_to text",
   ]) {
     try { sqlite.exec(stmt); } catch {}
   }

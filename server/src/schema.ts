@@ -299,6 +299,11 @@ export const postItems = sqliteTable("post_items", {
   reviewStatus: text("review_status").default("none"),
   lastReviewedBy: text("last_reviewed_by"),
   lastReviewedAt: text("last_reviewed_at"),
+  postType: text("post_type"),
+  ageRating: text("age_rating"),
+  isAdvertisingMarked: integer("is_advertising_marked").default(0),
+  advertiserInfo: text("advertiser_info"),
+  ordToken: text("ord_token"),
   createdAt: text("created_at").default(sql`(current_timestamp)`),
   updatedAt: text("updated_at").default(sql`(current_timestamp)`),
 });
@@ -447,6 +452,35 @@ export const policyRules = sqliteTable("policy_rules", {
   severity: text("severity").default("warning"),
   enabled: integer("enabled").default(1),
   createdAt: text("created_at").default(sql`(current_timestamp)`),
+});
+
+// ── Compliance Rules (structured, from 38-ФЗ) ────────────
+export const complianceRules = sqliteTable("compliance_rules", {
+  id: text("id").primaryKey(),
+  ruleId: text("rule_id").notNull().unique(),
+  category: text("category").notNull(),
+  article: text("article").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  severity: text("severity").default("medium"),
+  enabled: integer("enabled").default(1),
+  ruleType: text("rule_type").default("text"),
+  appliesTo: text("applies_to"),
+  platformOverrides: text("platform_overrides"),
+  createdAt: text("created_at").default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at").default(sql`(current_timestamp)`),
+});
+
+// ── Compliance Check Results ─────────────────────────────
+export const complianceChecks = sqliteTable("compliance_checks", {
+  id: text("id").primaryKey(),
+  draftId: text("draft_id"),
+  postItemId: text("post_item_id"),
+  platform: text("platform"),
+  status: text("status").default("pending"),
+  riskScore: real("risk_score"),
+  resultsJson: text("results_json"),
+  checkedAt: text("checked_at").default(sql`(current_timestamp)`),
 });
 
 // ── Post Analytics (aggregated per post) ────────────────────

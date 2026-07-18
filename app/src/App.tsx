@@ -20,6 +20,7 @@ import BrandStylesPage from "./pages/BrandStylesPage";
 import KnowledgeBase from "./pages/KnowledgeBase";
 import BrandFactsPage from "./pages/BrandFactsPage";
 import UnpackPage from "./pages/UnpackPage";
+import CompliancePage from "./pages/CompliancePage";
 import ChatPanel from "./components/ChatPanel";
 
 const globalNavItems = [
@@ -391,9 +392,12 @@ function ContextSection() {
         <NavLink to={`/analytics${qs}`} end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
           Аналитика
         </NavLink>
-        <NavLink to={`/assets${qs}`} end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
-          Медиатека
-        </NavLink>
+         <NavLink to={`/assets${qs}`} end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+           Медиатека
+         </NavLink>
+         <NavLink to="/compliance" end className={({ isActive }) => `sidebar-link ${isActive ? "active" : ""}`}>
+           Compliance
+         </NavLink>
       </div>
     </div>
   );
@@ -462,6 +466,7 @@ export default function App() {
           <Route path="/assets" element={<AssetsPage />} />
           <Route path="/queue" element={<QueuePage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+          <Route path="/compliance" element={<CompliancePage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>

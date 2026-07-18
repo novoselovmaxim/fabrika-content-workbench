@@ -160,120 +160,21 @@ function ThemeSelector() {
   );
 }
 
-const SEVERITY_LABELS: Record<string, string> = { info: "Инфо", warning: "Предупреждение", block: "Блокирующий" };
-const SEVERITY_COLORS: Record<string, string> = { info: "var(--dim)", warning: "var(--orange, #e68a2e)", block: "var(--red)" };
-
-function ComplianceSection() {
-  const queryClient = useQueryClient();
-  const { data: rules, refetch } = useQuery({
-    queryKey: ["policy-rules"],
-    queryFn: () => api.compliance.listPolicyRules(),
-  });
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formCode, setFormCode] = useState("");
-  const [formDesc, setFormDesc] = useState("");
-  const [formPattern, setFormPattern] = useState("");
-  const [formSeverity, setFormSeverity] = useState("warning");
-  const [showForm, setShowForm] = useState(false);
-
-  const toggleRule = useMutation({
-    mutationFn: ({ id, enabled }: { id: string; enabled: number }) =>
-      api.compliance.updatePolicyRule(id, { enabled }),
-    onSuccess: () => refetch(),
-  });
-
-  const deleteRule = useMutation({
-    mutationFn: (id: string) => api.compliance.deletePolicyRule(id),
-    onSuccess: () => refetch(),
-  });
-
-  const createRule = useMutation({
-    mutationFn: () => api.compliance.createPolicyRule({ code: formCode, description: formDesc, pattern: formPattern, severity: formSeverity }),
-    onSuccess: () => { refetch(); setShowForm(false); setFormCode(""); setFormDesc(""); setFormPattern(""); setFormSeverity("warning"); },
-  });
-
-  const updateRule = useMutation({
-    mutationFn: (data: any) => api.compliance.updatePolicyRule(data.id, data),
-    onSuccess: () => { refetch(); setEditingId(null); },
-  });
-
-  function startEdit(rule: any) {
-    setEditingId(rule.id);
-    setFormCode(rule.code);
-    setFormDesc(rule.description);
-    setFormPattern(rule.pattern || "");
-    setFormSeverity(rule.severity || "warning");
-  }
-
+function ComplianceLink() {
   return (
     <div className="card" style={{ gridColumn: "span 2" }}>
       <div className="card-header">
-        <span className="card-title">Правила compliance</span>
-        <button className="btn btn-ghost" style={{ fontSize: 12 }} onClick={() => { setShowForm(!showForm); setEditingId(null); }}>
-          {showForm ? "Отмена" : "+ Добавить"}
+        <span className="card-title">Compliance</span>
+      </div>
+      <p className="text-sm text-dim" style={{ marginBottom: 12 }}>
+        Проверка рекламных текстов на соответствие 38-ФЗ «О рекламе» — 40+ правил по категориям,
+        AI-проверка, история проверок.
+      </p>
+      <a href="/compliance" style={{ textDecoration: "none" }}>
+        <button className="btn btn-primary">
+          Перейти в раздел Compliance →
         </button>
-      </div>
-      {(showForm || editingId) && (
-        <div className="flex flex-col gap-3" style={{ marginBottom: 12, padding: 12, background: "var(--bg-hover)", borderRadius: 10 }}>
-          <div>
-            <label className="text-xs text-dim">Код</label>
-            <input className="input" value={formCode} onChange={(e) => setFormCode(e.target.value)} placeholder="no_guaranteed_result" />
-          </div>
-          <div>
-            <label className="text-xs text-dim">Описание</label>
-            <input className="input" value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder="Запрет обещаний гарантированного результата" />
-          </div>
-          <div>
-            <label className="text-xs text-dim">Регулярное выражение (regex)</label>
-            <input className="input" value={formPattern} onChange={(e) => setFormPattern(e.target.value)} placeholder="\\b(гарантирую|100%)\\b" />
-          </div>
-          <div>
-            <label className="text-xs text-dim">Severity</label>
-            <select className="input" value={formSeverity} onChange={(e) => setFormSeverity(e.target.value)}>
-              {Object.entries(SEVERITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
-          </div>
-          <div className="flex gap-2">
-            {editingId ? (
-              <button className="btn btn-primary" onClick={() => updateRule.mutate({ id: editingId, code: formCode, description: formDesc, pattern: formPattern, severity: formSeverity })}>
-                💾 Сохранить
-              </button>
-            ) : (
-              <button className="btn btn-primary" onClick={() => createRule.mutate()} disabled={!formCode || !formDesc}>
-                Создать
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-      <div className="flex flex-col gap-2">
-        {(rules || []).map((rule: any) => (
-          <div key={rule.id} className="flex items-center justify-between" style={{ padding: "8px 0", borderBottom: "1px solid var(--border)" }}>
-            <div className="flex items-center gap-3" style={{ flex: 1 }}>
-              <label className="switch" style={{ margin: 0 }}>
-                <input
-                  type="checkbox"
-                  checked={!!rule.enabled}
-                  onChange={() => toggleRule.mutate({ id: rule.id, enabled: rule.enabled ? 0 : 1 })}
-                />
-                <span className="slider round" />
-              </label>
-              <div style={{ flex: 1 }}>
-                <div className="text-sm" style={{ fontWeight: 500 }}>{rule.code}</div>
-                <div className="text-xs text-dim">{rule.description}</div>
-              </div>
-              <span className="tag" style={{ background: SEVERITY_COLORS[rule.severity] || "var(--dim)", color: "#fff", fontSize: 10 }}>
-                {SEVERITY_LABELS[rule.severity] || rule.severity}
-              </span>
-            </div>
-            <div className="flex gap-1" style={{ flexShrink: 0 }}>
-              <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px" }} onClick={() => startEdit(rule)}>✏️</button>
-              <button className="btn btn-ghost" style={{ fontSize: 11, padding: "2px 6px", color: "var(--red)" }} onClick={() => { if (confirm("Удалить правило?")) deleteRule.mutate(rule.id); }}>🗑</button>
-            </div>
-          </div>
-        ))}
-        {(!rules || rules.length === 0) && <div className="text-dim text-sm">Нет правил compliance</div>}
-      </div>
+      </a>
     </div>
   );
 }
@@ -588,7 +489,7 @@ export default function SettingsPage() {
 
         <LanguageSection />
 
-        <ComplianceSection />
+        <ComplianceLink />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {/* Export */}

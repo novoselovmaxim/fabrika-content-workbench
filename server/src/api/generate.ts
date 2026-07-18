@@ -124,11 +124,11 @@ generateRouter.post("/", async (req, res) => {
     }
 
     // Compliance check (regex layer on top of LLM risk)
-    const compliance = checkCompliance(contentText, ctxProjectId || undefined);
+    const compliance = await checkCompliance(contentText, { projectId: ctxProjectId || undefined, useAi: false });
     const finalRiskScore = riskScore != null ? Math.max(riskScore, compliance.riskScore) : compliance.riskScore || null;
-    const finalRiskTags = [...new Set([...(riskTags || []), ...compliance.riskTags])];
-    if (compliance.violatedRules.length > 0 && !explanation) {
-      explanation = `Нарушены правила: ${compliance.violatedRules.join(", ")}`;
+    const finalRiskTags = [...new Set([...(riskTags || []), ...compliance.violations.map(v => v.ruleId)])];
+    if (compliance.violations.length > 0 && !explanation) {
+      explanation = `Нарушены правила: ${compliance.violations.map(v => v.title).join(", ")}`;
     }
 
     // Save as draft version if postItemId provided
