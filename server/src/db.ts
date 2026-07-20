@@ -143,6 +143,7 @@ export function runMigrations(): void {
     "ALTER TABLE post_items ADD COLUMN ord_token text",
     "ALTER TABLE compliance_rules ADD COLUMN rule_type text DEFAULT 'text'",
     "ALTER TABLE compliance_rules ADD COLUMN applies_to text",
+    "ALTER TABLE platforms ADD COLUMN account_handle text",
   ]) {
     try { sqlite.exec(stmt); } catch {}
   }

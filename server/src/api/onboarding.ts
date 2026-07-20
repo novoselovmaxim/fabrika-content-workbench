@@ -1216,11 +1216,14 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
 
         // 1) Try Apify (if configured)
         let apifyPosts = null;
+        let apifyStatus = "skip";
         try {
           const { fetchInstagramProfile, fetchInstagramPosts, isApifyConfigured } = await import("../services/apify.js");
           if (isApifyConfigured()) {
+            apifyStatus = "tried";
             const rawPosts = await fetchInstagramPosts(username, 20);
             if (rawPosts && rawPosts.length > 0) {
+              apifyStatus = "ok";
               const profile = await fetchInstagramProfile(username);
               const posts = rawPosts.map((p) => ({
                 text: p.caption || "",
@@ -1238,7 +1241,8 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
               };
             }
           }
-        } catch (e) {
+        } catch (e: any) {
+          apifyStatus = `error: ${e.message}`;
           console.error(`[onboarding] Apify failed for "${username}":`, e);
         }
 
@@ -1277,9 +1281,17 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
               },
             };
           } catch (e: any) {
+            const apifyDetail = apifyStatus === "skip"
+              ? "Apify API ключ не настроен (Settings → Apify API Key)."
+              : apifyStatus === "tried"
+              ? "Apify настроен, но не вернул данные. Проверьте actor apidojo~instagram-scraper и публичность аккаунта."
+              : apifyStatus.startsWith("error")
+              ? `Apify ошибка: ${apifyStatus.slice(6)}`
+              : "Apify недоступен";
             return res.status(503).json({
-              error: `Instagram: не удалось получить посты. Apify недоступен, VPS не отвечает (${e.message}).`,
+              error: `Instagram: ${apifyDetail} VPS не отвечает (${e.message}).`,
               detail: e.message,
+              apify: apifyStatus,
             });
           }
         }

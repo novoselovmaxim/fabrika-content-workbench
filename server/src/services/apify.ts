@@ -111,10 +111,15 @@ export async function fetchInstagramPosts(username: string, limit: number = 20):
       console.error(`[apify] fetchInstagramPosts HTTP ${res.status} for "${username}": ${text.slice(0, 200)}`);
       return null;
     }
-    const data = await res.json();
+    let data = await res.json();
     if (!Array.isArray(data)) {
-      console.error(`[apify] fetchInstagramPosts: non-array response for "${username}"`);
-      return null;
+      if (Array.isArray(data.data)) data = data.data;
+      else if (Array.isArray(data.items)) data = data.items;
+      else if (data.output && Array.isArray(data.output)) data = data.output;
+      else {
+        console.error(`[apify] fetchInstagramPosts: non-array response for "${username}"`, JSON.stringify(data).slice(0, 300));
+        return null;
+      }
     }
 
     // Debug: log first item keys
