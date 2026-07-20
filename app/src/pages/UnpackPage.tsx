@@ -47,7 +47,7 @@ export default function UnpackPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [projectId, setProjectId] = useState<string | null>(() => {
-    try { return sessionStorage.getItem(`${SAVE_KEY}_projectId`) || getStoredProjectId() || null; } catch { return null; }
+    try { return getStoredProjectId() || null; } catch { return null; }
   });
   const [stepIdx, setStepIdx] = useState(() => {
     try { return parseInt(sessionStorage.getItem(`${SAVE_KEY}_step`) || "0"); } catch { return 0; }
@@ -70,12 +70,31 @@ export default function UnpackPage() {
 
   const { data: allProjects } = useQuery({ queryKey: ["projects"], queryFn: api.projects.list });
 
+  function clearWizardState() {
+    setUnpackKnowledgeCount(0);
+    setImportIdentifier("");
+    setImportResult(null);
+    setImportError(null);
+    setImportDescription("");
+    setGeneratedKeywords([]);
+    setKeywordsEditMode(false);
+    setKeywordsEdits({});
+    const keys = [
+      "unpackKnowledgeCount", "importIdentifier", "importResult",
+      "importError", "importDescription", "generatedKeywords",
+      "keywordsEditMode", "keywordsEdits",
+    ];
+    for (const k of keys) {
+      try { sessionStorage.removeItem(`${SAVE_KEY}_${k}`); } catch {}
+    }
+  }
+
   const createProject = useMutation({
     mutationFn: () => api.projects.create({ name: "Новый проект" }),
     onSuccess: (project) => {
+      clearWizardState();
       setProjectId(project.id);
       setStoredProjectId(project.id);
-      try { sessionStorage.setItem(`${SAVE_KEY}_projectId`, JSON.stringify(project.id)); } catch {}
     },
   });
 
