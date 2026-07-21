@@ -16,14 +16,11 @@ export { sqlite };
 const isDev = !process.env.PKG_EXECPATH && !process.env.ELECTRON_APP && !process.env.NODE_ENV;
 
 export function runMigrations(): void {
-  if (isDev) {
-    console.log("✓ Dev mode — migrations managed by drizzle-kit push");
-    return;
-  }
-
   try {
-    migrate(db, { migrationsFolder: PATHS.migrations });
-    console.log("✓ Migrations applied");
+    if (!isDev) {
+      migrate(db, { migrationsFolder: PATHS.migrations });
+      console.log("✓ Migrations applied");
+    }
   } catch (err) {
     console.warn("⚠ Migration non-fatal:", String(err));
   }

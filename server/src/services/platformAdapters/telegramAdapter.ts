@@ -9,7 +9,34 @@ function parseViewsCount(raw?: string): number | undefined {
 }
 
 function stripTags(html: string): string {
-  return html.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").trim();
+  return html.replace(/<br\s*\/?>/g, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
+}
+
+function findEndOfDiv(html: string, startIdx: number): number {
+  let depth = 0;
+  let i = startIdx;
+  const len = html.length;
+  while (i < len) {
+    const c = html[i];
+    if (c === '<') {
+      const tagEnd = html.indexOf('>', i);
+      if (tagEnd < 0) { i++; continue; }
+      const tag = html.slice(i + 1, tagEnd).trim();
+      if (tag.startsWith('/')) {
+        depth--;
+      } else if (!tag.endsWith('/') && !tag.startsWith('!') && !tag.startsWith('?')) {
+        const tagName = tag.split(/\s/)[0].toLowerCase();
+        if (tagName !== 'br' && tagName !== 'hr' && tagName !== 'img' && tagName !== 'input' && tagName !== 'meta' && tagName !== 'link') {
+          depth++;
+        }
+      }
+      i = tagEnd + 1;
+      if (depth === 0) return i;
+    } else {
+      i++;
+    }
+  }
+  return len;
 }
 
 async function fetchTelegramPosts(channelUsername: string, limit: number): Promise<PlatformMetrics[]> {
@@ -22,21 +49,42 @@ async function fetchTelegramPosts(channelUsername: string, limit: number): Promi
     if (!res.ok) return [];
     const html = await res.text();
 
-    const blocks = html.match(/<div class="tgme_widget_message[\s\S]*?(?=<div class="tgme_widget_message|\s*<\/div>\s*<\/div>\s*<\/section>)/g) || [];
+    const posts: PlatformMetrics[] = [];
+    const idRegex = /data-post="[^/]+\/(\d+)"/g;
+    let m: RegExpExecArray | null;
+    while ((m = idRegex.exec(html)) !== null) {
+      const postId = m[1];
+      const wrapStartIdx = html.lastIndexOf("<div", m.index);
+      const wrapEndIdx = findEndOfDiv(html, wrapStartIdx);
 
-    return blocks.slice(0, limit).map((block) => {
-      const idMatch = block.match(/data-post="[^/]+\/(\d+)"/);
-      const viewsMatch = block.match(/tgme_widget_message_views">([^<]+)</);
+      const block = html.slice(wrapStartIdx, wrapEndIdx);
+
+      const viewsMatch = block.match(/tgme_widget_message_views[^>]*>([^<]+)</);
       const dateMatch = block.match(/<time[^>]+datetime="([^"]+)"/);
-      const textMatch = block.match(/tgme_widget_message_text[^>]*>([\s\S]*?)<\/div>/);
 
-      return {
+      let caption: string | undefined;
+      const textMatch = block.match(/<div class="tgme_widget_message_text[^>]*">([\s\S]*?)<\/div>\s*(?:<div class="tgme_widget_message_reactions|$)/);
+      if (textMatch) {
+        caption = stripTags(textMatch[1]) || undefined;
+      }
+      if (!caption) {
+        const altMatch = block.match(/<div class="tgme_widget_message_text[^>]*">([\s\S]*?)<\/div>/);
+        if (altMatch) {
+          caption = stripTags(altMatch[1]) || undefined;
+        }
+      }
+
+      posts.push({
         metrics: { impressions: parseViewsCount(viewsMatch?.[1]) },
-        externalId: idMatch?.[1],
+        externalId: postId,
         postedAt: dateMatch?.[1],
-        caption: textMatch ? stripTags(textMatch[1]) : undefined,
-      };
-    });
+        caption,
+      });
+
+      if (posts.length >= limit) break;
+    }
+
+    return posts;
   } catch {
     return [];
   }

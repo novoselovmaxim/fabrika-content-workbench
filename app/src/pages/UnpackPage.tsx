@@ -131,7 +131,7 @@ export default function UnpackPage() {
   }
   const [unpackTab, setUnpackTab] = useState(() => ss("unpackTab", "files"));
   const [unpackLoading, setUnpackLoading] = useState(false);
-  const [unpackKnowledgeCount, setUnpackKnowledgeCount] = useState(() => ss("unpackKnowledgeCount", 0));
+  const [unpackKnowledgeCount, setUnpackKnowledgeCount] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
@@ -141,31 +141,23 @@ export default function UnpackPage() {
   const [noteSaved, setNoteSaved] = useState(false);
   const [fileSaved, setFileSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [generatedKeywords, setGeneratedKeywords] = useState<any[]>(() => ss("generatedKeywords", []));
+  const [generatedKeywords, setGeneratedKeywords] = useState<any[]>([]);
   const [keywordsLoading, setKeywordsLoading] = useState(false);
-  const [keywordsEditMode, setKeywordsEditMode] = useState(() => ss("keywordsEditMode", false));
-  const [keywordsEdits, setKeywordsEdits] = useState<Record<string, string>>(() => ss("keywordsEdits", {}));
+  const [keywordsEditMode, setKeywordsEditMode] = useState(false);
+  const [keywordsEdits, setKeywordsEdits] = useState<Record<string, string>>({});
   const [keywordsSaving, setKeywordsSaving] = useState(false);
 
   const [importPlatform, setImportPlatform] = useState(() => ss("importPlatform", "telegram"));
-  const [importIdentifier, setImportIdentifier] = useState(() => ss("importIdentifier", ""));
-  const [importDescription, setImportDescription] = useState(() => ss("importDescription", ""));
+  const [importIdentifier, setImportIdentifier] = useState("");
+  const [importDescription, setImportDescription] = useState("");
   const [importLoading, setImportLoading] = useState(false);
-  const [importResult, setImportResult] = useState<any>(() => ss("importResult", null));
-  const [importError, setImportError] = useState<string | null>(() => ss("importError", null));
+  const [importResult, setImportResult] = useState<any>(null);
+  const [importError, setImportError] = useState<string | null>(null);
 
-  // Persist materials state to sessionStorage
+  // Persist only UI preferences to sessionStorage (NOT project data)
   const persist = (key: string, value: any) => { try { sessionStorage.setItem(`${SAVE_KEY}_${key}`, JSON.stringify(value)); } catch {} };
   useEffect(() => { persist("unpackTab", unpackTab); }, [unpackTab]);
-  useEffect(() => { persist("unpackKnowledgeCount", unpackKnowledgeCount); }, [unpackKnowledgeCount]);
-  useEffect(() => { persist("generatedKeywords", generatedKeywords); }, [generatedKeywords]);
-  useEffect(() => { persist("keywordsEditMode", keywordsEditMode); }, [keywordsEditMode]);
-  useEffect(() => { persist("keywordsEdits", keywordsEdits); }, [keywordsEdits]);
   useEffect(() => { persist("importPlatform", importPlatform); }, [importPlatform]);
-  useEffect(() => { persist("importIdentifier", importIdentifier); }, [importIdentifier]);
-  useEffect(() => { persist("importDescription", importDescription); }, [importDescription]);
-  useEffect(() => { persist("importResult", importResult); }, [importResult]);
-  useEffect(() => { persist("importError", importError); }, [importError]);
 
   const createKnowledge = useMutation({
     mutationFn: async (data: any) => {
@@ -225,7 +217,11 @@ export default function UnpackPage() {
     try {
       const pid = await ensureProject();
       const res = await fetch(`/api/onboarding/${pid}/generate-keywords`, { method: "POST" });
-      if (!res.ok) throw new Error("Keyword generation failed");
+      if (!res.ok) {
+        let msg = "Keyword generation failed";
+        try { const err = await res.json(); if (err.error) msg = err.error; } catch {}
+        throw new Error(msg);
+      }
       const data = await res.json();
       setGeneratedKeywords(data);
       queryClient.invalidateQueries({ queryKey: ["onboarding-status", projectId] });
@@ -613,7 +609,11 @@ export default function UnpackPage() {
     mutationFn: async () => {
       const pid = await ensureProject();
       const res = await fetch(`/api/onboarding/${pid}/generate-products`, { method: "POST" });
-      if (!res.ok) throw new Error("Failed to generate products");
+      if (!res.ok) {
+        let msg = "Failed to generate products";
+        try { const err = await res.json(); if (err.error) msg = err.error; } catch {}
+        throw new Error(msg);
+      }
       return res.json();
     },
     onSuccess: (data) => {
@@ -1399,7 +1399,7 @@ export default function UnpackPage() {
                             key={p}
                             className={`btn ${importPlatform === p ? "btn-primary" : "btn-ghost"}`}
                             style={{ fontSize: 13, flex: 1, minWidth: 80 }}
-                            onClick={() => { setImportPlatform(p); setImportResult(null); setImportError(null); setImportDescription(""); }}
+                            onClick={() => { setImportPlatform(p); setImportIdentifier(""); setImportResult(null); setImportError(null); setImportDescription(""); }}
                           >
                             {p === "telegram" ? "✈️ Telegram" : p === "youtube" ? "▶️ YouTube" : p === "vk" ? "📱 VK" : p === "zen" ? "📰 Дзен" : "📸 Instagram"}
                           </button>
@@ -1568,9 +1568,9 @@ export default function UnpackPage() {
               </div>
             )}
 
-            {unpackKnowledgeCount > 0 && (
+            {(realKnowledgeCount > 0 || unpackKnowledgeCount > 0) && (
               <div className="text-sm text-dim" style={{ marginTop: 12, textAlign: "center" }}>
-                ✅ Загружено: {unpackKnowledgeCount} записей в базу знаний
+                ✅ Загружено: {Math.max(realKnowledgeCount, unpackKnowledgeCount)} записей в базу знаний
               </div>
             )}
 

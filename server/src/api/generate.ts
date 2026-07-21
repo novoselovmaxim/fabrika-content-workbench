@@ -2,7 +2,7 @@ import { Router } from "express";
 import { generate, getModelForTask, getTemplates, getTemplate, fillTemplate, extractJSON, type GenerateOptions } from "../services/aiGateway.js";
 import { db } from "../db.js";
 import { projects, draftVersions, postItems, rubrics, topics, contentTypes, strategyBlocks, funnels } from "../schema.js";
-import { sql, eq, and, gte } from "drizzle-orm";
+import { sql, eq, and, gte, lte } from "drizzle-orm";
 import { v4 as uuid } from "uuid";
 import { buildProjectContext } from "../services/projectContext.js";
 import { selectRelevantFacts } from "../services/factSelector.js";
@@ -192,6 +192,7 @@ function buildWeekPlanPrompt(opts: {
   topics: any[]; ideas: string[];
   funnel?: any;
   projectTone?: string;
+  replacedPosts?: string[];
 }) {
   const funnelText = opts.funnel 
     ? `ВОРОНКА ПРОДАЖ (следуй этой структуре): ${opts.funnel.name}\nОписание: ${opts.funnel.description}\nСтадии/Шаги:\n${opts.funnel.stages}\nПравила: ${opts.funnel.rules || "нет"}`
@@ -221,6 +222,10 @@ function buildWeekPlanPrompt(opts: {
     ? opts.plannedPosts.map(p => `  • ${p.scheduledDate} — ${p.title}`).join("\n")
     : "  (нет)";
 
+  const replacedText = opts.replacedPosts && opts.replacedPosts.length > 0
+    ? `\nЗАМЕНЁННЫЕ ПОСТЫ (эти заголовки уже были — не повторяй их, придумай новые):\n${opts.replacedPosts.map(t => `  • ${t}`).join("\n")}`
+    : "";
+
   const toneText = opts.projectTone ? `- Тон: ${opts.projectTone}` : "";
 
   return `Составь контент-план для Instagram-канала "${opts.platformName}" строго на неделю ${opts.weekStart} (понедельник) — ${opts.weekEnd} (воскресенье).
@@ -244,6 +249,7 @@ ${contentTypesText}
 
 УЖЕ ЗАПЛАНИРОВАНО (не повторяй темы):
 ${plannedText}
+${replacedText}
 
 ТРЕБОВАНИЯ:
 - Распредели посты равномерно по дням недели (пн-вс)
@@ -276,7 +282,8 @@ ${toneText}
 // Generate next week plan
 generateRouter.post("/week-plan", async (req, res) => {
   try {
-    const { projectId, platformId, ideas: reqIdeas, funnelId } = req.body;
+    const { projectId, platformId, ideas: reqIdeas, funnelId, mode } = req.body;
+    const genMode = mode === "replace" ? "replace" : "append";
     if (!projectId || !platformId) {
       return res.status(400).json({ error: "projectId and platformId are required" });
     }
@@ -361,7 +368,29 @@ generateRouter.post("/week-plan", async (req, res) => {
       .where(sql`id = ${platformId}`)
       .get();
 
-    // 7. Build AI prompt
+    // 7. Handle replace mode — delete ALL planned posts for this funnel and pass titles to AI
+    let replacedTitles: string[] = [];
+    let replacedCount = 0;
+    if (genMode === "replace" && funnelId) {
+      const existingPlanned = db
+        .select({ title: postItems.title })
+        .from(postItems)
+        .where(and(
+          eq(postItems.funnelId, funnelId),
+          eq(postItems.status, "planned"),
+        ))
+        .all();
+      replacedTitles = existingPlanned.map(p => p.title).filter(Boolean) as string[];
+      if (replacedTitles.length > 0) {
+        db.delete(postItems).where(and(
+          eq(postItems.funnelId, funnelId),
+          eq(postItems.status, "planned"),
+        )).run();
+        replacedCount = replacedTitles.length;
+      }
+    }
+
+    // 8. Build AI prompt
     const prompt = buildWeekPlanPrompt({
       weekStart,
       weekEnd,
@@ -374,6 +403,7 @@ generateRouter.post("/week-plan", async (req, res) => {
       ideas,
       funnel,
       projectTone: project?.tone || undefined,
+      replacedPosts: replacedTitles.length > 0 ? replacedTitles : undefined,
     });
 
     // 8. Call AI
@@ -409,11 +439,38 @@ generateRouter.post("/week-plan", async (req, res) => {
       });
     }
 
-    // 10. Create posts for each day (DO NOT delete existing)
+    // 10. Check existing posts in target week for append mode
+    let skippedCount = 0;
+    const existingForFunnel = (genMode === "append" && funnelId)
+      ? db.select({ scheduledDate: postItems.scheduledDate, title: postItems.title })
+        .from(postItems)
+        .where(and(
+          eq(postItems.funnelId, funnelId),
+          gte(postItems.scheduledDate, weekStart),
+          lte(postItems.scheduledDate, weekEnd),
+        ))
+        .all()
+      : [];
+    const existingDateMap = new Map<string, Set<string>>();
+    for (const p of existingForFunnel) {
+      const d = p.scheduledDate || "";
+      if (!existingDateMap.has(d)) existingDateMap.set(d, new Set());
+      existingDateMap.get(d)!.add(p.title);
+    }
+
+    // 12. Create posts for each day
     const createdPosts: any[] = [];
     for (const day of planData.plan) {
       for (const post of (day.posts || [])) {
         if (!post.title || post.title === "Новый пост") continue;
+
+        if (genMode === "append" && funnelId) {
+          const dayExisting = existingDateMap.get(day.date);
+          if (dayExisting && dayExisting.has(post.title)) {
+            skippedCount++;
+            continue;
+          }
+        }
         
         const id = uuid();
         const rubric = existingRubrics.find(r => r.name === post.rubric);
@@ -455,6 +512,9 @@ generateRouter.post("/week-plan", async (req, res) => {
       weekStart,
       weekEnd,
       count: createdPosts.length,
+      mode: genMode,
+      replacedCount,
+      skippedCount,
     });
 
   } catch (err: any) {

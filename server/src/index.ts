@@ -31,6 +31,7 @@ import { analyticsRouter } from "./api/analytics.js";
 import { competitorsRouter } from "./api/competitors.js";
 import { licenseRouter } from "./api/license.js";
 import { metricsRouter } from "./api/metrics.js";
+import { backupRouter } from "./api/backup.js";
 import { seedContentTextures } from "./seeds/contentTextures.js";
 import { seedFunnels } from "./seeds/funnels.js";
 import { seedPolicyRules } from "./seeds/policyRules.js";
@@ -226,6 +227,7 @@ app.use("/api/compliance", complianceRouter);
 app.use("/api/analytics", analyticsRouter);
 app.use("/api/competitors", competitorsRouter);
 app.use("/api/brand-facts", brandFactsRouter);
+app.use("/api/backup", backupRouter);
 
 seedContentTextures();
 seedFunnels();

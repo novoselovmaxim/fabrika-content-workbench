@@ -160,6 +160,98 @@ function ThemeSelector() {
   );
 }
 
+function BackupCard() {
+  const [backupInfo, setBackupInfo] = useState<any>(null);
+  const [loading, setLoading] = useState("");
+  const [msg, setMsg] = useState("");
+
+  const fetchInfo = async () => {
+    try {
+      const res = await fetch("/api/backup/info");
+      if (res.ok) setBackupInfo(await res.json());
+    } catch {}
+  };
+
+  useEffect(() => { fetchInfo(); }, []);
+
+  const doCreate = async () => {
+    setLoading("create");
+    setMsg("");
+    try {
+      const res = await fetch("/api/backup/create", { method: "POST" });
+      if (!res.ok) { setMsg("Ошибка создания бэкапа"); return; }
+      setMsg("✅ Бэкап создан");
+      fetchInfo();
+    } catch { setMsg("Ошибка создания бэкапа"); }
+    finally { setLoading(""); }
+  };
+
+  const doDownload = () => {
+    window.open("/api/backup/download", "_blank");
+  };
+
+  const doRestore = async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".db,.sqlite,.sqlite3";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      setLoading("restore");
+      setMsg("");
+      const form = new FormData();
+      form.append("file", file);
+      try {
+        const res = await fetch("/api/backup/restore", { method: "POST", body: form });
+        const data = await res.json();
+        setMsg(data.message || (res.ok ? "✅ База восстановлена. Приложение перезапускается..." : "Ошибка восстановления"));
+      } catch { setMsg("Ошибка восстановления"); }
+      finally { setLoading(""); }
+    };
+    input.click();
+  };
+
+  const sizeFmt = (bytes: number) =>
+    bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${(bytes / 1024).toFixed(1)} KB` : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
+  return (
+    <div className="card">
+      <div className="card-header">
+        <span className="card-title">💾 База данных</span>
+      </div>
+      <div className="flex flex-col gap-4">
+        <p className="text-sm text-dim">
+          Полная база проекта: все проекты, посты, стратегии, настройки, AI-результаты.
+          Бэкапы сохраняются в <code>~/FabrikaContent/backups/</code>.
+        </p>
+
+        {backupInfo && (
+          <div className="text-xs" style={{ color: "var(--text-dim)", fontFamily: "monospace" }}>
+            Текущая БД: {sizeFmt(backupInfo.current.size)} ({new Date(backupInfo.current.mtime).toLocaleString()})
+            {backupInfo.backups.length > 0 && (
+              <span style={{ marginLeft: 12 }}>• Бэкапов: {backupInfo.backups.length}</span>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-wrap" style={{ gap: 8 }}>
+          <button className="btn btn-ghost" onClick={doCreate} disabled={loading === "create"} style={{ alignSelf: "flex-start" }}>
+            {loading === "create" ? "⏳" : "📀"} Создать бэкап
+          </button>
+          <button className="btn btn-ghost" onClick={doDownload} disabled={!!loading} style={{ alignSelf: "flex-start" }}>
+            ⬇️ Скачать .db
+          </button>
+          <button className="btn btn-ghost" onClick={doRestore} disabled={loading === "restore"} style={{ alignSelf: "flex-start", color: "#ef4444" }}>
+            {loading === "restore" ? "⏳" : "📥"} Восстановить из файла
+          </button>
+        </div>
+
+        {msg && <p className="text-sm" style={{ color: msg.startsWith("✅") ? "#22c55e" : "#ef4444" }}>{msg}</p>}
+      </div>
+    </div>
+  );
+}
+
 function ComplianceLink() {
   return (
     <div className="card" style={{ gridColumn: "span 2" }}>
@@ -492,19 +584,8 @@ export default function SettingsPage() {
         <ComplianceLink />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {/* Export */}
-          <div className="card">
-            <div className="card-header">
-              <span className="card-title">Экспорт данных</span>
-            </div>
-            <div className="flex flex-col gap-4">
-              <p className="text-sm text-dim">
-                Экспорт контент-плана, постов и ассетов в файловую систему.
-              </p>
-              <button className="btn btn-ghost" style={{ alignSelf: "flex-start" }}>📦 Экспорт в JSON</button>
-              <button className="btn btn-ghost" style={{ alignSelf: "flex-start" }}>📁 Экспорт папки публикации</button>
-            </div>
-          </div>
+          {/* Backup & Restore */}
+          <BackupCard />
 
           {/* Contacts */}
           <div className="card">

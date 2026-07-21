@@ -1,6 +1,6 @@
 {
   "name": "fabrika-content-workbench",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "private": true,
   "description": "Фабрика Контента — редакторская платформа для управления контентом",
   "main": "electron/dist/main.js",
@@ -52,7 +52,10 @@
     "mac": {
       "artifactName": "Fabrika.Content-${version}-${arch}.${ext}",
       "category": "public.app-category.productivity",
-      "target": ["dmg", "zip"]
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "nsis": {
       "oneClick": false,

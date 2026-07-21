@@ -234,6 +234,8 @@ export default function StrategyPage() {
 
   // Active funnel tab for content plan step
   const [activeFunnelId, setActiveFunnelId] = useState<string | null>(null);
+  const [existingPostCount, setExistingPostCount] = useState(0);
+  const [pendingFunnelId, setPendingFunnelId] = useState<string | null>(null);
 
   // Derived current platform data
   const currentPlatform = currentPlatformId ? platformMap[currentPlatformId] : null;
@@ -1011,38 +1013,109 @@ export default function StrategyPage() {
               <button 
                 className="btn btn-primary" 
                 onClick={async () => {
+                  setError(null);
+                  const genFunnelId = allFunnels?.find((f: any) => f.id === activeFunnelId) ? activeFunnelId : null;
+
+                  // Check if funnel already has planned posts
+                  if (genFunnelId) {
+                    try {
+                      const check = await (await fetch(`/api/posts?projectId=${projectId}&platformId=${currentPlatformId}&funnelId=${genFunnelId}&status=planned`)).json();
+                      if (Array.isArray(check) && check.length > 0) {
+                        setExistingPostCount(check.length);
+                        setPendingFunnelId(genFunnelId);
+                        return; // show dialog instead
+                      }
+                    } catch {}
+                  }
+
+                  // No existing posts — generate directly
                   setAiImporting(true);
                   try {
-                    const genFunnelId = allFunnels?.find((f: any) => f.id === activeFunnelId) ? activeFunnelId : null;
                     const res = await fetch("/api/generate/week-plan", {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        projectId,
-                        platformId: currentPlatformId,
-                        funnelId: genFunnelId,
-                        ideas,
-                      }),
+                      body: JSON.stringify({ projectId, platformId: currentPlatformId, funnelId: genFunnelId, ideas, mode: "append" }),
                     });
                     const data = await res.json();
                     if (!res.ok) throw new Error(data.error || "Ошибка генерации");
                     queryClient.invalidateQueries({ queryKey: ["posts"] });
                     queryClient.invalidateQueries({ queryKey: ["platform-posts"] });
                     queryClient.invalidateQueries({ queryKey: ["free-posts"] });
+                    queryClient.invalidateQueries({ queryKey: ["funnel-posts"] });
                   } catch (err: any) {
                     setError(err?.message || "Ошибка генерации контент‑плана");
-                  } finally {
-                    setAiImporting(false);
-                  }
+                  } finally { setAiImporting(false); }
                 }}
                 disabled={aiImporting}
               >
-                {aiImporting ? "⏳ Генерация..." : "Генерировать план"}
+                {aiImporting ? "⏳ Генерация..." : "Сгенерировать план"}
               </button>
               <button className="btn btn-ghost" onClick={() => navigate("/calendar")}>
                 Открыть календарь
               </button>
             </div>
+
+            {/* Dialog для повторного использования воронки */}
+            {pendingFunnelId && existingPostCount > 0 && (
+              <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+                <div style={{ background: "var(--bg)", borderRadius: 12, padding: 28, maxWidth: 440, width: "90%", boxShadow: "0 8px 40px rgba(0,0,0,0.3)" }}>
+                  <h3 style={{ margin: "0 0 8px", fontSize: 18 }}>Воронка уже используется</h3>
+                  <p className="text-sm text-dim" style={{ marginBottom: 20 }}>
+                    У воронки <strong>{allFunnels?.find((f: any) => f.id === pendingFunnelId)?.name}</strong> уже {existingPostCount} запланированных постов. Что делаем?
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    <button className="btn btn-primary" style={{ justifyContent: "center" }} onClick={async () => {
+                      setAiImporting(true);
+                      setPendingFunnelId(null);
+                      try {
+                        const res = await fetch("/api/generate/week-plan", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ projectId, platformId: currentPlatformId, funnelId: pendingFunnelId, ideas, mode: "append" }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || "Ошибка генерации");
+                        queryClient.invalidateQueries({ queryKey: ["posts"] });
+                        queryClient.invalidateQueries({ queryKey: ["platform-posts"] });
+                        queryClient.invalidateQueries({ queryKey: ["free-posts"] });
+                        queryClient.invalidateQueries({ queryKey: ["funnel-posts"] });
+                      } catch (err: any) {
+                        setError(err?.message || "Ошибка генерации контент‑плана");
+                      } finally { setAiImporting(false); }
+                    }} disabled={aiImporting}>
+                      ➕ Добавить новую неделю
+                    </button>
+                    <button className="btn" style={{ justifyContent: "center", borderColor: "#e68a2e", color: "#e68a2e" }} onClick={async () => {
+                      setAiImporting(true);
+                      setPendingFunnelId(null);
+                      try {
+                        const res = await fetch("/api/generate/week-plan", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ projectId, platformId: currentPlatformId, funnelId: pendingFunnelId, ideas, mode: "replace" }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.error || "Ошибка генерации");
+                        queryClient.invalidateQueries({ queryKey: ["posts"] });
+                        queryClient.invalidateQueries({ queryKey: ["platform-posts"] });
+                        queryClient.invalidateQueries({ queryKey: ["free-posts"] });
+                        queryClient.invalidateQueries({ queryKey: ["funnel-posts"] });
+                      } catch (err: any) {
+                        setError(err?.message || "Ошибка генерации контент‑плана");
+                      } finally { setAiImporting(false); }
+                    }} disabled={aiImporting}>
+                      🔄 Пересоздать план (удалить старые посты)
+                    </button>
+                    <button className="btn btn-ghost" style={{ justifyContent: "center" }} onClick={() => { setStep(2); setPendingFunnelId(null); }}>
+                      ➕ Создать новую воронку
+                    </button>
+                    <button className="btn btn-ghost" style={{ justifyContent: "center", color: "var(--text-dim)" }} onClick={() => { setPendingFunnelId(null); setExistingPostCount(0); }}>
+                      Отмена
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Вкладки воронок: выбранная в БД или с постами */}
             {(() => {

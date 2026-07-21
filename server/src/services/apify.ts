@@ -129,6 +129,11 @@ export async function fetchInstagramPosts(username: string, limit: number = 20):
       console.error(`[apify] Type="${data[0].type}", caption="${(data[0].caption || "").slice(0, 80)}", hashtags=${data[0].hashtags?.length || 0}`);
     }
 
+    if (data.length > 0 && data[0].noResults !== undefined) {
+      console.error(`[apify] Actor returned noResults for "${username}":`, JSON.stringify(data[0]).slice(0, 300));
+      return null;
+    }
+
     const ownerName = (item: any) => {
       if (!item.owner) return item.username || null;
       if (typeof item.owner === "string") return item.owner;

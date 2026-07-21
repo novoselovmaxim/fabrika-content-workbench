@@ -960,6 +960,7 @@ volume — примерная оценка частотности, group — т�
 
     res.json(parsed);
   } catch (err: any) {
+    console.error(`[onboarding] generate-keywords failed for ${req.params.projectId}:`, err?.message || err);
     res.status(500).json({ error: err.message || "Keyword generation failed" });
   }
 });
@@ -1222,6 +1223,7 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
           if (isApifyConfigured()) {
             apifyStatus = "tried";
             const rawPosts = await fetchInstagramPosts(username, 20);
+            console.error(`[onboarding] Apify responded for "${username}": posts=${rawPosts?.length ?? "null"}`);
             if (rawPosts && rawPosts.length > 0) {
               apifyStatus = "ok";
               const profile = await fetchInstagramProfile(username);
@@ -1296,6 +1298,60 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
           }
         }
       }
+    } else if (platform === "telegram") {
+      try {
+        const { telegramAdapter } = await import("../services/platformAdapters/telegramAdapter.js");
+        const posts = await telegramAdapter.fetchCompetitorMetrics(identifier, 20, {});
+        const channelName = identifier.replace(/^@/, "").replace(/^https?:\/\/t\.me\//, "");
+        fetchData = {
+          posts: posts.map((p: any) => ({
+            text: p.caption || "",
+            title: (p.caption || "").slice(0, 100) || `Telegram пост ${p.externalId || ""}`,
+            url: p.externalId ? `https://t.me/${channelName}/${p.externalId}` : "",
+            date: p.postedAt || "",
+            views: p.metrics?.impressions || 0,
+          })),
+          channel: { title: channelName, name: channelName, subscriberCount: 0 },
+        };
+        if (posts.length === 0) {
+          console.error(`[import] Telegram scraper returned 0 posts for "${identifier}", falling back to VPS`);
+        }
+      } catch (e: any) {
+        console.error(`[import] Telegram scraper failed: ${e.message}, falling back to VPS`);
+      }
+      if (!fetchData || !fetchData.posts || fetchData.posts.length === 0) {
+        try {
+          const VPS = "http://80.87.111.142:4000";
+          const r = await fetch(`${VPS}/api/metrics/fetch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ platform, identifier }),
+          signal: AbortSignal.timeout(15000),
+        });
+        if (!r.ok) {
+          const text = await r.text().catch(() => "");
+          console.error(`[import] VPS returned ${r.status} for ${platform}/${identifier}: ${text.slice(0, 200)}`);
+          return res.status(502).json({ error: `VPS вернул ${r.status}` });
+        }
+        const raw = await r.json();
+        console.error(`[import] VPS response for ${platform}/${identifier}:`, JSON.stringify(raw).slice(0, 300));
+        if (raw.error) {
+          return res.status(502).json({ error: raw.error });
+        }
+        fetchData = {
+          posts: raw.posts || raw.items || raw.data?.posts || raw.data?.items || [],
+          channel: raw.channel || (raw.name ? { title: raw.name, name: raw.identifier || raw.name, subscriberCount: raw.subscribers || 0 } : null),
+        };
+        if (!fetchData.posts.length) {
+          console.error(`[import] VPS returned 0 posts for ${platform}/${identifier}`);
+        }
+      } catch (e: any) {
+        return res.status(503).json({
+          error: `VPS недоступен (${e.message}). Импорт канала требует подключения к серверу метрик.`,
+          detail: e.message,
+        });
+      }
+    }
     } else {
       try {
         const VPS = "http://80.87.111.142:4000";
@@ -1305,15 +1361,25 @@ onboardingRouter.post("/:projectId/import-channel", async (req, res) => {
           body: JSON.stringify({ platform, identifier }),
           signal: AbortSignal.timeout(15000),
         });
-        fetchData = await r.json();
+        if (!r.ok) {
+          const text = await r.text().catch(() => "");
+          console.error(`[import] VPS returned ${r.status} for ${platform}/${identifier}: ${text.slice(0, 200)}`);
+          return res.status(502).json({ error: `VPS вернул ${r.status}` });
+        }
+        const raw = await r.json();
+        console.error(`[import] VPS response for ${platform}/${identifier}:`, JSON.stringify(raw).slice(0, 300));
+        if (raw.error) {
+          return res.status(502).json({ error: raw.error });
+        }
+        fetchData = {
+          posts: raw.posts || raw.items || raw.data?.posts || raw.data?.items || [],
+          channel: raw.channel || (raw.name ? { title: raw.name, name: raw.identifier || raw.name, subscriberCount: raw.subscribers || 0 } : null),
+        };
       } catch (e: any) {
         return res.status(503).json({
           error: `VPS недоступен (${e.message}). Импорт канала требует подключения к серверу метрик.`,
           detail: e.message,
         });
-      }
-      if (fetchData.error) {
-        return res.status(502).json({ error: fetchData.error });
       }
     }
 

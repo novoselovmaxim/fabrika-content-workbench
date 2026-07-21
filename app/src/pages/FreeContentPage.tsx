@@ -109,12 +109,28 @@ export default function FreeContentPage() {
         topicId: selectedTopic?.id || null,
         contentTypeId: selectedContentType?.id || null,
       };
-      return api.posts.create(payload);
+      const res = await fetch("/api/posts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.status === 409) {
+        const data = await res.json();
+        navigate(`/posts/${data.existingPostId}`);
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Ошибка создания поста");
+      }
+      return res.json();
     },
     onSuccess: (post) => {
+      if (!post) return;
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       navigate(`/posts/${post.id}`);
     },
+    onError: (err: any) => setError(err?.message || "Ошибка создания поста"),
   });
 
   const nextStep = () => setStep((s) => Math.min(s + 1, STEPS.length - 1));
